@@ -30,7 +30,7 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
-	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.3.0")
+	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.13")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
