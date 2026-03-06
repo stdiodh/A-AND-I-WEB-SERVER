@@ -48,16 +48,13 @@ class CourseV1Controller(
     @Operation(summary = "전체 코스 목록 조회", description = "분야/수강신청 여부와 관계없이 모든 코스를 조회합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(
-                responseCode = "200",
-                description = "조회 성공",
-                content = [Content(array = ArraySchema(schema = Schema(implementation = CourseResponse::class)))],
-            ),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @GetMapping
-    fun getAdminCourses(): Flux<CourseResponse> = courseV1Service.getAdminCourses()
+    fun getAdminCourses(): Mono<ApiEnvelope<List<CourseResponse>>> =
+        courseV1Service.getAdminCourses().collectList().map { ApiEnvelope.success(it) }
 
     @Operation(
         summary = "코스 생성",

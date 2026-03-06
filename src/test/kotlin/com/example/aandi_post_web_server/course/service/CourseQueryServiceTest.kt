@@ -19,7 +19,6 @@ import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.assertions.throwables.shouldThrow
 import org.mockito.Mockito
@@ -54,13 +53,13 @@ class CourseQueryServiceTest : StringSpec({
         )
 
         Mockito.`when`(fixture.courseRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt")))
-            .thenReturn(Flux.just(flCourse, spCourse))
+            .thenReturn(Flux.just(spCourse, flCourse))
 
         StepVerifier.create(
             fixture.service.getAdminCourses().map { it.slug }.collectList()
         )
             .assertNext { slugs ->
-                slugs.shouldContainExactlyInAnyOrder("sp-basic", "fl-basic")
+                slugs.shouldContainExactly("sp-basic", "fl-basic")
             }
             .verifyComplete()
     }

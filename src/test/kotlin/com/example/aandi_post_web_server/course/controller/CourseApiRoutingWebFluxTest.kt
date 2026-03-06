@@ -153,7 +153,7 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$[0].slug").isEqualTo("back-basic")
+                .jsonPath("$.data[0].slug").isEqualTo("back-basic")
         }
 
         "admin 전체 코스 조회 API는 ADMIN이 아니면 403을 반환한다" {
@@ -163,6 +163,9 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .uri("/v1/admin/courses")
                 .exchange()
                 .expectStatus().isForbidden
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.error.code").isEqualTo("FORBIDDEN")
         }
 
         "admin API는 ADMIN이 아니면 403을 반환한다" {
