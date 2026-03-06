@@ -47,6 +47,20 @@ class CourseV1Controller(
     private val courseV1Service: CourseV1Service,
 ) {
 
+    @Operation(summary = "전체 코스 목록 조회", description = "분야/수강신청 여부와 관계없이 모든 코스를 조회합니다.")
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+                content = [Content(array = ArraySchema(schema = Schema(implementation = CourseResponse::class)))],
+            ),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+        ],
+    )
+    @GetMapping
+    fun getAdminCourses(): Flux<CourseResponse> = courseV1Service.getAdminCourses()
+
     @Operation(
         summary = "코스 생성",
         description = "관리자가 코스를 생성합니다. 필수 코어 필드는 slug/fieldTag/startDate/endDate이며, 상세 정보는 metadata로 관리합니다.",

@@ -19,9 +19,11 @@ import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.assertions.throwables.shouldThrow
 import org.mockito.Mockito
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
@@ -30,6 +32,39 @@ import reactor.test.StepVerifier
 import java.time.Instant
 
 class CourseQueryServiceTest : StringSpec({
+    "관리자 코스 조회는 수강신청 여부와 관계없이 전체 코스를 반환한다" {
+        val fixture = QueryFixture()
+        val old = Instant.parse("2026-02-01T00:00:00Z")
+        val latest = Instant.parse("2026-03-01T00:00:00Z")
+        val flCourse = Course(
+            id = "course-1",
+            title = "FL 기초",
+            slug = "fl-basic",
+            targetTrack = CourseTrack.FL,
+            createdAt = old,
+            updatedAt = old,
+        )
+        val spCourse = Course(
+            id = "course-2",
+            title = "SP 기초",
+            slug = "sp-basic",
+            targetTrack = CourseTrack.SP,
+            createdAt = latest,
+            updatedAt = latest,
+        )
+
+        Mockito.`when`(fixture.courseRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt")))
+            .thenReturn(Flux.just(flCourse, spCourse))
+
+        StepVerifier.create(
+            fixture.service.getAdminCourses().map { it.slug }.collectList()
+        )
+            .assertNext { slugs ->
+                slugs.shouldContainExactlyInAnyOrder("sp-basic", "fl-basic")
+            }
+            .verifyComplete()
+    }
+
     "코스 조회는 ENROLLED + track=FL 필터를 함께 적용한다" {
         val fixture = QueryFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"

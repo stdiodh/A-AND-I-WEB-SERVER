@@ -139,6 +139,31 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .jsonPath("$[0].targetTrack").isEqualTo("FL")
         }
 
+        "admin 전체 코스 조회 API는 ADMIN 토큰으로 호출하면 성공한다" {
+            val response = sampleCourseResponse()
+            Mockito.`when`(courseV1Service.getAdminCourses()).thenReturn(Flux.just(response))
+
+            webTestClient.mutateWith(
+                mockJwt().jwt { jwt ->
+                    jwt.subject("8ee88b63-526d-49dc-9e72-a96be0f81385")
+                }.authorities(SimpleGrantedAuthority("ROLE_ADMIN")),
+            ).get()
+                .uri("/v1/admin/courses")
+                .exchange()
+                .expectStatus().isOk
+                .expectBody()
+                .jsonPath("$[0].slug").isEqualTo("back-basic")
+        }
+
+        "admin 전체 코스 조회 API는 ADMIN이 아니면 403을 반환한다" {
+            webTestClient.mutateWith(
+                mockJwt().authorities(SimpleGrantedAuthority("ROLE_USER")),
+            ).get()
+                .uri("/v1/admin/courses")
+                .exchange()
+                .expectStatus().isForbidden
+        }
+
         "admin API는 ADMIN이 아니면 403을 반환한다" {
             webTestClient.mutateWith(
                 mockJwt().authorities(SimpleGrantedAuthority("ROLE_USER")),
