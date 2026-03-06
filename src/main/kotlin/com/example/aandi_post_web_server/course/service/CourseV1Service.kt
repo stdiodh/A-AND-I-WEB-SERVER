@@ -29,6 +29,9 @@ class CourseV1Service(
     private val courseQueryService: CourseQueryService,
 ) {
 
+    fun getAdminCourses(): Flux<CourseResponse> =
+        courseQueryService.getAdminCourses()
+
     fun createCourse(request: CreateCourseRequest): Mono<CourseResponse> =
         courseCommandService.createCourse(request)
 

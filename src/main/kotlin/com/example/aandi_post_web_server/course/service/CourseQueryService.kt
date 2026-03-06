@@ -33,6 +33,7 @@ import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepos
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
 import org.springframework.http.HttpStatus
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
@@ -49,6 +50,10 @@ class CourseQueryService(
     private val assignmentExampleRepository: AssignmentExampleRepository,
     private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
 ) {
+
+    fun getAdminCourses(): Flux<CourseResponse> =
+        courseRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+            .map(::toCourseResponse)
 
     fun getCourse(courseSlug: String, userId: String): Mono<CourseResponse> {
         val slug = parseCourseSlug(courseSlug)
