@@ -1,5 +1,9 @@
 package com.example.aandi_post_web_server.common.security
 
+import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
+import com.example.aandi_post_web_server.common.error.RequestIdSupport
+import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -19,6 +23,7 @@ import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.security.web.server.SecurityWebFilterChain
+import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets
 import java.time.Duration
@@ -33,6 +38,8 @@ class SecurityConfig {
     fun securityWebFilterChain(
         http: ServerHttpSecurity,
         jwtDecoder: ReactiveJwtDecoder,
+        errorResponseFactory: ErrorResponseFactory,
+        objectMapper: ObjectMapper,
     ): SecurityWebFilterChain =
         http
             .csrf { it.disable() }
@@ -51,19 +58,13 @@ class SecurityConfig {
                 it.anyExchange().denyAll()
             }
             .exceptionHandling { exceptions ->
-                exceptions.authenticationEntryPoint { exchange, _ ->
-                    val response = exchange.response
-                    response.statusCode = HttpStatus.UNAUTHORIZED
-                    response.headers.contentType = MediaType.APPLICATION_JSON
-                    val body = "{\"message\":\"Unauthorized\"}".toByteArray()
-                    response.writeWith(Mono.just(response.bufferFactory().wrap(body)))
+                exceptions.authenticationEntryPoint { exchange, authException ->
+                    val result = errorResponseFactory.unauthorized(exchange, authException.message)
+                    writeErrorResponse(exchange, objectMapper, result)
                 }
-                exceptions.accessDeniedHandler { exchange, _ ->
-                    val response = exchange.response
-                    response.statusCode = HttpStatus.FORBIDDEN
-                    response.headers.contentType = MediaType.APPLICATION_JSON
-                    val body = "{\"message\":\"Forbidden\"}".toByteArray()
-                    response.writeWith(Mono.just(response.bufferFactory().wrap(body)))
+                exceptions.accessDeniedHandler { exchange, accessDeniedException ->
+                    val result = errorResponseFactory.forbidden(exchange, accessDeniedException.message)
+                    writeErrorResponse(exchange, objectMapper, result)
                 }
             }
             .oauth2ResourceServer { oauth2 ->
@@ -103,4 +104,18 @@ class SecurityConfig {
             val authorities = role?.grantedAuthorities() ?: UserRole.USER.grantedAuthorities()
             Mono.just(JwtAuthenticationToken(jwt, authorities, jwt.subject))
         }
+
+    private fun writeErrorResponse(
+        exchange: ServerWebExchange,
+        objectMapper: ObjectMapper,
+        result: com.example.aandi_post_web_server.common.error.ApiErrorResult,
+    ): Mono<Void> {
+        val response = exchange.response
+        response.statusCode = HttpStatus.valueOf(result.status.value())
+        response.headers.contentType = MediaType.APPLICATION_JSON
+        response.headers.set(RequestIdSupport.HEADER_NAME, RequestIdSupport.resolveRequestId(exchange))
+        val payload = runCatching { objectMapper.writeValueAsBytes(result.body) }
+            .getOrElse { objectMapper.writeValueAsBytes(ApiEnvelope.failure("INTERNAL_ERROR", "서버 내부 오류가 발생했습니다.")) }
+        return response.writeWith(Mono.just(response.bufferFactory().wrap(payload)))
+    }
 }

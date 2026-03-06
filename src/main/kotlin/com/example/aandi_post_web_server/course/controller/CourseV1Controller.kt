@@ -6,7 +6,7 @@ import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.PublishAssignmentResponse
 import com.example.aandi_post_web_server.assignment.dtos.TriggerDeliveriesResponse
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
-import com.example.aandi_post_web_server.common.openapi.ApiErrorResponse
+import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
@@ -18,7 +18,6 @@ import com.example.aandi_post_web_server.course.dtos.UpdateEnrollmentRequest
 import com.example.aandi_post_web_server.course.service.CourseV1Service
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -36,7 +35,6 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "코스 관리자 API", description = "관리자 전용 코스/수강/과제 관리 API")
@@ -53,15 +51,16 @@ class CourseV1Controller(
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "생성 성공", content = [Content(schema = Schema(implementation = CourseResponse::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "409", description = "slug 중복", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "생성 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "409", description = "slug 중복", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @PostMapping
     fun createCourse(
         @Valid @RequestBody request: CreateCourseRequest,
-    ): Mono<CourseResponse> = courseV1Service.createCourse(request)
+    ): Mono<ApiEnvelope<CourseResponse>> =
+        courseV1Service.createCourse(request).map { ApiEnvelope.success(it) }
 
     @Operation(
         summary = "코스 수정",
@@ -69,9 +68,9 @@ class CourseV1Controller(
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "수정 성공", content = [Content(schema = Schema(implementation = CourseResponse::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "수정 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @PatchMapping("/{courseSlug}")
@@ -79,28 +78,30 @@ class CourseV1Controller(
         @Parameter(description = "코스 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
         @RequestBody request: UpdateCourseRequest,
-    ): Mono<CourseResponse> = courseV1Service.updateCourse(courseSlug, request)
+    ): Mono<ApiEnvelope<CourseResponse>> =
+        courseV1Service.updateCourse(courseSlug, request).map { ApiEnvelope.success(it) }
 
     @Operation(summary = "코스 아카이브", description = "코스를 ARCHIVED 상태로 변경합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "아카이브 성공"),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "아카이브 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @DeleteMapping("/{courseSlug}")
     fun archiveCourse(
         @Parameter(description = "코스 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
-    ): Mono<Void> = courseV1Service.archiveCourse(courseSlug)
+    ): Mono<ApiEnvelope<Nothing?>> =
+        courseV1Service.archiveCourse(courseSlug).thenReturn(ApiEnvelope.success(null))
 
     @Operation(summary = "수강생 등록/복구", description = "코스에 수강생을 ENROLLED 상태로 등록합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "등록 성공", content = [Content(schema = Schema(implementation = CourseEnrollmentResponse::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "등록 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @PostMapping("/{courseSlug}/enrollments")
@@ -108,15 +109,16 @@ class CourseV1Controller(
         @Parameter(description = "코스 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
         @Valid @RequestBody request: EnrollCourseRequest,
-    ): Mono<CourseEnrollmentResponse> = courseV1Service.enrollMember(courseSlug, request)
+    ): Mono<ApiEnvelope<CourseEnrollmentResponse>> =
+        courseV1Service.enrollMember(courseSlug, request).map { ApiEnvelope.success(it) }
 
     @Operation(summary = "수강 상태 변경", description = "ENROLLED/DROPPED/BANNED로 상태를 변경합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "변경 성공", content = [Content(schema = Schema(implementation = CourseEnrollmentResponse::class))]),
-            ApiResponse(responseCode = "400", description = "요청값 오류(예: BANNED + banReason 누락)", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스 또는 수강생을 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "변경 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "400", description = "요청값 오류(예: BANNED + banReason 누락)", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스 또는 수강생을 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @PatchMapping("/{courseSlug}/enrollments/{userId}")
@@ -126,33 +128,31 @@ class CourseV1Controller(
         @Parameter(description = "유저 ID", example = "user-1")
         @PathVariable userId: String,
         @RequestBody request: UpdateEnrollmentRequest,
-    ): Mono<CourseEnrollmentResponse> = courseV1Service.updateEnrollmentStatus(courseSlug, userId, request)
+    ): Mono<ApiEnvelope<CourseEnrollmentResponse>> =
+        courseV1Service.updateEnrollmentStatus(courseSlug, userId, request).map { ApiEnvelope.success(it) }
 
     @Operation(summary = "수강생 목록 조회", description = "해당 코스의 수강생 목록을 조회합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(
-                responseCode = "200",
-                description = "조회 성공",
-                content = [Content(array = ArraySchema(schema = Schema(implementation = CourseEnrollmentResponse::class)))],
-            ),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/enrollments")
     fun getEnrollments(
         @Parameter(description = "코스 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
-    ): Flux<CourseEnrollmentResponse> = courseV1Service.getEnrollments(courseSlug)
+    ): Mono<ApiEnvelope<List<CourseEnrollmentResponse>>> =
+        courseV1Service.getEnrollments(courseSlug).collectList().map { ApiEnvelope.success(it) }
 
     @Operation(summary = "주차 생성/수정", description = "주차를 생성하거나 같은 weekNo가 있으면 갱신합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "처리 성공", content = [Content(schema = Schema(implementation = CourseWeekResponse::class))]),
-            ApiResponse(responseCode = "400", description = "요청값 오류", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "처리 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "400", description = "요청값 오류", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @PostMapping("/{courseSlug}/weeks")
@@ -160,16 +160,17 @@ class CourseV1Controller(
         @Parameter(description = "코스 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
         @Valid @RequestBody request: CreateCourseWeekRequest,
-    ): Mono<CourseWeekResponse> = courseV1Service.createWeek(courseSlug, request)
+    ): Mono<ApiEnvelope<CourseWeekResponse>> =
+        courseV1Service.createWeek(courseSlug, request).map { ApiEnvelope.success(it) }
 
     @Operation(summary = "과제 생성", description = "코스 내부에 과제를 생성합니다. 생성 시 courseId/courseSlug가 함께 저장됩니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "생성 성공", content = [Content(schema = Schema(implementation = AssignmentDetailResponse::class))]),
-            ApiResponse(responseCode = "400", description = "요청값 오류", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "409", description = "동일 코스/주차/순번 중복", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "생성 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "400", description = "요청값 오류", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "409", description = "동일 코스/주차/순번 중복", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @PostMapping("/{courseSlug}/assignments")
@@ -178,16 +179,16 @@ class CourseV1Controller(
         @PathVariable courseSlug: String,
         @Valid @RequestBody request: CreateAssignmentRequest,
         authentication: Authentication,
-    ): Mono<AssignmentDetailResponse> =
-        courseV1Service.createAssignment(courseSlug, request, authentication.name)
+    ): Mono<ApiEnvelope<AssignmentDetailResponse>> =
+        courseV1Service.createAssignment(courseSlug, request, authentication.name).map { ApiEnvelope.success(it) }
 
     @Operation(summary = "과제 게시", description = "DRAFT 과제를 PUBLISHED 상태로 게시합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "게시 성공", content = [Content(schema = Schema(implementation = PublishAssignmentResponse::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "422", description = "상태 전이 불가(예: ARCHIVED)", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "게시 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "422", description = "상태 전이 불가(예: ARCHIVED)", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @PostMapping("/{courseSlug}/assignments/{assignmentId}/publish")
@@ -196,15 +197,16 @@ class CourseV1Controller(
         @PathVariable courseSlug: String,
         @Parameter(description = "과제 ID", example = "assignment-1")
         @PathVariable assignmentId: String,
-    ): Mono<PublishAssignmentResponse> = courseV1Service.publishAssignment(courseSlug, assignmentId)
+    ): Mono<ApiEnvelope<PublishAssignmentResponse>> =
+        courseV1Service.publishAssignment(courseSlug, assignmentId).map { ApiEnvelope.success(it) }
 
     @Operation(summary = "과제 배포 트리거", description = "ENROLLED 대상에게 과제 배포를 수행합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "배포 처리 성공", content = [Content(schema = Schema(implementation = TriggerDeliveriesResponse::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "422", description = "PUBLISHED 상태가 아닌 과제", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "배포 처리 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "422", description = "PUBLISHED 상태가 아닌 과제", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @PostMapping("/{courseSlug}/assignments/{assignmentId}/deliveries")
@@ -213,19 +215,16 @@ class CourseV1Controller(
         @PathVariable courseSlug: String,
         @Parameter(description = "과제 ID", example = "assignment-1")
         @PathVariable assignmentId: String,
-    ): Mono<TriggerDeliveriesResponse> = courseV1Service.triggerDeliveries(courseSlug, assignmentId)
+    ): Mono<ApiEnvelope<TriggerDeliveriesResponse>> =
+        courseV1Service.triggerDeliveries(courseSlug, assignmentId).map { ApiEnvelope.success(it) }
 
     @Operation(summary = "배포 결과 조회", description = "과제 배포 결과를 상태별로 조회합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(
-                responseCode = "200",
-                description = "조회 성공",
-                content = [Content(array = ArraySchema(schema = Schema(implementation = AssignmentDeliveryResponse::class)))],
-            ),
-            ApiResponse(responseCode = "400", description = "잘못된 status 파라미터", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
-            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiErrorResponse::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "400", description = "잘못된 status 파라미터", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/assignments/{assignmentId}/deliveries")
@@ -236,5 +235,6 @@ class CourseV1Controller(
         @PathVariable assignmentId: String,
         @Parameter(description = "배포 상태 필터", example = "DELIVERED")
         @RequestParam(required = false) status: AssignmentDeliveryStatus?,
-    ): Flux<AssignmentDeliveryResponse> = courseV1Service.getDeliveries(courseSlug, assignmentId, status)
+    ): Mono<ApiEnvelope<List<AssignmentDeliveryResponse>>> =
+        courseV1Service.getDeliveries(courseSlug, assignmentId, status).collectList().map { ApiEnvelope.success(it) }
 }

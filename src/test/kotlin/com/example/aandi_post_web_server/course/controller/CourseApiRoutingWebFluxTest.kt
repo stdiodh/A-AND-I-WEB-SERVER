@@ -7,6 +7,7 @@ import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPaylo
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
+import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.security.SecurityConfig
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
 import com.example.aandi_post_web_server.course.dtos.CourseMetadataPayload
@@ -32,7 +33,7 @@ import java.time.Instant
 import java.time.LocalDate
 
 @WebFluxTest(controllers = [CourseV1Controller::class, CourseQueryV1Controller::class])
-@Import(SecurityConfig::class)
+@Import(SecurityConfig::class, ErrorResponseFactory::class)
 class CourseApiRoutingWebFluxTest : StringSpec() {
 
     override fun extensions() = listOf(SpringExtension)
@@ -69,7 +70,7 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$[0].slug").isEqualTo("back-basic")
+                .jsonPath("$.data[0].slug").isEqualTo("back-basic")
         }
 
         "과제 상세 조회 API는 토큰이 없으면 401을 반환한다" {
@@ -94,7 +95,7 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$.id").isEqualTo("assignment-1")
+                .jsonPath("$.data.id").isEqualTo("assignment-1")
         }
 
         "과제 ID로 코스 조회 API는 USER 토큰으로 호출하면 성공한다" {
@@ -112,7 +113,7 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$.slug").isEqualTo("back-basic")
+                .jsonPath("$.data.slug").isEqualTo("back-basic")
         }
 
         "코스 조회 API는 track 쿼리 파라미터로 필터링 호출한다" {
@@ -136,7 +137,7 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$[0].targetTrack").isEqualTo("FL")
+                .jsonPath("$.data[0].targetTrack").isEqualTo("FL")
         }
 
         "admin API는 ADMIN이 아니면 403을 반환한다" {
@@ -214,7 +215,7 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$.slug").isEqualTo("back-basic")
+                .jsonPath("$.data.slug").isEqualTo("back-basic")
         }
 
         "과제 생성은 JWT subject를 createdBy로 전달한다" {
@@ -266,7 +267,7 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$.id").isEqualTo("assignment-1")
+                .jsonPath("$.data.id").isEqualTo("assignment-1")
 
             Mockito.verify(courseV1Service).createAssignment(
                 "back-basic",
@@ -309,7 +310,7 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$[0].userId").isEqualTo("user-1")
+                .jsonPath("$.data[0].userId").isEqualTo("user-1")
         }
     }
 }
