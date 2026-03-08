@@ -2,6 +2,8 @@ package com.example.aandi_post_web_server.course.service
 
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
+import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository
@@ -10,9 +12,11 @@ import com.example.aandi_post_web_server.assignment.repository.AssignmentReposit
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
 import com.example.aandi_post_web_server.course.dtos.CreateCourseWeekRequest
+import com.example.aandi_post_web_server.course.dtos.CourseMetadataPayload
 import com.example.aandi_post_web_server.course.dtos.UpdateEnrollmentRequest
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
+import com.example.aandi_post_web_server.course.entity.CourseMetadata
 import com.example.aandi_post_web_server.course.entity.CourseWeek
 import com.example.aandi_post_web_server.course.enum.CoursePhase
 import com.example.aandi_post_web_server.course.enum.CourseTrack
@@ -41,11 +45,15 @@ class CourseCommandServiceTest : StringSpec({
         StepVerifier.create(
             fixture.service.createCourse(
                 CreateCourseRequest(
-                    title = "BACK 기초",
                     slug = "back-basic",
-                    description = "desc",
-                    phase = CoursePhase.BASIC,
-                    targetTrack = CourseTrack.FL,
+                    fieldTag = CourseTrack.FL,
+                    startDate = LocalDate.parse("2026-03-01"),
+                    endDate = LocalDate.parse("2026-03-28"),
+                    metadata = CourseMetadataPayload(
+                        title = "BACK 기초",
+                        description = "desc",
+                        phase = CoursePhase.BASIC,
+                    ),
                 )
             )
         )
@@ -55,9 +63,40 @@ class CourseCommandServiceTest : StringSpec({
             .verify()
     }
 
+    "코스 삭제는 코스 연관 데이터를 하드 삭제한다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignments = listOf(
+            commandAssignment(id = "assignment-1", courseId = "course-1", status = AssignmentStatus.PUBLISHED),
+            commandAssignment(id = "assignment-2", courseId = "course-1", status = AssignmentStatus.DRAFT),
+        )
+        val assignmentIds = assignments.mapNotNull { it.id }
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1")).thenReturn(Flux.fromIterable(assignments))
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(2))
+        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(2))
+        Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(4))
+        Mockito.`when`(fixture.assignmentRepository.deleteAllById(assignmentIds)).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.deleteAllByCourseId("course-1")).thenReturn(Mono.just(3))
+        Mockito.`when`(fixture.courseEnrollmentRepository.deleteAllByCourseId("course-1")).thenReturn(Mono.just(5))
+        Mockito.`when`(fixture.courseRepository.deleteById("course-1")).thenReturn(Mono.empty())
+
+        StepVerifier.create(fixture.service.deleteCourse("back-basic"))
+            .verifyComplete()
+
+        Mockito.verify(fixture.assignmentRequirementRepository).deleteAllByAssignmentIdIn(assignmentIds)
+        Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(assignmentIds)
+        Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(assignmentIds)
+        Mockito.verify(fixture.assignmentRepository).deleteAllById(assignmentIds)
+        Mockito.verify(fixture.courseWeekRepository).deleteAllByCourseId("course-1")
+        Mockito.verify(fixture.courseEnrollmentRepository).deleteAllByCourseId("course-1")
+        Mockito.verify(fixture.courseRepository).deleteById("course-1")
+    }
+
     "BANNED 상태 변경은 banReason이 필수다" {
         val fixture = CommandFixture()
-        val course = Course(id = "course-1", title = "BACK 기초", slug = "back-basic")
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val enrollment = CourseEnrollment(
             id = "enroll-1",
             courseId = "course-1",
@@ -87,26 +126,29 @@ class CourseCommandServiceTest : StringSpec({
             .verify()
     }
 
-    "ARCHIVED 과제는 publish할 수 없다" {
+    "이미 PUBLISHED 과제를 게시하면 기존 publishedAt을 유지한다" {
         val fixture = CommandFixture()
-        val course = Course(id = "course-1", title = "BACK 기초", slug = "back-basic")
-        val archived = commandAssignment(
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val alreadyPublishedAt = Instant.parse("2026-03-01T00:00:00Z")
+        val published = commandAssignment(
             id = "assignment-1",
             courseId = "course-1",
-            status = AssignmentStatus.ARCHIVED,
-        )
+            status = AssignmentStatus.PUBLISHED,
+        ).copy(publishedAt = alreadyPublishedAt)
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId("assignment-1", "course-1"))
-            .thenReturn(Mono.just(archived))
+            .thenReturn(Mono.just(published))
 
         StepVerifier.create(
             fixture.service.publishAssignment("back-basic", "assignment-1")
         )
-            .expectErrorSatisfies { error ->
-                (error as ResponseStatusException).statusCode shouldBe HttpStatus.UNPROCESSABLE_ENTITY
+            .assertNext {
+                it.assignmentId shouldBe "assignment-1"
+                it.status shouldBe AssignmentStatus.PUBLISHED
+                it.publishedAt shouldBe alreadyPublishedAt
             }
-            .verify()
+            .verifyComplete()
     }
 
     "주차 생성은 weekNo가 1 미만이면 BAD_REQUEST를 반환한다" {
@@ -147,7 +189,7 @@ class CourseCommandServiceTest : StringSpec({
 
     "주차 업서트는 기존 주차를 수정한다" {
         val fixture = CommandFixture()
-        val course = Course(id = "course-1", title = "BACK 기초", slug = "back-basic")
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val existing = CourseWeek(
             id = "week-1",
             courseId = "course-1",
@@ -187,9 +229,62 @@ class CourseCommandServiceTest : StringSpec({
             .verifyComplete()
     }
 
+    "주차가 없으면 과제 생성은 NOT_FOUND를 반환한다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val request = CreateAssignmentRequest(
+            weekNo = 2,
+            orderInWeek = 1,
+            startAt = Instant.parse("2026-03-10T00:00:00Z"),
+            endAt = Instant.parse("2026-03-11T00:00:00Z"),
+            metadata = AssignmentMetadataPayload(
+                title = "터미널 계산기",
+                difficulty = AssignmentDifficulty.MID,
+                description = "문제 설명",
+                timeLimitMinutes = 60,
+            ),
+            requirements = emptyList(),
+            examples = emptyList(),
+        )
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.empty())
+
+        StepVerifier.create(
+            fixture.service.createAssignment(
+                courseSlug = "back-basic",
+                request = request,
+                createdBy = "admin",
+            )
+        )
+            .expectErrorSatisfies { error ->
+                (error as ResponseStatusException).statusCode shouldBe HttpStatus.NOT_FOUND
+            }
+            .verify()
+
+        Mockito.verify(fixture.assignmentRepository, Mockito.never())
+            .findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+    }
+
     "DRAFT 과제는 배포 트리거할 수 없다" {
         val fixture = CommandFixture()
-        val course = Course(id = "course-1", title = "BACK 기초", slug = "back-basic")
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val draft = commandAssignment(
             id = "assignment-draft",
             courseId = "course-1",
@@ -211,7 +306,7 @@ class CourseCommandServiceTest : StringSpec({
 
     "배포 트리거는 ENROLLED 대상만 DELIVERED 처리한다" {
         val fixture = CommandFixture()
-        val course = Course(id = "course-1", title = "BACK 기초", slug = "back-basic")
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val published = commandAssignment(
             id = "assignment-1",
             courseId = "course-1",
@@ -282,16 +377,32 @@ private fun commandAssignment(
         courseId = courseId,
         createdBy = "admin",
         weekNo = 1,
-        seqInWeek = 1,
-        title = "테스트 과제",
-        difficulty = AssignmentDifficulty.MID,
-        contentMd = "content",
-        timeLimitMinutes = 60,
-        openAt = now,
-        dueAt = now.plusSeconds(3600),
+        orderInWeek = 1,
+        startAt = now,
+        endAt = now.plusSeconds(3600),
+        metadata = com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata(
+            title = "테스트 과제",
+            difficulty = AssignmentDifficulty.MID,
+            description = "content",
+            timeLimitMinutes = 60,
+        ),
         status = status,
         createdAt = now,
         updatedAt = now,
         publishedAt = if (status == AssignmentStatus.PUBLISHED) now else null,
     )
 }
+
+private fun queryCourse(id: String, slug: String, title: String): Course = Course(
+    id = id,
+    slug = slug,
+    fieldTag = CourseTrack.FL,
+    startDate = LocalDate.of(2026, 3, 1),
+    endDate = LocalDate.of(2026, 3, 30),
+    metadata = CourseMetadata(
+        title = title,
+        description = null,
+        phase = CoursePhase.BASIC,
+        attributes = emptyMap(),
+    ),
+)

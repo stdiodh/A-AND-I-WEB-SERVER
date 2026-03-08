@@ -99,15 +99,14 @@ class CourseCommandService(
             }
     }
 
-    fun archiveCourse(courseSlug: String): Mono<Void> {
+    fun deleteCourse(courseSlug: String): Mono<Void> {
         val slug = parseCourseSlug(courseSlug)
         return findCourseBySlug(slug)
             .flatMap { course ->
-                val archived = course.copy(
-                    status = CourseStatus.ARCHIVED,
-                    updatedAt = Instant.now(),
-                )
-                courseRepository.save(archived)
+                val courseId = parseCourseId(requireNotNull(course.id))
+                deleteAssignmentsByCourse(courseId.value)
+                    .then(deleteCourseRelations(courseId.value))
+                    .then(courseRepository.deleteById(courseId.value))
             }
             .then()
     }
@@ -259,52 +258,56 @@ class CourseCommandService(
                 val courseId = parseCourseId(requireNotNull(course.id))
                 ensureWeekExists(courseId, weekNo)
                     .then(
-                        assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo.value, request.orderInWeek)
-                            .flatMap<AssignmentDetailResponse> {
-                                Mono.error(
-                                    ResponseStatusException(
-                                        HttpStatus.CONFLICT,
-                                        "동일 코스/주차/순번 과제가 이미 존재합니다.",
+                        Mono.defer {
+                            assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo.value, request.orderInWeek)
+                                .flatMap<AssignmentDetailResponse> {
+                                    Mono.error(
+                                        ResponseStatusException(
+                                            HttpStatus.CONFLICT,
+                                            "동일 코스/주차/순번 과제가 이미 존재합니다.",
+                                        )
                                     )
-                                )
-                            }
-                            .switchIfEmpty(
-                                assignmentRepository.save(
-                                    Assignment(
-                                        courseId = courseId.value,
-                                        courseSlug = course.slug,
-                                        createdBy = createdBy,
-                                        weekNo = weekNo.value,
-                                        orderInWeek = request.orderInWeek,
-                                        startAt = request.startAt,
-                                        endAt = request.endAt,
-                                        metadata = com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata(
-                                            title = request.metadata.title.trim(),
-                                            difficulty = request.metadata.difficulty,
-                                            description = request.metadata.description.trim(),
-                                            timeLimitMinutes = request.metadata.timeLimitMinutes,
-                                            learningGoals = request.metadata.learningGoals.map { it.trim() },
-                                            attributes = request.metadata.attributes,
-                                        ),
-                                        status = AssignmentStatus.DRAFT,
-                                        createdAt = Instant.now(),
-                                        updatedAt = Instant.now(),
-                                    )
-                                ).flatMap { assignment ->
-                                    val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
-                                    val requirementsMono = saveRequirements(assignmentId, requirementDrafts)
-                                    val examplesMono = saveExamples(assignmentId, exampleDrafts)
-                                    Mono.zip(requirementsMono, examplesMono)
-                                        .map { tuple ->
-                                            toAssignmentDetailResponse(
-                                                courseSlug = course.slug,
-                                                assignment = assignment,
-                                                requirements = tuple.t1,
-                                                examples = tuple.t2,
-                                            )
-                                        }
                                 }
-                            )
+                                .switchIfEmpty(
+                                    Mono.defer {
+                                        assignmentRepository.save(
+                                            Assignment(
+                                                courseId = courseId.value,
+                                                courseSlug = course.slug,
+                                                createdBy = createdBy,
+                                                weekNo = weekNo.value,
+                                                orderInWeek = request.orderInWeek,
+                                                startAt = request.startAt,
+                                                endAt = request.endAt,
+                                                metadata = com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata(
+                                                    title = request.metadata.title.trim(),
+                                                    difficulty = request.metadata.difficulty,
+                                                    description = request.metadata.description.trim(),
+                                                    timeLimitMinutes = request.metadata.timeLimitMinutes,
+                                                    learningGoals = request.metadata.learningGoals.map { it.trim() },
+                                                    attributes = request.metadata.attributes,
+                                                ),
+                                                status = AssignmentStatus.DRAFT,
+                                                createdAt = Instant.now(),
+                                                updatedAt = Instant.now(),
+                                            )
+                                        ).flatMap { assignment ->
+                                            val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
+                                            val requirementsMono = saveRequirements(assignmentId, requirementDrafts)
+                                            val examplesMono = saveExamples(assignmentId, exampleDrafts)
+                                            Mono.zip(requirementsMono, examplesMono)
+                                                .map { tuple ->
+                                                    toAssignmentDetailResponse(
+                                                        courseSlug = course.slug,
+                                                        assignment = assignment,
+                                                        requirements = tuple.t1,
+                                                        examples = tuple.t2,
+                                                    )
+                                                }
+                                        }
+                                    }
+                                )
+                        }
                     )
             }
     }
@@ -355,7 +358,7 @@ class CourseCommandService(
                 phase = request.metadata.phase,
                 attributes = request.metadata.attributes,
             ),
-            status = CourseStatus.ACTIVE,
+            status = CourseStatus.PUBLISHED,
             createdAt = now,
             updatedAt = now,
         )
@@ -366,9 +369,14 @@ class CourseCommandService(
         assignment: Assignment,
         courseSlug: String,
     ): Mono<PublishAssignmentResponse> {
-        if (assignment.status == AssignmentStatus.ARCHIVED) {
-            return Mono.error(
-                ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ARCHIVED 과제는 게시할 수 없습니다.")
+        if (assignment.status == AssignmentStatus.PUBLISHED) {
+            return Mono.just(
+                PublishAssignmentResponse(
+                    assignmentId = requireNotNull(assignment.id),
+                    courseSlug = courseSlug,
+                    status = assignment.status,
+                    publishedAt = assignment.publishedAt,
+                )
             )
         }
         val published = assignment.copy(
@@ -477,17 +485,41 @@ class CourseCommandService(
     private fun ensureWeekExists(courseId: CourseId, weekNo: WeekNo): Mono<Void> {
         return courseWeekRepository.findByCourseIdAndWeekNo(courseId.value, weekNo.value)
             .switchIfEmpty(
-                courseWeekRepository.save(
-                    CourseWeek(
-                        courseId = courseId.value,
-                        weekNo = weekNo.value,
-                        title = "${weekNo.value}주차",
-                        createdAt = Instant.now(),
-                        updatedAt = Instant.now(),
+                Mono.error(
+                    ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "주차를 찾을 수 없습니다: ${weekNo.value}",
                     )
                 )
             )
             .then()
+    }
+
+    private fun deleteAssignmentsByCourse(courseId: String): Mono<Void> {
+        return assignmentRepository.findAllByCourseId(courseId)
+            .map { it.id }
+            .filter { it != null }
+            .map { it!! }
+            .collectList()
+            .flatMap { assignmentIds ->
+                if (assignmentIds.isEmpty()) {
+                    Mono.empty<Void>()
+                } else {
+                    Mono.whenDelayError(
+                        assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
+                        assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
+                        assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
+                        assignmentRepository.deleteAllById(assignmentIds).then()
+                    )
+                }
+            }
+    }
+
+    private fun deleteCourseRelations(courseId: String): Mono<Void> {
+        return Mono.whenDelayError(
+            courseWeekRepository.deleteAllByCourseId(courseId).then(),
+            courseEnrollmentRepository.deleteAllByCourseId(courseId).then()
+        )
     }
 
     private fun upsertDelivered(assignmentId: AssignmentId, userId: UserId): Mono<AssignmentDelivery> {

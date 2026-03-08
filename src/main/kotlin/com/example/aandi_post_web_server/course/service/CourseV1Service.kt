@@ -9,6 +9,7 @@ import com.example.aandi_post_web_server.assignment.dtos.TriggerDeliveriesRespon
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
+import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
@@ -38,11 +39,14 @@ class CourseV1Service(
     fun updateCourse(courseSlug: String, request: UpdateCourseRequest): Mono<CourseResponse> =
         courseCommandService.updateCourse(courseSlug, request)
 
-    fun archiveCourse(courseSlug: String): Mono<Void> =
-        courseCommandService.archiveCourse(courseSlug)
+    fun deleteCourse(courseSlug: String): Mono<Void> =
+        courseCommandService.deleteCourse(courseSlug)
 
     fun getCourse(courseSlug: String, userId: String): Mono<CourseResponse> =
         courseQueryService.getCourse(courseSlug, userId)
+
+    fun getCourseOutline(courseSlug: String, userId: String): Mono<CourseOutlineResponse> =
+        courseQueryService.getCourseOutline(courseSlug, userId)
 
     fun getCourses(
         status: CourseStatus?,

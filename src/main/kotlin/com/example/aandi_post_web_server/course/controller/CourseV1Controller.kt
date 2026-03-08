@@ -92,20 +92,20 @@ class CourseV1Controller(
     ): Mono<ApiEnvelope<CourseResponse>> =
         courseV1Service.updateCourse(courseSlug, request).map { ApiEnvelope.success(it) }
 
-    @Operation(summary = "코스 아카이브", description = "코스를 ARCHIVED 상태로 변경합니다.")
+    @Operation(summary = "코스 삭제(하드 삭제)", description = "코스와 연관 데이터(주차/수강/과제/배포/요구사항/예시)를 모두 삭제합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "아카이브 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "200", description = "삭제 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
             ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
             ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @DeleteMapping("/{courseSlug}")
-    fun archiveCourse(
+    fun deleteCourse(
         @Parameter(description = "코스 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
     ): Mono<ApiEnvelope<Nothing?>> =
-        courseV1Service.archiveCourse(courseSlug).thenReturn(ApiEnvelope.success(null))
+        courseV1Service.deleteCourse(courseSlug).thenReturn(ApiEnvelope.success(null))
 
     @Operation(summary = "수강생 등록/복구", description = "코스에 수강생을 ENROLLED 상태로 등록합니다.")
     @ApiResponses(
@@ -180,7 +180,7 @@ class CourseV1Controller(
             ApiResponse(responseCode = "200", description = "생성 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
             ApiResponse(responseCode = "400", description = "요청값 오류", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
             ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "404", description = "코스 또는 주차를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
             ApiResponse(responseCode = "409", description = "동일 코스/주차/순번 중복", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
@@ -199,7 +199,6 @@ class CourseV1Controller(
             ApiResponse(responseCode = "200", description = "게시 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
             ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
             ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "422", description = "상태 전이 불가(예: ARCHIVED)", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
         ],
     )
     @PostMapping("/{courseSlug}/assignments/{assignmentId}/publish")

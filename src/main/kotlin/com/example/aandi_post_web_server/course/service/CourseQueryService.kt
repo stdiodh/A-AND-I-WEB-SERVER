@@ -19,6 +19,9 @@ import com.example.aandi_post_web_server.course.domain.CourseSlug
 import com.example.aandi_post_web_server.course.domain.UserId
 import com.example.aandi_post_web_server.course.domain.WeekNo
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
+import com.example.aandi_post_web_server.course.dtos.CourseOutlineAssignmentItemResponse
+import com.example.aandi_post_web_server.course.dtos.CourseOutlineHeaderResponse
+import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
 import com.example.aandi_post_web_server.course.entity.Course
@@ -38,6 +41,7 @@ import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.Clock
 import java.time.Instant
 
 @Service
@@ -49,6 +53,7 @@ class CourseQueryService(
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentExampleRepository: AssignmentExampleRepository,
     private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
+    private val clock: Clock = Clock.systemUTC(),
 ) {
 
     fun getAdminCourses(): Flux<CourseResponse> =
@@ -59,6 +64,20 @@ class CourseQueryService(
         val slug = parseCourseSlug(courseSlug)
         val parsedUserId = parseUserId(userId)
         return findAccessibleCourseBySlug(slug, parsedUserId).map(::toCourseResponse)
+    }
+
+    fun getCourseOutline(courseSlug: String, userId: String): Mono<CourseOutlineResponse> {
+        val slug = parseCourseSlug(courseSlug)
+        val parsedUserId = parseUserId(userId)
+
+        return findAccessibleCourseBySlug(slug, parsedUserId)
+            .flatMap { course ->
+                val courseId = parseCourseId(requireNotNull(course.id))
+                assignmentRepository.findAllByCourseIdAndStatus(courseId.value, AssignmentStatus.PUBLISHED)
+                    .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
+                    .collectList()
+                    .map { assignments -> toCourseOutlineResponse(course, assignments) }
+            }
     }
 
     fun getCourses(
@@ -369,6 +388,39 @@ class CourseQueryService(
         createdAt = week.createdAt,
         updatedAt = week.updatedAt,
     )
+
+    private fun toCourseOutlineResponse(course: Course, assignments: List<Assignment>): CourseOutlineResponse {
+        val now = Instant.now(clock)
+        val assignmentItems = assignments
+            .sortedWith(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
+            .map { assignment ->
+                CourseOutlineAssignmentItemResponse(
+                    assignmentId = requireNotNull(assignment.id),
+                    weekNo = assignment.weekNo,
+                    orderInWeek = assignment.orderInWeek,
+                    title = assignment.metadata.title,
+                    difficulty = assignment.metadata.difficulty,
+                    startAt = assignment.startAt,
+                    endAt = assignment.endAt,
+                    checked = isChecked(now, assignment),
+                )
+            }
+
+        return CourseOutlineResponse(
+            course = CourseOutlineHeaderResponse(
+                id = requireNotNull(course.id),
+                slug = course.slug,
+                fieldTag = course.fieldTag,
+                title = course.metadata.title,
+                description = course.metadata.description,
+                phase = course.metadata.phase,
+            ),
+            totalAssignments = assignments.size,
+            assignments = assignmentItems,
+        )
+    }
+
+    private fun isChecked(now: Instant, assignment: Assignment): Boolean = now.isAfter(assignment.endAt)
 
     private fun toAssignmentSummaryResponse(assignment: Assignment): AssignmentSummaryResponse = AssignmentSummaryResponse(
         id = requireNotNull(assignment.id),

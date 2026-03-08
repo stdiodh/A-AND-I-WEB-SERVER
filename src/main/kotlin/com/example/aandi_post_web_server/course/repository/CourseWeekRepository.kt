@@ -8,4 +8,5 @@ import reactor.core.publisher.Mono
 interface CourseWeekRepository : ReactiveMongoRepository<CourseWeek, String> {
     fun findByCourseIdAndWeekNo(courseId: String, weekNo: Int): Mono<CourseWeek>
     fun findAllByCourseId(courseId: String): Flux<CourseWeek>
+    fun deleteAllByCourseId(courseId: String): Mono<Long>
 }

@@ -1,17 +1,23 @@
 package com.example.aandi_post_web_server.common.openapi
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Schema(description = "공통 API 응답")
+@JsonInclude(JsonInclude.Include.ALWAYS)
 data class ApiEnvelope<T>(
     @field:Schema(description = "요청 성공 여부", example = "true")
     val success: Boolean,
-    @field:Schema(description = "성공 데이터. 실패 시 null")
+    @field:Schema(description = "성공 데이터. 실패 시 null", nullable = true)
     val data: T?,
-    @field:Schema(description = "실패 정보. 성공 시 null")
+    @field:Schema(
+        description = "실패 정보. 성공 시 null",
+        nullable = true,
+        example = "null",
+    )
     val error: ApiErrorPayload?,
     @field:Schema(description = "응답 시각(Asia/Seoul)", example = "2026-03-06T14:00:00+09:00")
     val timestamp: String,
