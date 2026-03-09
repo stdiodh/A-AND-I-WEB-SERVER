@@ -102,9 +102,11 @@ class CourseQueryServiceTest : StringSpec({
     "코스 조회는 ENROLLED + track=FL 필터를 함께 적용한다" {
         val fixture = QueryFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
+        val commonCourse = queryCourse(id = "course-0", slug = "3rd-cs-basic", title = "공통 CS", fieldTag = CourseTrack.NO)
         val flCourse = queryCourse(id = "course-1", slug = "fl-basic", title = "FL 기초", fieldTag = CourseTrack.FL)
         val spCourse = queryCourse(id = "course-2", slug = "sp-basic", title = "SP 기초", fieldTag = CourseTrack.SP)
         val enrollments = listOf(
+            CourseEnrollment(id = "enroll-0", courseId = "course-0", userId = userId, status = EnrollmentStatus.ENROLLED),
             CourseEnrollment(id = "enroll-1", courseId = "course-1", userId = userId, status = EnrollmentStatus.ENROLLED),
             CourseEnrollment(id = "enroll-2", courseId = "course-2", userId = userId, status = EnrollmentStatus.ENROLLED),
         )
@@ -115,8 +117,8 @@ class CourseQueryServiceTest : StringSpec({
                 EnrollmentStatus.ENROLLED,
             )
         ).thenReturn(Flux.fromIterable(enrollments))
-        Mockito.`when`(fixture.courseRepository.findAllById(listOf("course-1", "course-2")))
-            .thenReturn(Flux.just(flCourse, spCourse))
+        Mockito.`when`(fixture.courseRepository.findAllById(listOf("course-0", "course-1", "course-2")))
+            .thenReturn(Flux.just(commonCourse, flCourse, spCourse))
 
         StepVerifier.create(
             fixture.service.getCourses(
@@ -127,14 +129,30 @@ class CourseQueryServiceTest : StringSpec({
             ).map { it.slug }.collectList()
         )
             .assertNext { slugs ->
-                slugs.shouldContainExactly("fl-basic")
+                slugs.shouldContainExactly("3rd-cs-basic", "fl-basic")
             }
             .verifyComplete()
     }
 
-    "코스 조회는 track=NO이면 빈 목록을 반환한다" {
+    "코스 조회는 track=NO이면 공통 코스만 반환한다" {
         val fixture = QueryFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
+        val commonCourse = queryCourse(id = "course-0", slug = "3rd-cs-basic", title = "공통 CS", fieldTag = CourseTrack.NO)
+        val flCourse = queryCourse(id = "course-1", slug = "fl-basic", title = "FL 기초", fieldTag = CourseTrack.FL)
+
+        Mockito.`when`(
+            fixture.courseEnrollmentRepository.findAllByUserIdAndStatus(
+                userId,
+                EnrollmentStatus.ENROLLED,
+            )
+        ).thenReturn(
+            Flux.just(
+                CourseEnrollment(id = "enroll-0", courseId = "course-0", userId = userId, status = EnrollmentStatus.ENROLLED),
+                CourseEnrollment(id = "enroll-1", courseId = "course-1", userId = userId, status = EnrollmentStatus.ENROLLED),
+            )
+        )
+        Mockito.`when`(fixture.courseRepository.findAllById(listOf("course-0", "course-1")))
+            .thenReturn(Flux.just(commonCourse, flCourse))
 
         StepVerifier.create(
             fixture.service.getCourses(
@@ -142,10 +160,10 @@ class CourseQueryServiceTest : StringSpec({
                 phase = null,
                 track = UserTrack.NO,
                 userId = userId,
-            ).collectList()
+            ).map { it.slug }.collectList()
         )
-            .assertNext { courses ->
-                courses.size shouldBe 0
+            .assertNext { slugs ->
+                slugs.shouldContainExactly("3rd-cs-basic")
             }
             .verifyComplete()
     }

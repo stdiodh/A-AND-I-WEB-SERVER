@@ -44,7 +44,7 @@ class CourseQueryV1Controller(
 
     @Operation(
         summary = "코스 목록 조회",
-        description = "track(FL/SP/NO), status, phase 조건으로 코스 목록을 조회합니다. track=NO면 빈 목록을 반환합니다.",
+        description = "track(FL/SP/NO), status, phase 조건으로 코스 목록을 조회합니다. NO는 공통 코스를 의미하며, FL/SP 조회 시 공통 코스도 함께 반환합니다.",
     )
     @ApiResponses(
         value = [

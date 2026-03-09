@@ -28,14 +28,14 @@ data class CourseMetadataPayload(
     example =
         """
         {
-          "slug": "fl-basic",
-          "fieldTag": "FL",
+          "slug": "3rd-cs-basic",
+          "fieldTag": "NO",
           "startDate": "2026-03-02",
           "endDate": "2026-03-30",
           "metadata": {
-            "title": "FL 기초",
-            "description": "프론트엔드 트랙 기초 과정",
-            "phase": "BASIC",
+            "title": "3rd_cs_basic",
+            "description": "공통 CS 과정",
+            "phase": "CS",
             "attributes": {}
           }
         }
@@ -43,10 +43,10 @@ data class CourseMetadataPayload(
 )
 data class CreateCourseRequest(
     @field:NotBlank
-    @field:Schema(description = "코스 슬러그(고유값)", example = "fl-basic")
+    @field:Schema(description = "코스 슬러그(고유값)", example = "3rd-cs-basic")
     val slug: String,
     @field:NotNull
-    @field:Schema(description = "분야 태그", example = "FL")
+    @field:Schema(description = "분야 태그(NO=공통, FL=프론트, SP=서버)", example = "NO")
     val fieldTag: CourseTrack,
     @field:NotNull
     @field:Schema(description = "과정 시작일", example = "2026-03-02")
@@ -64,13 +64,13 @@ data class CreateCourseRequest(
     example =
         """
         {
-          "fieldTag": "SP",
+          "fieldTag": "NO",
           "startDate": "2026-03-09",
           "endDate": "2026-04-06",
           "metadata": {
-            "title": "SP 기초",
-            "description": "서버 트랙 기초 과정",
-            "phase": "BASIC",
+            "title": "3rd_cs_basic",
+            "description": "공통 CS 과정",
+            "phase": "CS",
             "attributes": {}
           },
           "status": "PUBLISHED"
@@ -78,7 +78,7 @@ data class CreateCourseRequest(
         """,
 )
 data class UpdateCourseRequest(
-    @field:Schema(description = "분야 태그", example = "SP")
+    @field:Schema(description = "분야 태그(NO=공통, FL=프론트, SP=서버)", example = "NO")
     val fieldTag: CourseTrack? = null,
     @field:Schema(description = "과정 시작일", example = "2026-03-02")
     val startDate: LocalDate? = null,
@@ -108,7 +108,7 @@ data class CourseResponse(
     val id: String,
     @field:Schema(description = "코스 슬러그", example = "fl-basic")
     val slug: String,
-    @field:Schema(description = "분야 태그", example = "FL")
+    @field:Schema(description = "분야 태그(NO=공통, FL=프론트, SP=서버)", example = "NO")
     val fieldTag: CourseTrack,
     @field:Schema(description = "과정 시작일", example = "2026-03-02")
     val startDate: LocalDate,
