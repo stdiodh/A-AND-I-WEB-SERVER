@@ -14,7 +14,6 @@ import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
-import com.example.aandi_post_web_server.course.dtos.CreateCourseWeekRequest
 import com.example.aandi_post_web_server.course.dtos.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.dtos.UpdateCourseRequest
 import com.example.aandi_post_web_server.course.dtos.UpdateEnrollmentRequest
@@ -69,9 +68,6 @@ class CourseV1Service(
 
     fun getEnrollments(courseSlug: String): Flux<CourseEnrollmentResponse> =
         courseQueryService.getEnrollments(courseSlug)
-
-    fun createWeek(courseSlug: String, request: CreateCourseWeekRequest): Mono<CourseWeekResponse> =
-        courseCommandService.createWeek(courseSlug, request)
 
     fun getWeeks(courseSlug: String, userId: String): Flux<CourseWeekResponse> =
         courseQueryService.getWeeks(courseSlug, userId)

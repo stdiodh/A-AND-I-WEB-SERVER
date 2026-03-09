@@ -5,7 +5,6 @@ import com.example.aandi_post_web_server.course.enum.CourseStatus
 import com.example.aandi_post_web_server.course.enum.CourseTrack
 import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
 import io.swagger.v3.oas.annotations.media.Schema
-import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import java.time.Instant
@@ -24,7 +23,24 @@ data class CourseMetadataPayload(
     val attributes: Map<String, Any?> = emptyMap(),
 )
 
-@Schema(description = "코스 생성 요청")
+@Schema(
+    description = "코스 생성 요청",
+    example =
+        """
+        {
+          "slug": "fl-basic",
+          "fieldTag": "FL",
+          "startDate": "2026-03-02",
+          "endDate": "2026-03-30",
+          "metadata": {
+            "title": "FL 기초",
+            "description": "프론트엔드 트랙 기초 과정",
+            "phase": "BASIC",
+            "attributes": {}
+          }
+        }
+        """,
+)
 data class CreateCourseRequest(
     @field:NotBlank
     @field:Schema(description = "코스 슬러그(고유값)", example = "fl-basic")
@@ -43,7 +59,24 @@ data class CreateCourseRequest(
     val metadata: CourseMetadataPayload,
 )
 
-@Schema(description = "코스 수정 요청")
+@Schema(
+    description = "코스 수정 요청",
+    example =
+        """
+        {
+          "fieldTag": "SP",
+          "startDate": "2026-03-09",
+          "endDate": "2026-04-06",
+          "metadata": {
+            "title": "SP 기초",
+            "description": "서버 트랙 기초 과정",
+            "phase": "BASIC",
+            "attributes": {}
+          },
+          "status": "PUBLISHED"
+        }
+        """,
+)
 data class UpdateCourseRequest(
     @field:Schema(description = "분야 태그", example = "SP")
     val fieldTag: CourseTrack? = null,
@@ -91,14 +124,31 @@ data class CourseResponse(
     val updatedAt: Instant,
 )
 
-@Schema(description = "수강생 등록 요청")
+@Schema(
+    description = "수강생 등록 요청",
+    example =
+        """
+        {
+          "userId": "mekazon"
+        }
+        """,
+)
 data class EnrollCourseRequest(
     @field:NotBlank
     @field:Schema(description = "유저 식별값", example = "user-1")
     val userId: String,
 )
 
-@Schema(description = "수강 상태 변경 요청")
+@Schema(
+    description = "수강 상태 변경 요청",
+    example =
+        """
+        {
+          "status": "BANNED",
+          "banReason": "운영 정책 위반"
+        }
+        """,
+)
 data class UpdateEnrollmentRequest(
     @field:Schema(description = "변경할 수강 상태", example = "BANNED")
     val status: EnrollmentStatus,
@@ -124,20 +174,6 @@ data class CourseEnrollmentResponse(
     val banReason: String?,
     @field:Schema(description = "최종 변경 시각(KST(Asia/Seoul))", example = "2026-03-02T09:00:00+09:00")
     val updatedAt: Instant,
-)
-
-@Schema(description = "주차 생성/수정 요청")
-data class CreateCourseWeekRequest(
-    @field:Min(1)
-    @field:Schema(description = "주차 번호", example = "1")
-    val weekNo: Int,
-    @field:NotBlank
-    @field:Schema(description = "주차 제목", example = "1주차 - Kotlin 기본")
-    val title: String,
-    @field:Schema(description = "시작일", example = "2026-03-02")
-    val startDate: LocalDate? = null,
-    @field:Schema(description = "종료일", example = "2026-03-08")
-    val endDate: LocalDate? = null,
 )
 
 @Schema(description = "주차 응답")

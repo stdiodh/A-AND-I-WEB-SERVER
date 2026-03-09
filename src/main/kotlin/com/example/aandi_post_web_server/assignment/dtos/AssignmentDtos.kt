@@ -51,7 +51,42 @@ data class CreateAssignmentExampleRequest(
     val description: String? = null,
 )
 
-@Schema(description = "과제 생성 요청")
+@Schema(
+    description = "과제 생성 요청",
+    example =
+        """
+        {
+          "weekNo": 1,
+          "orderInWeek": 1,
+          "startAt": "2026-03-03T09:00:00+09:00",
+          "endAt": "2026-03-11T08:59:59+09:00",
+          "metadata": {
+            "title": "터미널 계산기",
+            "difficulty": "MID",
+            "description": "# 문제 설명",
+            "timeLimitMinutes": 60,
+            "learningGoals": ["함수 분리"],
+            "attributes": {
+              "language": "kotlin"
+            }
+          },
+          "requirements": [
+            {
+              "sortOrder": 1,
+              "requirementText": "함수 분리 필수"
+            }
+          ],
+          "examples": [
+            {
+              "seq": 1,
+              "inputText": "ADD 1\\nCLOSE",
+              "outputText": "+1",
+              "description": "기본 동작"
+            }
+          ]
+        }
+        """,
+)
 data class CreateAssignmentRequest(
     @field:Min(1)
     @field:Schema(description = "주차 번호", example = "1")
@@ -71,7 +106,41 @@ data class CreateAssignmentRequest(
     val examples: List<CreateAssignmentExampleRequest> = emptyList(),
 )
 
-@Schema(description = "과제 수정 요청")
+@Schema(
+    description = "과제 수정 요청",
+    example =
+        """
+        {
+          "orderInWeek": 2,
+          "startAt": "2026-03-04T09:00:00+09:00",
+          "endAt": "2026-03-12T08:59:59+09:00",
+          "metadata": {
+            "title": "터미널 계산기 응용",
+            "difficulty": "HIGH",
+            "description": "# 문제 설명(수정)",
+            "timeLimitMinutes": 90,
+            "learningGoals": ["입력 파싱", "함수 분리"],
+            "attributes": {
+              "language": "kotlin"
+            }
+          },
+          "requirements": [
+            {
+              "sortOrder": 1,
+              "requirementText": "함수 분리 필수"
+            }
+          ],
+          "examples": [
+            {
+              "seq": 1,
+              "inputText": "ADD 1\\nCLOSE",
+              "outputText": "+1",
+              "description": "기본 동작"
+            }
+          ]
+        }
+        """,
+)
 data class UpdateAssignmentRequest(
     @field:Min(1)
     @field:Schema(description = "주차 번호(옵션)", example = "1")

@@ -28,9 +28,7 @@ import com.example.aandi_post_web_server.course.domain.UserId
 import com.example.aandi_post_web_server.course.domain.WeekNo
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
-import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
-import com.example.aandi_post_web_server.course.dtos.CreateCourseWeekRequest
 import com.example.aandi_post_web_server.course.dtos.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.dtos.UpdateCourseRequest
 import com.example.aandi_post_web_server.course.dtos.UpdateEnrollmentRequest
@@ -202,45 +200,6 @@ class CourseCommandService(
             }
     }
 
-    fun createWeek(courseSlug: String, request: CreateCourseWeekRequest): Mono<CourseWeekResponse> {
-        val slug = parseCourseSlug(courseSlug)
-        val weekNo = parseWeekNo(request.weekNo)
-        if (request.endDate != null && request.startDate != null && request.endDate.isBefore(request.startDate)) {
-            return Mono.error(ResponseStatusException(HttpStatus.BAD_REQUEST, "endDate는 startDate보다 빠를 수 없습니다."))
-        }
-
-        return findCourseBySlug(slug)
-            .flatMap { course ->
-                val now = Instant.now()
-                val courseId = parseCourseId(requireNotNull(course.id))
-                courseWeekRepository.findByCourseIdAndWeekNo(courseId.value, weekNo.value)
-                    .flatMap { existing ->
-                        courseWeekRepository.save(
-                            existing.copy(
-                                title = request.title.trim(),
-                                startDate = request.startDate,
-                                endDate = request.endDate,
-                                updatedAt = now,
-                            )
-                        )
-                    }
-                    .switchIfEmpty(
-                        courseWeekRepository.save(
-                            CourseWeek(
-                                courseId = courseId.value,
-                                weekNo = weekNo.value,
-                                title = request.title.trim(),
-                                startDate = request.startDate,
-                                endDate = request.endDate,
-                                createdAt = now,
-                                updatedAt = now,
-                            )
-                        )
-                    )
-                    .map(::toWeekResponse)
-            }
-    }
-
     fun createAssignment(
         courseSlug: String,
         request: CreateAssignmentRequest,
@@ -257,7 +216,12 @@ class CourseCommandService(
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                ensureWeekExists(courseId, weekNo)
+                ensureWeekExistsOrCreate(
+                    courseId = courseId,
+                    weekNo = weekNo,
+                    startAt = request.startAt,
+                    endAt = request.endAt,
+                )
                     .then(
                         Mono.defer {
                             assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo.value, request.orderInWeek)
@@ -554,6 +518,31 @@ class CourseCommandService(
             .then()
     }
 
+    private fun ensureWeekExistsOrCreate(
+        courseId: CourseId,
+        weekNo: WeekNo,
+        startAt: Instant,
+        endAt: Instant,
+    ): Mono<Void> {
+        return courseWeekRepository.findByCourseIdAndWeekNo(courseId.value, weekNo.value)
+            .switchIfEmpty(
+                Mono.defer {
+                    courseWeekRepository.save(
+                        CourseWeek(
+                            courseId = courseId.value,
+                            weekNo = weekNo.value,
+                            title = "${weekNo.value}주차",
+                            startDate = startAt.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate(),
+                            endDate = endAt.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate(),
+                            createdAt = Instant.now(),
+                            updatedAt = Instant.now(),
+                        )
+                    )
+                }
+            )
+            .then()
+    }
+
     private fun deleteAssignmentsByCourse(courseId: String): Mono<Void> {
         return assignmentRepository.findAllByCourseId(courseId)
             .map { it.id }
@@ -645,7 +634,12 @@ class CourseCommandService(
         )
 
         val checkDuplicate = ensureAssignmentSlotAvailable(courseId, candidate, parsedAssignmentId)
-        val checkWeek = ensureWeekExists(courseId, parseWeekNo(targetWeekNo))
+        val checkWeek = ensureWeekExistsOrCreate(
+            courseId = courseId,
+            weekNo = parseWeekNo(targetWeekNo),
+            startAt = targetStartAt,
+            endAt = targetEndAt,
+        )
         return checkWeek
             .then(checkDuplicate)
             .then(assignmentRepository.save(candidate))
@@ -775,16 +769,6 @@ class CourseCommandService(
         bannedAt = enrollment.bannedAt,
         banReason = enrollment.banReason,
         updatedAt = enrollment.updatedAt,
-    )
-
-    private fun toWeekResponse(week: CourseWeek): CourseWeekResponse = CourseWeekResponse(
-        id = requireNotNull(week.id),
-        weekNo = week.weekNo,
-        title = week.title,
-        startDate = week.startDate,
-        endDate = week.endDate,
-        createdAt = week.createdAt,
-        updatedAt = week.updatedAt,
     )
 
     private fun toAssignmentDetailResponse(

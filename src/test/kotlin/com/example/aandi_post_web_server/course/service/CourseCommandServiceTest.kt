@@ -12,7 +12,6 @@ import com.example.aandi_post_web_server.assignment.repository.AssignmentExample
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
-import com.example.aandi_post_web_server.course.dtos.CreateCourseWeekRequest
 import com.example.aandi_post_web_server.course.dtos.CourseMetadataPayload
 import com.example.aandi_post_web_server.course.dtos.UpdateEnrollmentRequest
 import com.example.aandi_post_web_server.course.entity.Course
@@ -27,7 +26,6 @@ import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.assertions.throwables.shouldThrow
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.springframework.http.HttpStatus
@@ -234,85 +232,7 @@ class CourseCommandServiceTest : StringSpec({
             .verifyComplete()
     }
 
-    "주차 생성은 weekNo가 1 미만이면 BAD_REQUEST를 반환한다" {
-        val fixture = CommandFixture()
-
-        val error = shouldThrow<ResponseStatusException> {
-            fixture.service.createWeek(
-                courseSlug = "back-basic",
-                request = CreateCourseWeekRequest(
-                    weekNo = 0,
-                    title = "0주차",
-                ),
-            )
-        }
-
-        error.statusCode shouldBe HttpStatus.BAD_REQUEST
-    }
-
-    "주차 생성은 endDate가 startDate보다 빠르면 BAD_REQUEST를 반환한다" {
-        val fixture = CommandFixture()
-
-        StepVerifier.create(
-            fixture.service.createWeek(
-                courseSlug = "back-basic",
-                request = CreateCourseWeekRequest(
-                    weekNo = 1,
-                    title = "1주차",
-                    startDate = LocalDate.of(2026, 3, 10),
-                    endDate = LocalDate.of(2026, 3, 9),
-                ),
-            )
-        )
-            .expectErrorSatisfies { error ->
-                (error as ResponseStatusException).statusCode shouldBe HttpStatus.BAD_REQUEST
-            }
-            .verify()
-    }
-
-    "주차 업서트는 기존 주차를 수정한다" {
-        val fixture = CommandFixture()
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
-        val existing = CourseWeek(
-            id = "week-1",
-            courseId = "course-1",
-            weekNo = 1,
-            title = "기존 1주차",
-            startDate = LocalDate.of(2026, 3, 1),
-            endDate = LocalDate.of(2026, 3, 7),
-            createdAt = Instant.parse("2026-02-20T00:00:00Z"),
-            updatedAt = Instant.parse("2026-02-20T00:00:00Z"),
-        )
-
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("course-1", 1)).thenReturn(Mono.just(existing))
-        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
-            .thenAnswer { invocation ->
-                val week = invocation.arguments[0] as CourseWeek
-                Mono.just(week)
-            }
-
-        StepVerifier.create(
-            fixture.service.createWeek(
-                courseSlug = "back-basic",
-                request = CreateCourseWeekRequest(
-                    weekNo = 1,
-                    title = "수정된 1주차",
-                    startDate = LocalDate.of(2026, 3, 2),
-                    endDate = LocalDate.of(2026, 3, 8),
-                ),
-            )
-        )
-            .assertNext {
-                it.id shouldBe "week-1"
-                it.title shouldBe "수정된 1주차"
-                it.startDate shouldBe LocalDate.of(2026, 3, 2)
-                it.endDate shouldBe LocalDate.of(2026, 3, 8)
-            }
-            .verifyComplete()
-    }
-
-    "주차가 없으면 과제 생성은 NOT_FOUND를 반환한다" {
+    "주차가 없으면 과제 생성 시 주차를 자동 생성한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val request = CreateAssignmentRequest(
@@ -337,6 +257,11 @@ class CourseCommandServiceTest : StringSpec({
                 ArgumentMatchers.anyInt(),
             )
         ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenAnswer { invocation ->
+                val week = invocation.arguments[0] as CourseWeek
+                Mono.just(week.copy(id = "week-2"))
+            }
         Mockito.`when`(
             fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
                 ArgumentMatchers.anyString(),
@@ -344,6 +269,11 @@ class CourseCommandServiceTest : StringSpec({
                 ArgumentMatchers.anyInt(),
             )
         ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                Mono.just(assignment.copy(id = "assignment-1"))
+            }
 
         StepVerifier.create(
             fixture.service.createAssignment(
@@ -352,17 +282,16 @@ class CourseCommandServiceTest : StringSpec({
                 createdBy = "admin",
             )
         )
-            .expectErrorSatisfies { error ->
-                (error as ResponseStatusException).statusCode shouldBe HttpStatus.NOT_FOUND
+            .assertNext { created ->
+                created.id shouldBe "assignment-1"
+                created.weekNo shouldBe 2
+                created.orderInWeek shouldBe 1
             }
-            .verify()
+            .verifyComplete()
 
-        Mockito.verify(fixture.assignmentRepository, Mockito.never())
-            .findByCourseIdAndWeekNoAndOrderInWeek(
-                ArgumentMatchers.anyString(),
-                ArgumentMatchers.anyInt(),
-                ArgumentMatchers.anyInt(),
-            )
+        Mockito.verify(fixture.courseWeekRepository).save(ArgumentMatchers.any(CourseWeek::class.java))
+        Mockito.verify(fixture.assignmentRepository)
+            .findByCourseIdAndWeekNoAndOrderInWeek("course-1", 2, 1)
     }
 
     "DRAFT 과제는 배포 트리거할 수 없다" {

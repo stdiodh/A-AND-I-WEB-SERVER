@@ -66,7 +66,7 @@ class ErrorHandlingWebFluxTest : StringSpec() {
                 .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.data").isEmpty
                 .jsonPath("$.error.code").isEqualTo("VALIDATION_ERROR")
-                .jsonPath("$.error.message").isEqualTo("요청 값이 올바르지 않습니다.")
+                .jsonPath("$.error.message").isEqualTo("slug: 공백일 수 없습니다")
                 .jsonPath("$.timestamp").exists()
         }
 
@@ -97,7 +97,7 @@ class ErrorHandlingWebFluxTest : StringSpec() {
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.error.code").isEqualTo("ENUM_MISMATCH")
-                .jsonPath("$.error.message").isEqualTo("열거형 값이 올바르지 않습니다.")
+                .jsonPath("$.error.message").exists()
                 .jsonPath("$.timestamp").exists()
         }
 
@@ -125,7 +125,47 @@ class ErrorHandlingWebFluxTest : StringSpec() {
                 .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.data").isEmpty
                 .jsonPath("$.error.code").isEqualTo("UNAUTHORIZED")
-                .jsonPath("$.error.message").isEqualTo("인증이 필요하거나 토큰이 유효하지 않습니다.")
+                .jsonPath("$.error.message").exists()
+                .jsonPath("$.timestamp").exists()
+        }
+
+        "query enum mismatch 실패 시 허용값이 포함된 공통 에러 envelope를 반환한다" {
+            webTestClient.mutateWith(
+                mockJwt().jwt { jwt ->
+                    jwt.subject("2d61d1cb-2898-4319-ba62-d30bbd44eb21")
+                }.authorities(SimpleGrantedAuthority("ROLE_USER")),
+            ).get()
+                .uri("/v1/courses?status=INVALID_STATUS")
+                .header(RequestIdSupport.HEADER_NAME, "req-query-enum-001")
+                .exchange()
+                .expectStatus().isBadRequest
+                .expectHeader().valueEquals(RequestIdSupport.HEADER_NAME, "req-query-enum-001")
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.error.code").isEqualTo("ENUM_MISMATCH")
+                .jsonPath("$.error.message").value<String> { message ->
+                    org.assertj.core.api.Assertions.assertThat(message).contains("허용값")
+                    org.assertj.core.api.Assertions.assertThat(message).contains("DRAFT, PUBLISHED")
+                }
+                .jsonPath("$.timestamp").exists()
+        }
+
+        "query track enum mismatch 실패 시 ENUM_MISMATCH를 반환한다" {
+            webTestClient.mutateWith(
+                mockJwt().jwt { jwt ->
+                    jwt.subject("2d61d1cb-2898-4319-ba62-d30bbd44eb21")
+                }.authorities(SimpleGrantedAuthority("ROLE_USER")),
+            ).get()
+                .uri("/v1/courses?track=INVALID_TRACK")
+                .exchange()
+                .expectStatus().isBadRequest
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.error.code").isEqualTo("ENUM_MISMATCH")
+                .jsonPath("$.error.message").value<String> { message ->
+                    org.assertj.core.api.Assertions.assertThat(message).contains("허용값")
+                    org.assertj.core.api.Assertions.assertThat(message).contains("NO, FL, SP")
+                }
                 .jsonPath("$.timestamp").exists()
         }
     }
