@@ -151,6 +151,22 @@ class CourseQueryService(
             .map(::toAssignmentSummaryResponse)
     }
 
+    fun getAdminAssignments(
+        courseSlug: String,
+        weekNo: Int?,
+        status: AssignmentStatus?,
+    ): Flux<AssignmentSummaryResponse> {
+        val slug = parseCourseSlug(courseSlug)
+        val parsedWeekNo = weekNo?.let { parseWeekNo(it) }
+        return findCourseBySlug(slug)
+            .flatMapMany { course ->
+                val courseId = parseCourseId(requireNotNull(course.id))
+                findAdminAssignmentsByFilter(courseId, parsedWeekNo, status)
+            }
+            .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
+            .map(::toAssignmentSummaryResponse)
+    }
+
     fun getAssignmentDetail(
         courseSlug: String,
         assignmentId: String,
@@ -166,6 +182,21 @@ class CourseQueryService(
                 assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
                     .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
                     .flatMap { assignment -> ensurePublishedAssignment(assignment, parsedAssignmentId) }
+                    .flatMap { assignment -> loadAssignmentDetail(course.slug, assignment, parsedAssignmentId) }
+            }
+    }
+
+    fun getAdminAssignmentDetail(
+        courseSlug: String,
+        assignmentId: String,
+    ): Mono<AssignmentDetailResponse> {
+        val slug = parseCourseSlug(courseSlug)
+        val parsedAssignmentId = parseAssignmentId(assignmentId)
+        return findCourseBySlug(slug)
+            .flatMap { course ->
+                val courseId = parseCourseId(requireNotNull(course.id))
+                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
+                    .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
                     .flatMap { assignment -> loadAssignmentDetail(course.slug, assignment, parsedAssignmentId) }
             }
     }
@@ -228,6 +259,23 @@ class CourseQueryService(
             return assignmentRepository.findAllByCourseIdAndWeekNoAndStatus(courseId.value, weekNo.value, status)
         }
         return assignmentRepository.findAllByCourseIdAndStatus(courseId.value, status)
+    }
+
+    private fun findAdminAssignmentsByFilter(
+        courseId: CourseId,
+        weekNo: WeekNo?,
+        status: AssignmentStatus?,
+    ): Flux<Assignment> {
+        if (weekNo != null && status != null) {
+            return assignmentRepository.findAllByCourseIdAndWeekNoAndStatus(courseId.value, weekNo.value, status)
+        }
+        if (weekNo != null) {
+            return assignmentRepository.findAllByCourseIdAndWeekNo(courseId.value, weekNo.value)
+        }
+        if (status != null) {
+            return assignmentRepository.findAllByCourseIdAndStatus(courseId.value, status)
+        }
+        return assignmentRepository.findAllByCourseId(courseId.value)
     }
 
     private fun loadDeliveries(

@@ -2,9 +2,11 @@ package com.example.aandi_post_web_server.course.controller
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDeliveryResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataResponse
+import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
@@ -338,6 +340,93 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 request,
                 "8ee88b63-526d-49dc-9e72-a96be0f81385",
             )
+        }
+
+        "admin 과제 목록 조회 API는 ADMIN 토큰으로 호출하면 성공한다" {
+            Mockito.`when`(
+                courseV1Service.getAdminAssignments(
+                    courseSlug = "back-basic",
+                    weekNo = 1,
+                    status = AssignmentStatus.DRAFT,
+                )
+            ).thenReturn(
+                Flux.just(
+                    AssignmentSummaryResponse(
+                        id = "assignment-1",
+                        weekNo = 1,
+                        orderInWeek = 1,
+                        startAt = Instant.parse("2026-03-01T00:00:00Z"),
+                        endAt = Instant.parse("2026-03-02T00:00:00Z"),
+                        status = AssignmentStatus.DRAFT,
+                        metadata = AssignmentMetadataResponse(
+                            title = "터미널 계산기",
+                            difficulty = AssignmentDifficulty.MID,
+                            description = "문제",
+                            timeLimitMinutes = 60,
+                            learningGoals = emptyList(),
+                            attributes = emptyMap(),
+                        ),
+                    )
+                )
+            )
+
+            webTestClient.mutateWith(
+                mockJwt().authorities(SimpleGrantedAuthority("ROLE_ADMIN")),
+            ).get()
+                .uri("/v1/admin/courses/back-basic/assignments?weekNo=1&status=DRAFT")
+                .exchange()
+                .expectStatus().isOk
+                .expectBody()
+                .jsonPath("$.data[0].id").isEqualTo("assignment-1")
+                .jsonPath("$.data[0].status").isEqualTo("DRAFT")
+        }
+
+        "admin 과제 수정 API는 ADMIN이 아니면 403을 반환한다" {
+            webTestClient.mutateWith(
+                mockJwt().authorities(SimpleGrantedAuthority("ROLE_USER")),
+            ).patch()
+                .uri("/v1/admin/courses/back-basic/assignments/assignment-1")
+                .bodyValue(mapOf("orderInWeek" to 2))
+                .exchange()
+                .expectStatus().isForbidden
+        }
+
+        "admin 과제 삭제 API는 ADMIN 토큰으로 호출하면 성공한다" {
+            Mockito.`when`(courseV1Service.deleteAssignment("back-basic", "assignment-1"))
+                .thenReturn(Mono.empty())
+
+            webTestClient.mutateWith(
+                mockJwt().authorities(SimpleGrantedAuthority("ROLE_ADMIN")),
+            ).delete()
+                .uri("/v1/admin/courses/back-basic/assignments/assignment-1")
+                .exchange()
+                .expectStatus().isOk
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(true)
+        }
+
+        "admin 과제 수정 API는 ADMIN 토큰으로 호출하면 성공한다" {
+            val response = sampleAssignmentDetailResponse()
+            val request = UpdateAssignmentRequest(
+                orderInWeek = 2,
+            )
+            Mockito.`when`(
+                courseV1Service.updateAssignment(
+                    courseSlug = "back-basic",
+                    assignmentId = "assignment-1",
+                    request = request,
+                )
+            ).thenReturn(Mono.just(response))
+
+            webTestClient.mutateWith(
+                mockJwt().authorities(SimpleGrantedAuthority("ROLE_ADMIN")),
+            ).patch()
+                .uri("/v1/admin/courses/back-basic/assignments/assignment-1")
+                .bodyValue(mapOf("orderInWeek" to 2))
+                .exchange()
+                .expectStatus().isOk
+                .expectBody()
+                .jsonPath("$.data.id").isEqualTo("assignment-1")
         }
 
         "admin 배포 조회 API는 ADMIN이 아니면 403을 반환한다" {

@@ -6,6 +6,7 @@ import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryRespon
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.PublishAssignmentResponse
 import com.example.aandi_post_web_server.assignment.dtos.TriggerDeliveriesResponse
+import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
@@ -81,6 +82,29 @@ class CourseV1Service(
         createdBy: String,
     ): Mono<AssignmentDetailResponse> =
         courseCommandService.createAssignment(courseSlug, request, createdBy)
+
+    fun updateAssignment(
+        courseSlug: String,
+        assignmentId: String,
+        request: UpdateAssignmentRequest,
+    ): Mono<AssignmentDetailResponse> =
+        courseCommandService.updateAssignment(courseSlug, assignmentId, request)
+
+    fun deleteAssignment(courseSlug: String, assignmentId: String): Mono<Void> =
+        courseCommandService.deleteAssignment(courseSlug, assignmentId)
+
+    fun getAdminAssignments(
+        courseSlug: String,
+        weekNo: Int?,
+        status: AssignmentStatus?,
+    ): Flux<AssignmentSummaryResponse> =
+        courseQueryService.getAdminAssignments(courseSlug, weekNo, status)
+
+    fun getAdminAssignmentDetail(
+        courseSlug: String,
+        assignmentId: String,
+    ): Mono<AssignmentDetailResponse> =
+        courseQueryService.getAdminAssignmentDetail(courseSlug, assignmentId)
 
     fun publishAssignment(courseSlug: String, assignmentId: String): Mono<PublishAssignmentResponse> =
         courseCommandService.publishAssignment(courseSlug, assignmentId)

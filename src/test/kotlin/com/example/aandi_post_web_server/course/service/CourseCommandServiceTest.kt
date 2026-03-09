@@ -4,6 +4,7 @@ import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository
@@ -92,6 +93,88 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.courseWeekRepository).deleteAllByCourseId("course-1")
         Mockito.verify(fixture.courseEnrollmentRepository).deleteAllByCourseId("course-1")
         Mockito.verify(fixture.courseRepository).deleteById("course-1")
+    }
+
+    "과제 삭제는 과제 연관 데이터를 하드 삭제한다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignment = commandAssignment(id = "assignment-1", courseId = "course-1", status = AssignmentStatus.DRAFT)
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId("assignment-1", "course-1"))
+            .thenReturn(Mono.just(assignment))
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf("assignment-1"))).thenReturn(Mono.just(1))
+        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf("assignment-1"))).thenReturn(Mono.just(1))
+        Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf("assignment-1"))).thenReturn(Mono.just(0))
+        Mockito.`when`(fixture.assignmentRepository.deleteById("assignment-1")).thenReturn(Mono.empty())
+
+        StepVerifier.create(fixture.service.deleteAssignment("back-basic", "assignment-1"))
+            .verifyComplete()
+
+        Mockito.verify(fixture.assignmentRequirementRepository).deleteAllByAssignmentIdIn(listOf("assignment-1"))
+        Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(listOf("assignment-1"))
+        Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(listOf("assignment-1"))
+        Mockito.verify(fixture.assignmentRepository).deleteById("assignment-1")
+    }
+
+    "과제 수정은 전달된 필드를 반영해 저장한다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val target = commandAssignment(id = "assignment-1", courseId = "course-1", status = AssignmentStatus.DRAFT)
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId("assignment-1", "course-1"))
+            .thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        )
+            .thenReturn(
+                Mono.just(
+                    CourseWeek(
+                        id = "week-2",
+                        courseId = "course-1",
+                        weekNo = 2,
+                        title = "2주차",
+                    )
+                )
+            )
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        )
+            .thenReturn(Mono.empty())
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                Mono.just(assignment)
+            }
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("assignment-1"))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("assignment-1"))
+            .thenReturn(Flux.empty())
+
+        StepVerifier.create(
+            fixture.service.updateAssignment(
+                courseSlug = "back-basic",
+                assignmentId = "assignment-1",
+                request = UpdateAssignmentRequest(
+                    weekNo = 2,
+                    orderInWeek = 2,
+                ),
+            )
+        )
+            .assertNext { updated ->
+                updated.id shouldBe "assignment-1"
+                updated.weekNo shouldBe 2
+                updated.orderInWeek shouldBe 2
+            }
+            .verifyComplete()
     }
 
     "BANNED 상태 변경은 banReason이 필수다" {

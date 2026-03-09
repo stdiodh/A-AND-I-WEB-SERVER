@@ -71,6 +71,26 @@ data class CreateAssignmentRequest(
     val examples: List<CreateAssignmentExampleRequest> = emptyList(),
 )
 
+@Schema(description = "과제 수정 요청")
+data class UpdateAssignmentRequest(
+    @field:Min(1)
+    @field:Schema(description = "주차 번호(옵션)", example = "1")
+    val weekNo: Int? = null,
+    @field:Min(1)
+    @field:Schema(description = "주차 내 순서(옵션)", example = "1")
+    val orderInWeek: Int? = null,
+    @field:Schema(description = "시작 시각(옵션, KST(Asia/Seoul))", example = "2026-03-03T09:00:00+09:00")
+    val startAt: Instant? = null,
+    @field:Schema(description = "종료 시각(옵션, KST(Asia/Seoul))", example = "2026-03-11T08:59:59+09:00")
+    val endAt: Instant? = null,
+    @field:Schema(description = "과제 메타데이터(전체 교체, 옵션)")
+    val metadata: AssignmentMetadataPayload? = null,
+    @field:Schema(description = "요구사항 목록(전체 교체, 옵션)")
+    val requirements: List<CreateAssignmentRequirementRequest>? = null,
+    @field:Schema(description = "예시 입출력 목록(전체 교체, 옵션)")
+    val examples: List<CreateAssignmentExampleRequest>? = null,
+)
+
 @Schema(description = "과제 메타데이터 응답")
 data class AssignmentMetadataResponse(
     @field:Schema(description = "과제 제목", example = "터미널 계산기")

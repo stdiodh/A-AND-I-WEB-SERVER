@@ -51,6 +51,54 @@ class CourseQueryServiceTest : StringSpec({
             .verifyComplete()
     }
 
+    "관리자 과제 목록 조회는 수강 상태와 무관하게 status 필터를 적용한다" {
+        val fixture = QueryFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val draft = queryAssignment(id = "assignment-1", courseId = "course-1").copy(status = AssignmentStatus.DRAFT)
+        val published = queryAssignment(id = "assignment-2", courseId = "course-1")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseIdAndStatus("course-1", AssignmentStatus.PUBLISHED))
+            .thenReturn(Flux.just(published))
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseIdAndStatus("course-1", AssignmentStatus.DRAFT))
+            .thenReturn(Flux.just(draft))
+
+        StepVerifier.create(
+            fixture.service.getAdminAssignments(
+                courseSlug = "back-basic",
+                weekNo = null,
+                status = AssignmentStatus.DRAFT,
+            ).map { it.id }.collectList()
+        )
+            .assertNext { ids ->
+                ids.shouldContainExactly("assignment-1")
+            }
+            .verifyComplete()
+    }
+
+    "관리자 과제 상세 조회는 DRAFT 과제도 조회할 수 있다" {
+        val fixture = QueryFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val draft = queryAssignment(id = "assignment-1", courseId = "course-1").copy(status = AssignmentStatus.DRAFT, publishedAt = null)
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId("assignment-1", "course-1"))
+            .thenReturn(Mono.just(draft))
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("assignment-1"))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("assignment-1"))
+            .thenReturn(Flux.empty())
+
+        StepVerifier.create(
+            fixture.service.getAdminAssignmentDetail("back-basic", "assignment-1")
+        )
+            .assertNext { detail ->
+                detail.id shouldBe "assignment-1"
+                detail.status shouldBe AssignmentStatus.DRAFT
+            }
+            .verifyComplete()
+    }
+
     "코스 조회는 ENROLLED + track=FL 필터를 함께 적용한다" {
         val fixture = QueryFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
