@@ -26,34 +26,7 @@ data class Course(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val metadata: CourseMetadata,
-    val status: CourseStatus = CourseStatus.ACTIVE,
+    val status: CourseStatus = CourseStatus.PUBLISHED,
     val createdAt: Instant = Instant.now(),
     val updatedAt: Instant = Instant.now(),
-) {
-    constructor(
-        id: String? = null,
-        title: String,
-        slug: String,
-        description: String? = null,
-        phase: CoursePhase = CoursePhase.BASIC,
-        targetTrack: CourseTrack = CourseTrack.FL,
-        status: CourseStatus = CourseStatus.ACTIVE,
-        createdAt: Instant = Instant.now(),
-        updatedAt: Instant = Instant.now(),
-    ) : this(
-        id = id,
-        slug = slug,
-        fieldTag = targetTrack,
-        startDate = LocalDate.of(1970, 1, 1),
-        endDate = LocalDate.of(2099, 12, 31),
-        metadata = CourseMetadata(
-            title = title,
-            description = description,
-            phase = phase,
-            attributes = emptyMap(),
-        ),
-        status = status,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-    )
-}
+)

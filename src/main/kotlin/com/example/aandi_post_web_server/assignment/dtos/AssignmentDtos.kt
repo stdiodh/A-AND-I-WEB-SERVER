@@ -1,5 +1,4 @@
 package com.example.aandi_post_web_server.assignment.dtos
-
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
@@ -7,51 +6,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import java.time.Instant
-
-@Schema(description = "레거시 순번-문자열 요청 모델")
-data class LegacySeqStringRequest(
-    @field:Min(1)
-    @field:Schema(description = "순번", example = "1")
-    val seq: Int,
-    @field:NotBlank
-    @field:Schema(description = "내용", example = "함수 분리 필수")
-    val content: String,
-)
-
-@Schema(description = "레거시 예시 입출력 요청 모델")
-data class LegacyExampleIORequest(
-    @field:Min(1)
-    @field:Schema(description = "예시 순번", example = "1")
-    val seq: Int,
-    @field:NotBlank
-    @field:Schema(description = "입력 예시", example = "ADD 1\\nCLOSE")
-    val input: String,
-    @field:NotBlank
-    @field:Schema(description = "출력 예시", example = "+1")
-    val output: String,
-)
-
-@Schema(description = "레거시 난이도")
-enum class LegacyAssignmentLevel {
-    LOW,
-    MEDIUM,
-    HIGH,
-    VERYHIGH,
-}
-
-private fun AssignmentDifficulty.toLegacyLevel(): LegacyAssignmentLevel = when (this) {
-    AssignmentDifficulty.LOW -> LegacyAssignmentLevel.LOW
-    AssignmentDifficulty.MID -> LegacyAssignmentLevel.MEDIUM
-    AssignmentDifficulty.HIGH -> LegacyAssignmentLevel.HIGH
-    AssignmentDifficulty.VERY_HIGH -> LegacyAssignmentLevel.VERYHIGH
-}
-
-private fun LegacyAssignmentLevel.toDifficulty(): AssignmentDifficulty = when (this) {
-    LegacyAssignmentLevel.LOW -> AssignmentDifficulty.LOW
-    LegacyAssignmentLevel.MEDIUM -> AssignmentDifficulty.MID
-    LegacyAssignmentLevel.HIGH -> AssignmentDifficulty.HIGH
-    LegacyAssignmentLevel.VERYHIGH -> AssignmentDifficulty.VERY_HIGH
-}
 
 @Schema(description = "과제 메타데이터")
 data class AssignmentMetadataPayload(
@@ -97,7 +51,42 @@ data class CreateAssignmentExampleRequest(
     val description: String? = null,
 )
 
-@Schema(description = "과제 생성 요청")
+@Schema(
+    description = "과제 생성 요청",
+    example =
+        """
+        {
+          "weekNo": 1,
+          "orderInWeek": 1,
+          "startAt": "2026-03-03T09:00:00+09:00",
+          "endAt": "2026-03-11T08:59:59+09:00",
+          "metadata": {
+            "title": "터미널 계산기",
+            "difficulty": "MID",
+            "description": "# 문제 설명",
+            "timeLimitMinutes": 60,
+            "learningGoals": ["함수 분리"],
+            "attributes": {
+              "language": "kotlin"
+            }
+          },
+          "requirements": [
+            {
+              "sortOrder": 1,
+              "requirementText": "함수 분리 필수"
+            }
+          ],
+          "examples": [
+            {
+              "seq": 1,
+              "inputText": "ADD 1\\nCLOSE",
+              "outputText": "+1",
+              "description": "기본 동작"
+            }
+          ]
+        }
+        """,
+)
 data class CreateAssignmentRequest(
     @field:Min(1)
     @field:Schema(description = "주차 번호", example = "1")
@@ -112,68 +101,64 @@ data class CreateAssignmentRequest(
     @field:Schema(description = "과제 메타데이터")
     val metadata: AssignmentMetadataPayload,
     @field:Schema(description = "요구사항 목록")
-    val requirement: List<LegacySeqStringRequest> = emptyList(),
+    val requirements: List<CreateAssignmentRequirementRequest> = emptyList(),
     @field:Schema(description = "예시 입출력 목록")
-    val exampleIO: List<LegacyExampleIORequest> = emptyList(),
-) {
-    constructor(
-        week: Int,
-        seq: Int,
-        title: String,
-        content: String,
-        requirement: List<LegacySeqStringRequest> = emptyList(),
-        objects: List<LegacySeqStringRequest> = emptyList(),
-        exampleIO: List<LegacyExampleIORequest> = emptyList(),
-        reportType: String? = null,
-        startAt: Instant,
-        endAt: Instant,
-        level: LegacyAssignmentLevel,
-        timeLimitMinutes: Int = 60,
-    ) : this(
-        weekNo = week,
-        orderInWeek = seq,
-        startAt = startAt,
-        endAt = endAt,
-        metadata = AssignmentMetadataPayload(
-            title = title,
-            difficulty = level.toDifficulty(),
-            description = content,
-            timeLimitMinutes = timeLimitMinutes,
-            learningGoals = objects.sortedBy { it.seq }.map { it.content.trim() },
-            attributes = reportType?.let { mapOf("reportType" to it) } ?: emptyMap(),
-        ),
-        requirement = requirement,
-        exampleIO = exampleIO,
-    )
+    val examples: List<CreateAssignmentExampleRequest> = emptyList(),
+)
 
-    val week: Int
-        get() = weekNo
-
-    val seq: Int
-        get() = orderInWeek
-
-    val requirements: List<CreateAssignmentRequirementRequest>
-        get() = requirement
-            .sortedBy { it.seq }
-            .map {
-                CreateAssignmentRequirementRequest(
-                    sortOrder = it.seq,
-                    requirementText = it.content.trim(),
-                )
+@Schema(
+    description = "과제 수정 요청",
+    example =
+        """
+        {
+          "orderInWeek": 2,
+          "startAt": "2026-03-04T09:00:00+09:00",
+          "endAt": "2026-03-12T08:59:59+09:00",
+          "metadata": {
+            "title": "터미널 계산기 응용",
+            "difficulty": "HIGH",
+            "description": "# 문제 설명(수정)",
+            "timeLimitMinutes": 90,
+            "learningGoals": ["입력 파싱", "함수 분리"],
+            "attributes": {
+              "language": "kotlin"
             }
-
-    val examples: List<CreateAssignmentExampleRequest>
-        get() = exampleIO
-            .sortedBy { it.seq }
-            .map {
-                CreateAssignmentExampleRequest(
-                    seq = it.seq,
-                    inputText = it.input,
-                    outputText = it.output,
-                    description = null,
-                )
+          },
+          "requirements": [
+            {
+              "sortOrder": 1,
+              "requirementText": "함수 분리 필수"
             }
-}
+          ],
+          "examples": [
+            {
+              "seq": 1,
+              "inputText": "ADD 1\\nCLOSE",
+              "outputText": "+1",
+              "description": "기본 동작"
+            }
+          ]
+        }
+        """,
+)
+data class UpdateAssignmentRequest(
+    @field:Min(1)
+    @field:Schema(description = "주차 번호(옵션)", example = "1")
+    val weekNo: Int? = null,
+    @field:Min(1)
+    @field:Schema(description = "주차 내 순서(옵션)", example = "1")
+    val orderInWeek: Int? = null,
+    @field:Schema(description = "시작 시각(옵션, KST(Asia/Seoul))", example = "2026-03-03T09:00:00+09:00")
+    val startAt: Instant? = null,
+    @field:Schema(description = "종료 시각(옵션, KST(Asia/Seoul))", example = "2026-03-11T08:59:59+09:00")
+    val endAt: Instant? = null,
+    @field:Schema(description = "과제 메타데이터(전체 교체, 옵션)")
+    val metadata: AssignmentMetadataPayload? = null,
+    @field:Schema(description = "요구사항 목록(전체 교체, 옵션)")
+    val requirements: List<CreateAssignmentRequirementRequest>? = null,
+    @field:Schema(description = "예시 입출력 목록(전체 교체, 옵션)")
+    val examples: List<CreateAssignmentExampleRequest>? = null,
+)
 
 @Schema(description = "과제 메타데이터 응답")
 data class AssignmentMetadataResponse(
@@ -197,15 +182,7 @@ data class AssignmentRequirementResponse(
     val sortOrder: Int,
     @field:Schema(description = "요구사항 내용", example = "함수 분리 필수")
     val requirementText: String,
-) {
-    @get:Schema(description = "요구사항 순번(레거시 필드)", example = "1")
-    val seq: Int
-        get() = sortOrder
-
-    @get:Schema(description = "요구사항 내용(레거시 필드)", example = "함수 분리 필수")
-    val content: String
-        get() = requirementText
-}
+)
 
 @Schema(description = "과제 예시 입출력 응답")
 data class AssignmentExampleResponse(
@@ -217,15 +194,7 @@ data class AssignmentExampleResponse(
     val outputText: String,
     @field:Schema(description = "예시 설명")
     val description: String?,
-) {
-    @get:Schema(description = "입력 예시(레거시 필드)", example = "ADD 1\\nCLOSE")
-    val input: String
-        get() = inputText
-
-    @get:Schema(description = "출력 예시(레거시 필드)", example = "+1")
-    val output: String
-        get() = outputText
-}
+)
 
 @Schema(description = "과제 요약 응답")
 data class AssignmentSummaryResponse(
@@ -243,39 +212,7 @@ data class AssignmentSummaryResponse(
     val status: AssignmentStatus,
     @field:Schema(description = "과제 메타데이터")
     val metadata: AssignmentMetadataResponse,
-) {
-    @get:Schema(description = "주차 번호(레거시 필드)", example = "1")
-    val week: Int
-        get() = weekNo
-
-    @get:Schema(description = "주차 내 순번(레거시 필드)", example = "1")
-    val seq: Int
-        get() = orderInWeek
-
-    @get:Schema(description = "주차 내 순번(레거시 필드)", example = "1")
-    val seqInWeek: Int
-        get() = orderInWeek
-
-    @get:Schema(description = "레거시 난이도", example = "MEDIUM")
-    val level: LegacyAssignmentLevel
-        get() = metadata.difficulty.toLegacyLevel()
-
-    @get:Schema(description = "오픈 시각(레거시: startAt, KST(Asia/Seoul))")
-    val openAt: Instant
-        get() = startAt
-
-    @get:Schema(description = "마감 시각(레거시: endAt, KST(Asia/Seoul))")
-    val dueAt: Instant
-        get() = endAt
-
-    @get:Schema(description = "과제 제목(레거시 필드)", example = "터미널 계산기")
-    val title: String
-        get() = metadata.title
-
-    @get:Schema(description = "난이도(레거시 필드)", example = "MID")
-    val difficulty: AssignmentDifficulty
-        get() = metadata.difficulty
-}
+)
 
 @Schema(description = "과제 상세 응답")
 data class AssignmentDetailResponse(
@@ -301,99 +238,7 @@ data class AssignmentDetailResponse(
     val requirements: List<AssignmentRequirementResponse>,
     @field:Schema(description = "예시 입출력 목록")
     val examples: List<AssignmentExampleResponse>,
-) {
-    constructor(
-        id: String,
-        courseSlug: String,
-        weekNo: Int,
-        seqInWeek: Int,
-        title: String,
-        difficulty: AssignmentDifficulty,
-        contentMd: String,
-        timeLimitMinutes: Int,
-        openAt: Instant,
-        dueAt: Instant,
-        status: AssignmentStatus,
-        publishedAt: Instant?,
-        requirements: List<AssignmentRequirementResponse>,
-        examples: List<AssignmentExampleResponse>,
-    ) : this(
-        id = id,
-        courseSlug = courseSlug,
-        weekNo = weekNo,
-        orderInWeek = seqInWeek,
-        startAt = openAt,
-        endAt = dueAt,
-        status = status,
-        publishedAt = publishedAt,
-        metadata = AssignmentMetadataResponse(
-            title = title,
-            difficulty = difficulty,
-            description = contentMd,
-            timeLimitMinutes = timeLimitMinutes,
-            learningGoals = emptyList(),
-            attributes = emptyMap(),
-        ),
-        requirements = requirements,
-        examples = examples,
-    )
-
-    @get:Schema(description = "주차 번호(레거시 필드)", example = "1")
-    val week: Int
-        get() = weekNo
-
-    @get:Schema(description = "주차 내 순번(레거시 필드)", example = "1")
-    val seq: Int
-        get() = orderInWeek
-
-    @get:Schema(description = "주차 내 순번(레거시 필드)", example = "1")
-    val seqInWeek: Int
-        get() = orderInWeek
-
-    @get:Schema(description = "레거시 난이도", example = "MEDIUM")
-    val level: LegacyAssignmentLevel
-        get() = metadata.difficulty.toLegacyLevel()
-
-    @get:Schema(description = "과제 제목(레거시 필드)", example = "터미널 계산기")
-    val title: String
-        get() = metadata.title
-
-    @get:Schema(description = "난이도(레거시 필드)", example = "MID")
-    val difficulty: AssignmentDifficulty
-        get() = metadata.difficulty
-
-    @get:Schema(description = "과제 본문(레거시 필드)")
-    val content: String
-        get() = metadata.description
-
-    @get:Schema(description = "과제 본문(레거시 필드)")
-    val contentMd: String
-        get() = metadata.description
-
-    @get:Schema(description = "제한 시간(분)(레거시 필드)", example = "60")
-    val timeLimitMinutes: Int
-        get() = metadata.timeLimitMinutes
-
-    @get:Schema(description = "오픈 시각(레거시: startAt, KST(Asia/Seoul))")
-    val openAt: Instant
-        get() = startAt
-
-    @get:Schema(description = "마감 시각(레거시: endAt, KST(Asia/Seoul))")
-    val dueAt: Instant
-        get() = endAt
-
-    @get:Schema(description = "요구사항 목록(레거시 필드)")
-    val requirement: List<LegacySeqStringRequest>
-        get() = requirements.map { LegacySeqStringRequest(seq = it.sortOrder, content = it.requirementText) }
-
-    @get:Schema(description = "학습 목표 목록(레거시 필드)")
-    val objects: List<LegacySeqStringRequest>
-        get() = metadata.learningGoals.mapIndexed { index, goal -> LegacySeqStringRequest(index + 1, goal) }
-
-    @get:Schema(description = "예시 입출력 목록(레거시 필드)")
-    val exampleIO: List<LegacyExampleIORequest>
-        get() = examples.map { LegacyExampleIORequest(seq = it.seq, input = it.inputText, output = it.outputText) }
-}
+)
 
 @Schema(description = "과제 게시 응답")
 data class PublishAssignmentResponse(

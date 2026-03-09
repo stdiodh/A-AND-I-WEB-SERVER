@@ -3,6 +3,7 @@ package com.example.aandi_post_web_server.common.error
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
+import org.springframework.core.convert.ConversionFailedException
 import org.springframework.core.codec.CodecException
 import org.springframework.core.codec.DecodingException
 import org.springframework.http.HttpStatus
@@ -84,7 +85,11 @@ class ErrorResponseFactory {
         )
 
     fun fromValidation(exchange: ServerWebExchange, ex: WebExchangeBindException): ApiErrorResult {
-        val firstFieldErrorMessage = ex.bindingResult.fieldErrors.firstOrNull()?.defaultMessage
+        val firstFieldError = ex.bindingResult.fieldErrors.firstOrNull()
+        val firstFieldErrorMessage = firstFieldError?.let {
+            val reason = it.defaultMessage?.takeIf { msg -> msg.isNotBlank() } ?: "값이 유효하지 않습니다."
+            "${it.field}: $reason"
+        }
         val firstObjectErrorMessage = ex.bindingResult.globalErrors.firstOrNull()?.defaultMessage
         return build(
             exchange = exchange,
@@ -96,6 +101,11 @@ class ErrorResponseFactory {
     }
 
     fun fromServerWebInput(exchange: ServerWebExchange, ex: ServerWebInputException): ApiErrorResult {
+        val conversionFailed = ex.findCause<ConversionFailedException>()
+        if (conversionFailed != null) {
+            return fromConversionFailed(exchange, conversionFailed)
+        }
+
         val invalidFormat = ex.findCause<InvalidFormatException>()
         if (invalidFormat != null) {
             return fromInvalidFormat(exchange, invalidFormat)
@@ -140,13 +150,55 @@ class ErrorResponseFactory {
     }
 
     fun fromInvalidFormat(exchange: ServerWebExchange, ex: InvalidFormatException): ApiErrorResult {
-        val code = if (ex.targetType?.isEnum == true) ErrorCode.ENUM_MISMATCH else ErrorCode.INPUT_ERROR
+        if (ex.targetType?.isEnum == true) {
+            val enumType = ex.targetType as Class<out Enum<*>>
+            val fieldPath = ex.path.joinToString(".") { it.fieldName ?: "[${it.index}]" }
+            val message = enumMismatchMessage(
+                enumType = enumType,
+                rejected = ex.value?.toString(),
+                target = fieldPath.takeIf { it.isNotBlank() },
+            )
+            return build(
+                exchange = exchange,
+                status = HttpStatus.BAD_REQUEST,
+                code = ErrorCode.ENUM_MISMATCH,
+                message = message,
+            )
+        }
+
         return build(
             exchange = exchange,
             status = HttpStatus.BAD_REQUEST,
-            code = code,
-            message = code.defaultMessage,
+            code = ErrorCode.INPUT_ERROR,
+            message = ErrorCode.INPUT_ERROR.defaultMessage,
             fallbackMessage = ex.originalMessage,
+        )
+    }
+
+    fun fromConversionFailed(exchange: ServerWebExchange, ex: ConversionFailedException): ApiErrorResult {
+        val targetType = ex.targetType.type as? Class<*>
+        if (targetType?.isEnum == true) {
+            @Suppress("UNCHECKED_CAST")
+            val enumType = targetType as Class<out Enum<*>>
+            val message = enumMismatchMessage(
+                enumType = enumType,
+                rejected = ex.value?.toString(),
+                target = ex.targetType.name.takeIf { it.isNotBlank() },
+            )
+            return build(
+                exchange = exchange,
+                status = HttpStatus.BAD_REQUEST,
+                code = ErrorCode.ENUM_MISMATCH,
+                message = message,
+            )
+        }
+
+        return build(
+            exchange = exchange,
+            status = HttpStatus.BAD_REQUEST,
+            code = ErrorCode.INPUT_ERROR,
+            message = ErrorCode.INPUT_ERROR.defaultMessage,
+            fallbackMessage = ex.message,
         )
     }
 
@@ -194,7 +246,10 @@ class ErrorResponseFactory {
         message: String,
         fallbackMessage: String? = null,
     ): ApiErrorResult {
-        val resolvedMessage = message.ifBlank { fallbackMessage?.takeIf { it.isNotBlank() } ?: code.defaultMessage }
+        val resolvedMessage = fallbackMessage
+            ?.takeIf { it.isNotBlank() }
+            ?: message.takeIf { it.isNotBlank() }
+            ?: code.defaultMessage
         val body = ApiEnvelope.failure(code = code.name, message = resolvedMessage)
         if (!exchange.response.headers.containsKey(RequestIdSupport.HEADER_NAME)) {
             exchange.response.headers.set(RequestIdSupport.HEADER_NAME, RequestIdSupport.resolveRequestId(exchange))
@@ -212,4 +267,16 @@ class ErrorResponseFactory {
         }
         return null
     }
+
+    private fun enumMismatchMessage(
+        enumType: Class<out Enum<*>>,
+        rejected: String?,
+        target: String?,
+    ): String {
+        val allowed = enumType.enumConstants.joinToString(", ") { it.name }
+        val targetText = target?.let { "$it 값" } ?: "요청 값"
+        val rejectedText = rejected?.takeIf { it.isNotBlank() } ?: "null"
+        return "$targetText '$rejectedText' 은(는) 올바르지 않습니다. 허용값: [$allowed]"
+    }
+
 }

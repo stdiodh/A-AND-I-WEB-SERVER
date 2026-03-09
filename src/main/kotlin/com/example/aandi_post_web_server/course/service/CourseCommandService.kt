@@ -10,6 +10,7 @@ import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.dtos.PublishAssignmentResponse
 import com.example.aandi_post_web_server.assignment.dtos.TriggerDeliveriesResponse
+import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
 import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
@@ -27,9 +28,7 @@ import com.example.aandi_post_web_server.course.domain.UserId
 import com.example.aandi_post_web_server.course.domain.WeekNo
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
-import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
-import com.example.aandi_post_web_server.course.dtos.CreateCourseWeekRequest
 import com.example.aandi_post_web_server.course.dtos.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.dtos.UpdateCourseRequest
 import com.example.aandi_post_web_server.course.dtos.UpdateEnrollmentRequest
@@ -99,15 +98,14 @@ class CourseCommandService(
             }
     }
 
-    fun archiveCourse(courseSlug: String): Mono<Void> {
+    fun deleteCourse(courseSlug: String): Mono<Void> {
         val slug = parseCourseSlug(courseSlug)
         return findCourseBySlug(slug)
             .flatMap { course ->
-                val archived = course.copy(
-                    status = CourseStatus.ARCHIVED,
-                    updatedAt = Instant.now(),
-                )
-                courseRepository.save(archived)
+                val courseId = parseCourseId(requireNotNull(course.id))
+                deleteAssignmentsByCourse(courseId.value)
+                    .then(deleteCourseRelations(courseId.value))
+                    .then(courseRepository.deleteById(courseId.value))
             }
             .then()
     }
@@ -202,45 +200,6 @@ class CourseCommandService(
             }
     }
 
-    fun createWeek(courseSlug: String, request: CreateCourseWeekRequest): Mono<CourseWeekResponse> {
-        val slug = parseCourseSlug(courseSlug)
-        val weekNo = parseWeekNo(request.weekNo)
-        if (request.endDate != null && request.startDate != null && request.endDate.isBefore(request.startDate)) {
-            return Mono.error(ResponseStatusException(HttpStatus.BAD_REQUEST, "endDate는 startDate보다 빠를 수 없습니다."))
-        }
-
-        return findCourseBySlug(slug)
-            .flatMap { course ->
-                val now = Instant.now()
-                val courseId = parseCourseId(requireNotNull(course.id))
-                courseWeekRepository.findByCourseIdAndWeekNo(courseId.value, weekNo.value)
-                    .flatMap { existing ->
-                        courseWeekRepository.save(
-                            existing.copy(
-                                title = request.title.trim(),
-                                startDate = request.startDate,
-                                endDate = request.endDate,
-                                updatedAt = now,
-                            )
-                        )
-                    }
-                    .switchIfEmpty(
-                        courseWeekRepository.save(
-                            CourseWeek(
-                                courseId = courseId.value,
-                                weekNo = weekNo.value,
-                                title = request.title.trim(),
-                                startDate = request.startDate,
-                                endDate = request.endDate,
-                                createdAt = now,
-                                updatedAt = now,
-                            )
-                        )
-                    )
-                    .map(::toWeekResponse)
-            }
-    }
-
     fun createAssignment(
         courseSlug: String,
         request: CreateAssignmentRequest,
@@ -257,54 +216,63 @@ class CourseCommandService(
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                ensureWeekExists(courseId, weekNo)
+                ensureWeekExistsOrCreate(
+                    courseId = courseId,
+                    weekNo = weekNo,
+                    startAt = request.startAt,
+                    endAt = request.endAt,
+                )
                     .then(
-                        assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo.value, request.orderInWeek)
-                            .flatMap<AssignmentDetailResponse> {
-                                Mono.error(
-                                    ResponseStatusException(
-                                        HttpStatus.CONFLICT,
-                                        "동일 코스/주차/순번 과제가 이미 존재합니다.",
+                        Mono.defer {
+                            assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo.value, request.orderInWeek)
+                                .flatMap<AssignmentDetailResponse> {
+                                    Mono.error(
+                                        ResponseStatusException(
+                                            HttpStatus.CONFLICT,
+                                            "동일 코스/주차/순번 과제가 이미 존재합니다.",
+                                        )
                                     )
-                                )
-                            }
-                            .switchIfEmpty(
-                                assignmentRepository.save(
-                                    Assignment(
-                                        courseId = courseId.value,
-                                        courseSlug = course.slug,
-                                        createdBy = createdBy,
-                                        weekNo = weekNo.value,
-                                        orderInWeek = request.orderInWeek,
-                                        startAt = request.startAt,
-                                        endAt = request.endAt,
-                                        metadata = com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata(
-                                            title = request.metadata.title.trim(),
-                                            difficulty = request.metadata.difficulty,
-                                            description = request.metadata.description.trim(),
-                                            timeLimitMinutes = request.metadata.timeLimitMinutes,
-                                            learningGoals = request.metadata.learningGoals.map { it.trim() },
-                                            attributes = request.metadata.attributes,
-                                        ),
-                                        status = AssignmentStatus.DRAFT,
-                                        createdAt = Instant.now(),
-                                        updatedAt = Instant.now(),
-                                    )
-                                ).flatMap { assignment ->
-                                    val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
-                                    val requirementsMono = saveRequirements(assignmentId, requirementDrafts)
-                                    val examplesMono = saveExamples(assignmentId, exampleDrafts)
-                                    Mono.zip(requirementsMono, examplesMono)
-                                        .map { tuple ->
-                                            toAssignmentDetailResponse(
-                                                courseSlug = course.slug,
-                                                assignment = assignment,
-                                                requirements = tuple.t1,
-                                                examples = tuple.t2,
-                                            )
-                                        }
                                 }
-                            )
+                                .switchIfEmpty(
+                                    Mono.defer {
+                                        assignmentRepository.save(
+                                            Assignment(
+                                                courseId = courseId.value,
+                                                courseSlug = course.slug,
+                                                createdBy = createdBy,
+                                                weekNo = weekNo.value,
+                                                orderInWeek = request.orderInWeek,
+                                                startAt = request.startAt,
+                                                endAt = request.endAt,
+                                                metadata = com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata(
+                                                    title = request.metadata.title.trim(),
+                                                    difficulty = request.metadata.difficulty,
+                                                    description = request.metadata.description.trim(),
+                                                    timeLimitMinutes = request.metadata.timeLimitMinutes,
+                                                    learningGoals = request.metadata.learningGoals.map { it.trim() },
+                                                    attributes = request.metadata.attributes,
+                                                ),
+                                                status = AssignmentStatus.DRAFT,
+                                                createdAt = Instant.now(),
+                                                updatedAt = Instant.now(),
+                                            )
+                                        ).flatMap { assignment ->
+                                            val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
+                                            val requirementsMono = saveRequirements(assignmentId, requirementDrafts)
+                                            val examplesMono = saveExamples(assignmentId, exampleDrafts)
+                                            Mono.zip(requirementsMono, examplesMono)
+                                                .map { tuple ->
+                                                    toAssignmentDetailResponse(
+                                                        courseSlug = course.slug,
+                                                        assignment = assignment,
+                                                        requirements = tuple.t1,
+                                                        examples = tuple.t2,
+                                                    )
+                                                }
+                                        }
+                                    }
+                                )
+                        }
                     )
             }
     }
@@ -318,6 +286,64 @@ class CourseCommandService(
                     .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
                     .flatMap { assignment -> publishAssignmentOrFail(assignment, course.slug) }
             }
+    }
+
+    fun updateAssignment(
+        courseSlug: String,
+        assignmentId: String,
+        request: UpdateAssignmentRequest,
+    ): Mono<AssignmentDetailResponse> {
+        val slug = parseCourseSlug(courseSlug)
+        val parsedAssignmentId = parseAssignmentId(assignmentId)
+        val parsedWeekNo = request.weekNo?.let { parseWeekNo(it) }
+        val requirementDrafts = request.requirements?.let { parseRequirementDrafts(it) }
+        val exampleDrafts = request.examples?.let { parseExampleDrafts(it) }
+
+        return findCourseBySlug(slug)
+            .flatMap { course ->
+                val courseId = parseCourseId(requireNotNull(course.id))
+                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
+                    .switchIfEmpty(
+                        Mono.error(
+                            ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}",
+                            )
+                        )
+                    )
+                    .flatMap { assignment ->
+                        updateAssignmentInternal(
+                            course = course,
+                            courseId = courseId,
+                            assignment = assignment,
+                            parsedAssignmentId = parsedAssignmentId,
+                            request = request,
+                            parsedWeekNo = parsedWeekNo,
+                            requirementDrafts = requirementDrafts,
+                            exampleDrafts = exampleDrafts,
+                        )
+                    }
+            }
+    }
+
+    fun deleteAssignment(courseSlug: String, assignmentId: String): Mono<Void> {
+        val slug = parseCourseSlug(courseSlug)
+        val parsedAssignmentId = parseAssignmentId(assignmentId)
+        return findCourseBySlug(slug)
+            .flatMap { course ->
+                val courseId = parseCourseId(requireNotNull(course.id))
+                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
+                    .switchIfEmpty(
+                        Mono.error(
+                            ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}",
+                            )
+                        )
+                    )
+                    .then(deleteAssignmentCascade(parsedAssignmentId.value))
+            }
+            .then()
     }
 
     fun triggerDeliveries(courseSlug: String, assignmentId: String): Mono<TriggerDeliveriesResponse> {
@@ -355,7 +381,7 @@ class CourseCommandService(
                 phase = request.metadata.phase,
                 attributes = request.metadata.attributes,
             ),
-            status = CourseStatus.ACTIVE,
+            status = CourseStatus.PUBLISHED,
             createdAt = now,
             updatedAt = now,
         )
@@ -366,9 +392,14 @@ class CourseCommandService(
         assignment: Assignment,
         courseSlug: String,
     ): Mono<PublishAssignmentResponse> {
-        if (assignment.status == AssignmentStatus.ARCHIVED) {
-            return Mono.error(
-                ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "ARCHIVED 과제는 게시할 수 없습니다.")
+        if (assignment.status == AssignmentStatus.PUBLISHED) {
+            return Mono.just(
+                PublishAssignmentResponse(
+                    assignmentId = requireNotNull(assignment.id),
+                    courseSlug = courseSlug,
+                    status = assignment.status,
+                    publishedAt = assignment.publishedAt,
+                )
             )
         }
         val published = assignment.copy(
@@ -477,17 +508,66 @@ class CourseCommandService(
     private fun ensureWeekExists(courseId: CourseId, weekNo: WeekNo): Mono<Void> {
         return courseWeekRepository.findByCourseIdAndWeekNo(courseId.value, weekNo.value)
             .switchIfEmpty(
-                courseWeekRepository.save(
-                    CourseWeek(
-                        courseId = courseId.value,
-                        weekNo = weekNo.value,
-                        title = "${weekNo.value}주차",
-                        createdAt = Instant.now(),
-                        updatedAt = Instant.now(),
+                Mono.error(
+                    ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "주차를 찾을 수 없습니다: ${weekNo.value}",
                     )
                 )
             )
             .then()
+    }
+
+    private fun ensureWeekExistsOrCreate(
+        courseId: CourseId,
+        weekNo: WeekNo,
+        startAt: Instant,
+        endAt: Instant,
+    ): Mono<Void> {
+        return courseWeekRepository.findByCourseIdAndWeekNo(courseId.value, weekNo.value)
+            .switchIfEmpty(
+                Mono.defer {
+                    courseWeekRepository.save(
+                        CourseWeek(
+                            courseId = courseId.value,
+                            weekNo = weekNo.value,
+                            title = "${weekNo.value}주차",
+                            startDate = startAt.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate(),
+                            endDate = endAt.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate(),
+                            createdAt = Instant.now(),
+                            updatedAt = Instant.now(),
+                        )
+                    )
+                }
+            )
+            .then()
+    }
+
+    private fun deleteAssignmentsByCourse(courseId: String): Mono<Void> {
+        return assignmentRepository.findAllByCourseId(courseId)
+            .map { it.id }
+            .filter { it != null }
+            .map { it!! }
+            .collectList()
+            .flatMap { assignmentIds ->
+                if (assignmentIds.isEmpty()) {
+                    Mono.empty<Void>()
+                } else {
+                    Mono.whenDelayError(
+                        assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
+                        assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
+                        assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
+                        assignmentRepository.deleteAllById(assignmentIds).then()
+                    )
+                }
+            }
+    }
+
+    private fun deleteCourseRelations(courseId: String): Mono<Void> {
+        return Mono.whenDelayError(
+            courseWeekRepository.deleteAllByCourseId(courseId).then(),
+            courseEnrollmentRepository.deleteAllByCourseId(courseId).then()
+        )
     }
 
     private fun upsertDelivered(assignmentId: AssignmentId, userId: UserId): Mono<AssignmentDelivery> {
@@ -513,6 +593,122 @@ class CourseCommandService(
                     )
                 )
             )
+    }
+
+    private fun updateAssignmentInternal(
+        course: Course,
+        courseId: CourseId,
+        assignment: Assignment,
+        parsedAssignmentId: AssignmentId,
+        request: UpdateAssignmentRequest,
+        parsedWeekNo: WeekNo?,
+        requirementDrafts: AssignmentRequirementDrafts?,
+        exampleDrafts: AssignmentExampleDrafts?,
+    ): Mono<AssignmentDetailResponse> {
+        val targetWeekNo = parsedWeekNo?.value ?: assignment.weekNo
+        val targetOrderInWeek = request.orderInWeek ?: assignment.orderInWeek
+        val targetStartAt = request.startAt ?: assignment.startAt
+        val targetEndAt = request.endAt ?: assignment.endAt
+        if (targetEndAt.isBefore(targetStartAt)) {
+            return Mono.error(ResponseStatusException(HttpStatus.BAD_REQUEST, "endAt은 startAt보다 빠를 수 없습니다."))
+        }
+
+        val metadata = request.metadata?.let {
+            com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata(
+                title = it.title.trim(),
+                difficulty = it.difficulty,
+                description = it.description.trim(),
+                timeLimitMinutes = it.timeLimitMinutes,
+                learningGoals = it.learningGoals.map(String::trim),
+                attributes = it.attributes,
+            )
+        } ?: assignment.metadata
+
+        val candidate = assignment.copy(
+            weekNo = targetWeekNo,
+            orderInWeek = targetOrderInWeek,
+            startAt = targetStartAt,
+            endAt = targetEndAt,
+            metadata = metadata,
+            updatedAt = Instant.now(),
+        )
+
+        val checkDuplicate = ensureAssignmentSlotAvailable(courseId, candidate, parsedAssignmentId)
+        val checkWeek = ensureWeekExistsOrCreate(
+            courseId = courseId,
+            weekNo = parseWeekNo(targetWeekNo),
+            startAt = targetStartAt,
+            endAt = targetEndAt,
+        )
+        return checkWeek
+            .then(checkDuplicate)
+            .then(assignmentRepository.save(candidate))
+            .flatMap { saved ->
+                loadOrReplaceRequirements(parsedAssignmentId, requirementDrafts)
+                    .zipWith(loadOrReplaceExamples(parsedAssignmentId, exampleDrafts))
+                    .map { tuple ->
+                        toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
+                    }
+            }
+    }
+
+    private fun loadOrReplaceRequirements(
+        assignmentId: AssignmentId,
+        drafts: AssignmentRequirementDrafts?,
+    ): Mono<List<AssignmentRequirementResponse>> {
+        if (drafts == null) {
+            return assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId.value)
+                .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
+                .collectList()
+        }
+        return assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId.value))
+            .then(saveRequirements(assignmentId, drafts))
+    }
+
+    private fun loadOrReplaceExamples(
+        assignmentId: AssignmentId,
+        drafts: AssignmentExampleDrafts?,
+    ): Mono<List<AssignmentExampleResponse>> {
+        if (drafts == null) {
+            return assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId.value)
+                .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText, it.description) }
+                .collectList()
+        }
+        return assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId.value))
+            .then(saveExamples(assignmentId, drafts))
+    }
+
+    private fun ensureAssignmentSlotAvailable(
+        courseId: CourseId,
+        assignment: Assignment,
+        assignmentId: AssignmentId,
+    ): Mono<Void> {
+        return assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+            courseId.value,
+            assignment.weekNo,
+            assignment.orderInWeek,
+        )
+            .flatMap { duplicated ->
+                if (duplicated.id == assignmentId.value) {
+                    return@flatMap Mono.empty<Void>()
+                }
+                Mono.error(
+                    ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "동일 코스/주차/순번 과제가 이미 존재합니다.",
+                    )
+                )
+            }
+            .then()
+    }
+
+    private fun deleteAssignmentCascade(assignmentId: String): Mono<Void> {
+        return Mono.whenDelayError(
+            assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
+            assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
+            assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
+            assignmentRepository.deleteById(assignmentId).then(),
+        )
     }
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> {
@@ -573,16 +769,6 @@ class CourseCommandService(
         bannedAt = enrollment.bannedAt,
         banReason = enrollment.banReason,
         updatedAt = enrollment.updatedAt,
-    )
-
-    private fun toWeekResponse(week: CourseWeek): CourseWeekResponse = CourseWeekResponse(
-        id = requireNotNull(week.id),
-        weekNo = week.weekNo,
-        title = week.title,
-        startDate = week.startDate,
-        endDate = week.endDate,
-        createdAt = week.createdAt,
-        updatedAt = week.updatedAt,
     )
 
     private fun toAssignmentDetailResponse(

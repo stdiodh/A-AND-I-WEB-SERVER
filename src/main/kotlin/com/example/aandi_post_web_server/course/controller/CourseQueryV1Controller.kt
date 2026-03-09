@@ -4,6 +4,14 @@ import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailRespons
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
+import com.example.aandi_post_web_server.common.openapi.AssignmentDetailEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.AssignmentSummaryListEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.CourseEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.CourseListEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.CourseOutlineEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.CourseWeekListEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.ErrorEnvelopeDoc
+import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
 import com.example.aandi_post_web_server.course.enum.CoursePhase
@@ -40,13 +48,13 @@ class CourseQueryV1Controller(
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "400", description = "잘못된 enum 파라미터(track/status/phase)", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseListEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "400", description = "잘못된 enum 파라미터(track/status/phase)", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping
     fun getCourses(
-        @Parameter(description = "코스 상태", example = "ACTIVE")
+        @Parameter(description = "코스 상태", example = "PUBLISHED")
         @RequestParam(required = false) status: CourseStatus?,
         @Parameter(description = "과정 단계", example = "BASIC")
         @RequestParam(required = false) phase: CoursePhase?,
@@ -63,8 +71,8 @@ class CourseQueryV1Controller(
     @Operation(summary = "코스 상세 조회", description = "courseSlug로 단일 코스를 조회합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}")
@@ -76,11 +84,30 @@ class CourseQueryV1Controller(
         return courseV1Service.getCourse(courseSlug, authentication.name).map { ApiEnvelope.success(it) }
     }
 
+    @Operation(
+        summary = "코스 목차 요약 조회",
+        description = "프론트 목차 UI용 코스/과제 요약 데이터를 조회합니다. 과제는 weekNo/orderInWeek 순으로 정렬되며 checked 플래그를 제공합니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseOutlineEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+        ],
+    )
+    @GetMapping("/{courseSlug}/outline")
+    fun getCourseOutline(
+        @Parameter(description = "코스 슬러그", example = "back-basic")
+        @PathVariable courseSlug: String,
+        authentication: Authentication,
+    ): Mono<ApiEnvelope<CourseOutlineResponse>> {
+        return courseV1Service.getCourseOutline(courseSlug, authentication.name).map { ApiEnvelope.success(it) }
+    }
+
     @Operation(summary = "코스 주차 목록 조회", description = "해당 코스의 주차 목록을 조회합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseWeekListEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/weeks")
@@ -98,9 +125,9 @@ class CourseQueryV1Controller(
     @Operation(summary = "주차별 과제 목록 조회", description = "특정 주차의 과제 목록을 조회합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "400", description = "잘못된 weekNo/status", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = AssignmentSummaryListEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "400", description = "잘못된 weekNo/status", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/weeks/{weekNo}/assignments")
@@ -124,31 +151,28 @@ class CourseQueryV1Controller(
             .map { ApiEnvelope.success(it) }
     }
 
-    @Operation(summary = "코스 과제 목록 조회", description = "코스 전체 과제를 조회하며 week(또는 weekNo)/status 필터를 지원합니다.")
+    @Operation(summary = "코스 과제 목록 조회", description = "코스 전체 과제를 조회하며 weekNo/status 필터를 지원합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "400", description = "잘못된 week/weekNo/status", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = AssignmentSummaryListEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "400", description = "잘못된 weekNo/status", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/assignments")
     fun getAssignments(
         @Parameter(description = "코스 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
-        @Parameter(description = "주차 번호(레거시 파라미터, 옵션)", example = "1")
-        @RequestParam(name = "week", required = false) week: Int?,
-        @Parameter(description = "주차 번호(신규 파라미터, 옵션)", example = "1")
+        @Parameter(description = "주차 번호(옵션)", example = "1")
         @RequestParam(name = "weekNo", required = false) weekNo: Int?,
         @Parameter(description = "과제 상태(옵션)", example = "PUBLISHED")
         @RequestParam(required = false) status: AssignmentStatus?,
         authentication: Authentication,
     ): Mono<ApiEnvelope<List<AssignmentSummaryResponse>>> {
-        val resolvedWeek = week ?: weekNo
         return courseV1Service
             .getAssignments(
                 courseSlug = courseSlug,
-                weekNo = resolvedWeek,
+                weekNo = weekNo,
                 status = status,
                 userId = authentication.name,
             )
@@ -159,8 +183,8 @@ class CourseQueryV1Controller(
     @Operation(summary = "과제 상세 조회", description = "courseSlug와 assignmentId로 과제 상세 정보를 조회합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = AssignmentDetailEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/assignments/{assignmentId}")
@@ -181,8 +205,8 @@ class CourseQueryV1Controller(
     @Operation(summary = "과제 ID로 코스 조회", description = "assignmentId로 과제가 속한 코스를 조회합니다.")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
-            ApiResponse(responseCode = "404", description = "과제 또는 코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ApiEnvelope::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "과제 또는 코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/assignments/{assignmentId}/course")

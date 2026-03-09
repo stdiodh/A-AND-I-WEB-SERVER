@@ -12,4 +12,5 @@ interface AssignmentDeliveryRepository : ReactiveMongoRepository<AssignmentDeliv
     fun findAllByAssignmentIdAndStatus(assignmentId: String, status: AssignmentDeliveryStatus): Flux<AssignmentDelivery>
     fun findAllByUserId(userId: String): Flux<AssignmentDelivery>
     fun findAllByUserIdAndStatus(userId: String, status: AssignmentDeliveryStatus): Flux<AssignmentDelivery>
+    fun deleteAllByAssignmentIdIn(assignmentIds: Collection<String>): Mono<Long>
 }
