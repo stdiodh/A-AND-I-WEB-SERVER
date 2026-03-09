@@ -86,9 +86,6 @@ class CourseQueryService(
         track: UserTrack?,
         userId: String,
     ): Flux<CourseResponse> {
-        if (track == UserTrack.NO) {
-            return Flux.empty()
-        }
         val targetTrack = toCourseTrack(track)
         val parsedUserId = parseUserId(userId)
         return loadEnrolledCourses(parsedUserId, status, phase, targetTrack).map(::toCourseResponse)
@@ -305,7 +302,7 @@ class CourseQueryService(
                 courseRepository.findAllById(enrolledCourseIds)
                     .filter { course -> status == null || course.status == status }
                     .filter { course -> phase == null || course.metadata.phase == phase }
-                    .filter { course -> targetTrack == null || course.fieldTag == targetTrack }
+                    .filter { course -> matchesTrack(course.fieldTag, targetTrack) }
             }
     }
 
@@ -384,6 +381,9 @@ class CourseQueryService(
         if (userTrack == null) {
             return null
         }
+        if (userTrack == UserTrack.NO) {
+            return CourseTrack.NO
+        }
         if (userTrack == UserTrack.FL) {
             return CourseTrack.FL
         }
@@ -391,6 +391,16 @@ class CourseQueryService(
             return CourseTrack.SP
         }
         return null
+    }
+
+    private fun matchesTrack(courseTrack: CourseTrack, requestedTrack: CourseTrack?): Boolean {
+        if (requestedTrack == null) {
+            return true
+        }
+        if (requestedTrack == CourseTrack.NO) {
+            return courseTrack == CourseTrack.NO
+        }
+        return courseTrack == requestedTrack || courseTrack == CourseTrack.NO
     }
 
     private fun <T> parseOrBadRequest(block: () -> T): T {
