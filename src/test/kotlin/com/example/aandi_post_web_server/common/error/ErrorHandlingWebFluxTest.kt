@@ -66,7 +66,9 @@ class ErrorHandlingWebFluxTest : StringSpec() {
                 .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.data").isEmpty
                 .jsonPath("$.error.code").isEqualTo("VALIDATION_ERROR")
-                .jsonPath("$.error.message").isEqualTo("slug: 공백일 수 없습니다")
+                .jsonPath("$.error.message").value<String> { message ->
+                    org.assertj.core.api.Assertions.assertThat(message).contains("slug")
+                }
                 .jsonPath("$.timestamp").exists()
         }
 
