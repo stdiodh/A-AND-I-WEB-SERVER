@@ -1,11 +1,18 @@
 package com.example.aandi_post_web_server.course.service
 
+import com.example.aandi_post_web_server.assignment.domain.AssignmentImportService
+import com.example.aandi_post_web_server.assignment.domain.ImportedAssignmentContent
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentImportSourcePayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemClassificationPayload
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetailPayload
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
+import com.example.aandi_post_web_server.assignment.enum.AssignmentSourcePlatform
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
@@ -269,6 +276,24 @@ class CourseCommandServiceTest : StringSpec({
                 ArgumentMatchers.anyInt(),
             )
         ).thenReturn(Mono.empty())
+        Mockito.`when`(
+            fixture.assignmentImportService.import(
+                AssignmentImportSourcePayload(
+                    platform = AssignmentSourcePlatform.BOJ,
+                    problemId = 2557,
+                    autoFillTemplates = true,
+                )
+            )
+        ).thenReturn(
+            Mono.just(
+                ImportedAssignmentContent(
+                    title = "Hello World!",
+                    description = "BOJ 문제 설명",
+                    inputDescription = "입력이 없다.",
+                    outputDescription = "Hello World!를 출력한다.",
+                )
+            )
+        )
         Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
             .thenAnswer { invocation ->
                 val assignment = invocation.arguments[0] as Assignment
@@ -292,6 +317,201 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.courseWeekRepository).save(ArgumentMatchers.any(CourseWeek::class.java))
         Mockito.verify(fixture.assignmentRepository)
             .findByCourseIdAndWeekNoAndOrderInWeek("course-1", 2, 1)
+    }
+
+    "BOJ 과제 생성은 기본 제출 템플릿을 자동 주입한다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val request = CreateAssignmentRequest(
+            weekNo = 1,
+            orderInWeek = 1,
+            startAt = Instant.parse("2026-03-10T00:00:00Z"),
+            endAt = Instant.parse("2026-03-11T00:00:00Z"),
+            metadata = AssignmentMetadataPayload(
+                title = "Hello World!",
+                difficulty = AssignmentDifficulty.LOW,
+                description = "문제 설명",
+                timeLimitMinutes = 60,
+                problemDetail = AssignmentProblemDetailPayload(
+                    source = AssignmentImportSourcePayload(
+                        platform = AssignmentSourcePlatform.BOJ,
+                        problemId = 2557,
+                        autoFillTemplates = true,
+                    ),
+                    inputDescription = "입력이 없다.",
+                    outputDescription = "Hello World!를 출력한다.",
+                    classification = AssignmentProblemClassificationPayload(
+                        algorithmStep = AssignmentProblemStep.STEP0,
+                        difficultyStep = 1,
+                    ),
+                ),
+            ),
+            requirements = emptyList(),
+            examples = emptyList(),
+        )
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenAnswer { invocation ->
+                val week = invocation.arguments[0] as CourseWeek
+                Mono.just(week.copy(id = "week-1"))
+            }
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(
+            fixture.assignmentImportService.import(
+                AssignmentImportSourcePayload(
+                    platform = AssignmentSourcePlatform.BOJ,
+                    problemId = 2557,
+                    autoFillTemplates = true,
+                )
+            )
+        ).thenReturn(
+            Mono.just(
+                ImportedAssignmentContent(
+                    title = "Hello World!",
+                    description = "Hello World!를 출력하는 문제입니다.",
+                    inputDescription = "입력이 없다.",
+                    outputDescription = "Hello World!를 출력한다.",
+                )
+            )
+        )
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                Mono.just(assignment.copy(id = "assignment-1"))
+            }
+
+        StepVerifier.create(
+            fixture.service.createAssignment(
+                courseSlug = "back-basic",
+                request = request,
+                createdBy = "admin",
+            )
+        )
+            .assertNext { created ->
+                created.metadata.problemDetail?.source?.platform shouldBe AssignmentSourcePlatform.BOJ
+                created.metadata.problemDetail?.source?.problemId shouldBe 2557
+                created.metadata.submissionGuide?.title shouldBe "문제 풀이 템플릿"
+                created.metadata.codeTemplates.map { it.language.name } shouldBe listOf("KOTLIN", "DART")
+            }
+            .verifyComplete()
+    }
+
+    "BOJ 과제 생성은 import 결과로 제목 설명 예제를 채운다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val request = CreateAssignmentRequest(
+            weekNo = 1,
+            orderInWeek = 2,
+            startAt = Instant.parse("2026-03-10T00:00:00Z"),
+            endAt = Instant.parse("2026-03-11T00:00:00Z"),
+            metadata = AssignmentMetadataPayload(
+                title = null,
+                difficulty = AssignmentDifficulty.LOW,
+                description = null,
+                timeLimitMinutes = 60,
+                problemDetail = AssignmentProblemDetailPayload(
+                    source = AssignmentImportSourcePayload(
+                        platform = AssignmentSourcePlatform.BOJ,
+                        problemId = 1000,
+                        autoFillTemplates = true,
+                    ),
+                    classification = AssignmentProblemClassificationPayload(
+                        algorithmStep = AssignmentProblemStep.STEP1,
+                        difficultyStep = 2,
+                    ),
+                ),
+            ),
+            requirements = emptyList(),
+            examples = emptyList(),
+        )
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenAnswer { invocation ->
+                val week = invocation.arguments[0] as CourseWeek
+                Mono.just(week.copy(id = "week-1"))
+            }
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(
+            fixture.assignmentImportService.import(
+                AssignmentImportSourcePayload(
+                    platform = AssignmentSourcePlatform.BOJ,
+                    problemId = 1000,
+                    autoFillTemplates = true,
+                )
+            )
+        ).thenReturn(
+            Mono.just(
+                ImportedAssignmentContent(
+                    title = "A+B",
+                    description = "두 수를 입력받아 합을 출력한다.",
+                    inputDescription = "첫째 줄에 A와 B가 주어진다.",
+                    outputDescription = "A+B를 출력한다.",
+                    examples = listOf(
+                        com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentExampleRequest(
+                            seq = 1,
+                            inputText = "1 2",
+                            outputText = "3",
+                            description = "BOJ 예제 1",
+                        )
+                    ),
+                )
+            )
+        )
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                Mono.just(assignment.copy(id = "assignment-imported"))
+            }
+        Mockito.doAnswer { invocation ->
+            @Suppress("UNCHECKED_CAST")
+            Flux.fromIterable(invocation.arguments[0] as List<com.example.aandi_post_web_server.assignment.entity.AssignmentExample>)
+        }.`when`(fixture.assignmentExampleRepository)
+            .saveAll(ArgumentMatchers.anyList<com.example.aandi_post_web_server.assignment.entity.AssignmentExample>())
+
+        StepVerifier.create(
+            fixture.service.createAssignment(
+                courseSlug = "back-basic",
+                request = request,
+                createdBy = "admin",
+            )
+        )
+            .assertNext { created ->
+                created.id shouldBe "assignment-imported"
+                created.metadata.title shouldBe "A+B"
+                created.metadata.description shouldBe "두 수를 입력받아 합을 출력한다."
+                created.metadata.problemDetail?.inputDescription shouldBe "첫째 줄에 A와 B가 주어진다."
+                created.metadata.problemDetail?.outputDescription shouldBe "A+B를 출력한다."
+                created.examples.size shouldBe 1
+                created.examples.first().inputText shouldBe "1 2"
+                created.examples.first().outputText shouldBe "3"
+            }
+            .verifyComplete()
     }
 
     "DRAFT 과제는 배포 트리거할 수 없다" {
@@ -366,6 +586,7 @@ private class CommandFixture {
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
     val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
     val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
+    val assignmentImportService: AssignmentImportService = Mockito.mock(AssignmentImportService::class.java)
 
     val service = CourseCommandService(
         courseRepository = courseRepository,
@@ -375,6 +596,7 @@ private class CommandFixture {
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentExampleRepository = assignmentExampleRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
+        assignmentImportService = assignmentImportService,
     )
 }
 

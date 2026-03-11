@@ -1,5 +1,6 @@
 package com.example.aandi_post_web_server.course.service
 
+import com.example.aandi_post_web_server.assignment.domain.toResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDeliveryResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
@@ -487,14 +488,7 @@ class CourseQueryService(
         startAt = assignment.startAt,
         endAt = assignment.endAt,
         status = assignment.status,
-        metadata = com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataResponse(
-            title = assignment.metadata.title,
-            difficulty = assignment.metadata.difficulty,
-            description = assignment.metadata.description,
-            timeLimitMinutes = assignment.metadata.timeLimitMinutes,
-            learningGoals = assignment.metadata.learningGoals,
-            attributes = assignment.metadata.attributes,
-        ),
+        metadata = assignment.metadata.toResponse(),
     )
 
     private fun toAssignmentDetailResponse(
@@ -511,14 +505,7 @@ class CourseQueryService(
         endAt = assignment.endAt,
         status = assignment.status,
         publishedAt = assignment.publishedAt,
-        metadata = com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataResponse(
-            title = assignment.metadata.title,
-            difficulty = assignment.metadata.difficulty,
-            description = assignment.metadata.description,
-            timeLimitMinutes = assignment.metadata.timeLimitMinutes,
-            learningGoals = assignment.metadata.learningGoals,
-            attributes = assignment.metadata.attributes,
-        ),
+        metadata = assignment.metadata.toResponse(),
         requirements = requirements,
         examples = examples,
     )

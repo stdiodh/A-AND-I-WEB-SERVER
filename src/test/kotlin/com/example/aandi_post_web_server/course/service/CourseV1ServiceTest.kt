@@ -1,5 +1,6 @@
 package com.example.aandi_post_web_server.course.service
 
+import com.example.aandi_post_web_server.assignment.domain.AssignmentImportService
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
@@ -103,6 +104,7 @@ private class Fixture {
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
     val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
     val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
+    val assignmentImportService: AssignmentImportService = Mockito.mock(AssignmentImportService::class.java)
 
     private val courseCommandService = CourseCommandService(
         courseRepository = courseRepository,
@@ -112,6 +114,7 @@ private class Fixture {
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentExampleRepository = assignmentExampleRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
+        assignmentImportService = assignmentImportService,
     )
 
     private val courseQueryService = CourseQueryService(

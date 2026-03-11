@@ -1,27 +1,148 @@
 package com.example.aandi_post_web_server.assignment.dtos
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
+import com.example.aandi_post_web_server.assignment.enum.AssignmentSourcePlatform
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import java.time.Instant
 
+@Schema(description = "문제 출처 import 요청")
+data class AssignmentImportSourcePayload(
+    @field:Schema(description = "문제 출처 플랫폼", example = "BOJ")
+    val platform: AssignmentSourcePlatform,
+    @field:Min(1)
+    @field:Schema(description = "문제 번호", example = "2557")
+    val problemId: Int,
+    @field:Schema(description = "기본 Kotlin/Dart 제출 템플릿 자동 주입 여부", example = "true")
+    val autoFillTemplates: Boolean = true,
+)
+
+@Schema(description = "문제 출처 응답")
+data class AssignmentProblemSourceResponse(
+    @field:Schema(description = "문제 출처 플랫폼", example = "BOJ")
+    val platform: AssignmentSourcePlatform,
+    @field:Schema(description = "문제 번호", example = "2557")
+    val problemId: Int,
+    @field:Schema(description = "문제 원문 링크", example = "https://www.acmicpc.net/problem/2557")
+    val url: String? = null,
+)
+
+@Schema(description = "문제 분류 요청")
+data class AssignmentProblemClassificationPayload(
+    @field:Schema(description = "문제 단계", example = "STEP0")
+    val algorithmStep: AssignmentProblemStep,
+    @field:Min(1)
+    @field:Max(3)
+    @field:Schema(description = "세부 난이도 단계", example = "1")
+    val difficultyStep: Int,
+)
+
+@Schema(description = "문제 분류 응답")
+data class AssignmentProblemClassificationResponse(
+    @field:Schema(description = "문제 단계", example = "STEP0")
+    val algorithmStep: AssignmentProblemStep,
+    @field:Schema(description = "세부 난이도 단계", example = "1")
+    val difficultyStep: Int,
+)
+
+@Schema(description = "문제 상세 정보 요청")
+data class AssignmentProblemDetailPayload(
+    @field:Valid
+    @field:Schema(description = "문제 출처 정보")
+    val source: AssignmentImportSourcePayload? = null,
+    @field:Schema(description = "입력 설명", example = "입력이 없다.")
+    val inputDescription: String? = null,
+    @field:Schema(description = "출력 설명", example = "Hello World!를 출력한다.")
+    val outputDescription: String? = null,
+    @field:Valid
+    @field:Schema(description = "문제 분류")
+    val classification: AssignmentProblemClassificationPayload? = null,
+)
+
+@Schema(description = "문제 상세 정보 응답")
+data class AssignmentProblemDetailResponse(
+    @field:Schema(description = "문제 출처 정보")
+    val source: AssignmentProblemSourceResponse? = null,
+    @field:Schema(description = "입력 설명", example = "입력이 없다.")
+    val inputDescription: String? = null,
+    @field:Schema(description = "출력 설명", example = "Hello World!를 출력한다.")
+    val outputDescription: String? = null,
+    @field:Schema(description = "문제 분류")
+    val classification: AssignmentProblemClassificationResponse? = null,
+)
+
+@Schema(description = "제출 가이드 요청")
+data class AssignmentSubmissionGuidePayload(
+    @field:Schema(description = "가이드 제목", example = "문제 풀이 템플릿")
+    val title: String = "문제 풀이 템플릿",
+    @field:Schema(description = "가이드 설명", example = "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.")
+    val description: String = "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.",
+    @field:Schema(description = "주석 섹션 목록", example = "[\"문제\",\"해석\",\"풀이\"]")
+    val commentSections: List<String> = listOf("문제", "해석", "풀이"),
+)
+
+@Schema(description = "제출 가이드 응답")
+data class AssignmentSubmissionGuideResponse(
+    @field:Schema(description = "가이드 제목", example = "문제 풀이 템플릿")
+    val title: String,
+    @field:Schema(description = "가이드 설명", example = "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.")
+    val description: String,
+    @field:Schema(description = "주석 섹션 목록")
+    val commentSections: List<String>,
+)
+
+@Schema(description = "언어별 코드 템플릿 요청")
+data class AssignmentCodeTemplatePayload(
+    @field:Schema(description = "언어", example = "KOTLIN")
+    val language: AssignmentTemplateLanguage,
+    @field:Schema(description = "상단 주석 템플릿")
+    val commentTemplate: String,
+    @field:Schema(description = "함수 템플릿")
+    val functionTemplate: String,
+    @field:Schema(description = "실행 가능한 전체 템플릿")
+    val runnableTemplate: String,
+)
+
+@Schema(description = "언어별 코드 템플릿 응답")
+data class AssignmentCodeTemplateResponse(
+    @field:Schema(description = "언어", example = "KOTLIN")
+    val language: AssignmentTemplateLanguage,
+    @field:Schema(description = "상단 주석 템플릿")
+    val commentTemplate: String,
+    @field:Schema(description = "함수 템플릿")
+    val functionTemplate: String,
+    @field:Schema(description = "실행 가능한 전체 템플릿")
+    val runnableTemplate: String,
+)
+
 @Schema(description = "과제 메타데이터")
 data class AssignmentMetadataPayload(
-    @field:NotBlank
     @field:Schema(description = "과제 제목", example = "터미널 계산기")
-    val title: String,
+    val title: String? = null,
     @field:Schema(description = "난이도", example = "MID")
     val difficulty: AssignmentDifficulty,
-    @field:NotBlank
     @field:Schema(description = "과제 설명", example = "# 문제 설명")
-    val description: String,
+    val description: String? = null,
     @field:Min(1)
     @field:Schema(description = "제한 시간(분)", example = "60")
     val timeLimitMinutes: Int = 60,
     @field:Schema(description = "학습 목표")
     val learningGoals: List<String> = emptyList(),
+    @field:Valid
+    @field:Schema(description = "문제 상세 정보")
+    val problemDetail: AssignmentProblemDetailPayload? = null,
+    @field:Valid
+    @field:Schema(description = "제출 가이드")
+    val submissionGuide: AssignmentSubmissionGuidePayload? = null,
+    @field:Valid
+    @field:Schema(description = "언어별 코드 템플릿")
+    val codeTemplates: List<AssignmentCodeTemplatePayload> = emptyList(),
     @field:Schema(description = "확장 메타데이터")
     val attributes: Map<String, Any?> = emptyMap(),
 )
@@ -66,6 +187,32 @@ data class CreateAssignmentExampleRequest(
             "description": "# 문제 설명",
             "timeLimitMinutes": 60,
             "learningGoals": ["함수 분리"],
+            "problemDetail": {
+              "source": {
+                "platform": "BOJ",
+                "problemId": 2557,
+                "autoFillTemplates": true
+              },
+              "inputDescription": "입력이 없다.",
+              "outputDescription": "Hello World!를 출력한다.",
+              "classification": {
+                "algorithmStep": "STEP0",
+                "difficultyStep": 1
+              }
+            },
+            "submissionGuide": {
+              "title": "문제 풀이 템플릿",
+              "description": "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.",
+              "commentSections": ["문제", "해석", "풀이"]
+            },
+            "codeTemplates": [
+              {
+                "language": "KOTLIN",
+                "commentTemplate": "/*\\n[문제]\\n> 이해한 방식으로 문제를 다시 정의해요\\n[해석]\\n> 문제의 요구사항을 분석해요\\n[풀이]\\n> 적용할 풀이를 작성해요\\n*/",
+                "functionTemplate": "fun solution(): String {\\n    var answer = \\\"\\\"\\n    return answer\\n}",
+                "runnableTemplate": "fun solution(): String {\\n    var answer = \\\"Hello World!\\\"\\n    return answer\\n}\\n\\nfun main() {\\n    println(solution())\\n}"
+              }
+            ],
             "attributes": {
               "language": "kotlin"
             }
@@ -120,6 +267,19 @@ data class CreateAssignmentRequest(
             "description": "# 문제 설명(수정)",
             "timeLimitMinutes": 90,
             "learningGoals": ["입력 파싱", "함수 분리"],
+            "problemDetail": {
+              "inputDescription": "문자열 명령이 주어진다.",
+              "outputDescription": "계산 결과를 출력한다.",
+              "classification": {
+                "algorithmStep": "STEP1",
+                "difficultyStep": 2
+              }
+            },
+            "submissionGuide": {
+              "title": "문제 풀이 템플릿",
+              "description": "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.",
+              "commentSections": ["문제", "해석", "풀이"]
+            },
             "attributes": {
               "language": "kotlin"
             }
@@ -172,6 +332,12 @@ data class AssignmentMetadataResponse(
     val timeLimitMinutes: Int,
     @field:Schema(description = "학습 목표")
     val learningGoals: List<String>,
+    @field:Schema(description = "문제 상세 정보")
+    val problemDetail: AssignmentProblemDetailResponse? = null,
+    @field:Schema(description = "제출 가이드")
+    val submissionGuide: AssignmentSubmissionGuideResponse? = null,
+    @field:Schema(description = "언어별 코드 템플릿")
+    val codeTemplates: List<AssignmentCodeTemplateResponse> = emptyList(),
     @field:Schema(description = "확장 메타데이터")
     val attributes: Map<String, Any?>,
 )

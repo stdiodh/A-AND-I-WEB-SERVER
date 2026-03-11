@@ -126,7 +126,7 @@ data class CourseOutlineEnvelopeDoc(
 
 @Schema(
     description = "과제 목록 성공 응답",
-    example = """{"success":true,"data":[{"id":"assignment-1","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"PUBLISHED","metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","timeLimitMinutes":60,"learningGoals":["함수 분리"],"attributes":{"language":"kotlin"}}}],"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
+    example = """{"success":true,"data":[{"id":"assignment-1","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"PUBLISHED","metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","timeLimitMinutes":60,"learningGoals":["함수 분리"],"problemDetail":{"source":{"platform":"BOJ","problemId":2557,"url":"https://www.acmicpc.net/problem/2557"},"inputDescription":"입력이 없다.","outputDescription":"Hello World!를 출력한다.","classification":{"algorithmStep":"STEP0","difficultyStep":1}},"submissionGuide":{"title":"문제 풀이 템플릿","description":"제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.","commentSections":["문제","해석","풀이"]},"codeTemplates":[{"language":"KOTLIN","commentTemplate":"/* ... */","functionTemplate":"fun solution(): String { ... }","runnableTemplate":"fun solution(): String { ... }"}],"attributes":{"language":"kotlin"}}}],"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
 )
 data class AssignmentSummaryListEnvelopeDoc(
     @field:Schema(example = "true")
@@ -140,7 +140,7 @@ data class AssignmentSummaryListEnvelopeDoc(
 
 @Schema(
     description = "과제 상세 성공 응답",
-    example = """{"success":true,"data":{"id":"assignment-1","courseSlug":"fl-basic","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"DRAFT","publishedAt":null,"metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","timeLimitMinutes":60,"learningGoals":["함수 분리"],"attributes":{"language":"kotlin"}},"requirements":[{"sortOrder":1,"requirementText":"함수 분리 필수"}],"examples":[{"seq":1,"inputText":"ADD 1\\nCLOSE","outputText":"+1","description":"기본 동작"}]},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
+    example = """{"success":true,"data":{"id":"assignment-1","courseSlug":"fl-basic","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"DRAFT","publishedAt":null,"metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","timeLimitMinutes":60,"learningGoals":["함수 분리"],"problemDetail":{"source":{"platform":"BOJ","problemId":2557,"url":"https://www.acmicpc.net/problem/2557"},"inputDescription":"입력이 없다.","outputDescription":"Hello World!를 출력한다.","classification":{"algorithmStep":"STEP0","difficultyStep":1}},"submissionGuide":{"title":"문제 풀이 템플릿","description":"제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.","commentSections":["문제","해석","풀이"]},"codeTemplates":[{"language":"KOTLIN","commentTemplate":"/* ... */","functionTemplate":"fun solution(): String { ... }","runnableTemplate":"fun solution(): String { ... }"},{"language":"DART","commentTemplate":"/* ... */","functionTemplate":"String solution() { ... }","runnableTemplate":"String solution() { ... }"}],"attributes":{"language":"kotlin"}},"requirements":[{"sortOrder":1,"requirementText":"함수 분리 필수"}],"examples":[{"seq":1,"inputText":"ADD 1\\nCLOSE","outputText":"+1","description":"기본 동작"}]},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
 )
 data class AssignmentDetailEnvelopeDoc(
     @field:Schema(example = "true")

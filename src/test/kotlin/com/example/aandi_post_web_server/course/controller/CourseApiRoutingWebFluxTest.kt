@@ -2,14 +2,22 @@ package com.example.aandi_post_web_server.course.controller
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDeliveryResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentCodeTemplateResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemClassificationResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemSourceResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuideResponse
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.enum.AssignmentSourcePlatform
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.security.SecurityConfig
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
@@ -104,6 +112,9 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .expectStatus().isOk
                 .expectBody()
                 .jsonPath("$.data.id").isEqualTo("assignment-1")
+                .jsonPath("$.data.metadata.problemDetail.source.platform").isEqualTo("BOJ")
+                .jsonPath("$.data.metadata.submissionGuide.title").isEqualTo("문제 풀이 템플릿")
+                .jsonPath("$.data.metadata.codeTemplates[0].language").isEqualTo("KOTLIN")
         }
 
         "과제 ID로 코스 조회 API는 USER 토큰으로 호출하면 성공한다" {
@@ -505,6 +516,38 @@ private fun sampleAssignmentDetailResponse(): AssignmentDetailResponse {
             description = "# 문제 설명",
             timeLimitMinutes = 60,
             learningGoals = emptyList(),
+            problemDetail = AssignmentProblemDetailResponse(
+                source = AssignmentProblemSourceResponse(
+                    platform = AssignmentSourcePlatform.BOJ,
+                    problemId = 2557,
+                    url = "https://www.acmicpc.net/problem/2557",
+                ),
+                inputDescription = "입력이 없다.",
+                outputDescription = "Hello World!를 출력한다.",
+                classification = AssignmentProblemClassificationResponse(
+                    algorithmStep = AssignmentProblemStep.STEP0,
+                    difficultyStep = 1,
+                ),
+            ),
+            submissionGuide = AssignmentSubmissionGuideResponse(
+                title = "문제 풀이 템플릿",
+                description = "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.",
+                commentSections = listOf("문제", "해석", "풀이"),
+            ),
+            codeTemplates = listOf(
+                AssignmentCodeTemplateResponse(
+                    language = AssignmentTemplateLanguage.KOTLIN,
+                    commentTemplate = "/* ... */",
+                    functionTemplate = "fun solution(): String { ... }",
+                    runnableTemplate = "fun solution(): String { ... }",
+                ),
+                AssignmentCodeTemplateResponse(
+                    language = AssignmentTemplateLanguage.DART,
+                    commentTemplate = "/* ... */",
+                    functionTemplate = "String solution() { ... }",
+                    runnableTemplate = "String solution() { ... }",
+                ),
+            ),
             attributes = emptyMap(),
         ),
         requirements = emptyList(),
