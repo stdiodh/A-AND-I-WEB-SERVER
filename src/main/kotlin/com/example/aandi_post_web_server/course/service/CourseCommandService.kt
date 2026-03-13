@@ -1,6 +1,11 @@
 package com.example.aandi_post_web_server.course.service
 
 import com.example.aandi_post_web_server.assignment.domain.AssignmentExampleDrafts
+import com.example.aandi_post_web_server.assignment.domain.AssignmentImportService
+import com.example.aandi_post_web_server.assignment.domain.toEntity
+import com.example.aandi_post_web_server.assignment.domain.source
+import com.example.aandi_post_web_server.assignment.domain.withImportedContent
+import com.example.aandi_post_web_server.assignment.domain.toResponse
 import com.example.aandi_post_web_server.assignment.domain.AssignmentRequirementDrafts
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
@@ -57,6 +62,7 @@ class CourseCommandService(
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentExampleRepository: AssignmentExampleRepository,
     private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
+    private val assignmentImportService: AssignmentImportService,
 ) {
 
     fun createCourse(request: CreateCourseRequest): Mono<CourseResponse> {
@@ -210,70 +216,66 @@ class CourseCommandService(
         if (request.endAt.isBefore(request.startAt)) {
             return Mono.error(ResponseStatusException(HttpStatus.BAD_REQUEST, "endAt은 startAt보다 빠를 수 없습니다."))
         }
-        val requirementDrafts = parseRequirementDrafts(request.requirements)
-        val exampleDrafts = parseExampleDrafts(request.examples)
+        return resolveCreateRequest(request)
+            .flatMap { resolvedRequest ->
+                val requirementDrafts = parseRequirementDrafts(resolvedRequest.requirements)
+                val exampleDrafts = parseExampleDrafts(resolvedRequest.examples)
 
-        return findCourseBySlug(slug)
-            .flatMap { course ->
-                val courseId = parseCourseId(requireNotNull(course.id))
-                ensureWeekExistsOrCreate(
-                    courseId = courseId,
-                    weekNo = weekNo,
-                    startAt = request.startAt,
-                    endAt = request.endAt,
-                )
-                    .then(
-                        Mono.defer {
-                            assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo.value, request.orderInWeek)
-                                .flatMap<AssignmentDetailResponse> {
-                                    Mono.error(
-                                        ResponseStatusException(
-                                            HttpStatus.CONFLICT,
-                                            "동일 코스/주차/순번 과제가 이미 존재합니다.",
-                                        )
-                                    )
-                                }
-                                .switchIfEmpty(
-                                    Mono.defer {
-                                        assignmentRepository.save(
-                                            Assignment(
-                                                courseId = courseId.value,
-                                                courseSlug = course.slug,
-                                                createdBy = createdBy,
-                                                weekNo = weekNo.value,
-                                                orderInWeek = request.orderInWeek,
-                                                startAt = request.startAt,
-                                                endAt = request.endAt,
-                                                metadata = com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata(
-                                                    title = request.metadata.title.trim(),
-                                                    difficulty = request.metadata.difficulty,
-                                                    description = request.metadata.description.trim(),
-                                                    timeLimitMinutes = request.metadata.timeLimitMinutes,
-                                                    learningGoals = request.metadata.learningGoals.map { it.trim() },
-                                                    attributes = request.metadata.attributes,
-                                                ),
-                                                status = AssignmentStatus.DRAFT,
-                                                createdAt = Instant.now(),
-                                                updatedAt = Instant.now(),
+                findCourseBySlug(slug)
+                    .flatMap { course ->
+                        val courseId = parseCourseId(requireNotNull(course.id))
+                        ensureWeekExistsOrCreate(
+                            courseId = courseId,
+                            weekNo = weekNo,
+                            startAt = resolvedRequest.startAt,
+                            endAt = resolvedRequest.endAt,
+                        )
+                            .then(
+                                Mono.defer {
+                                    assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo.value, resolvedRequest.orderInWeek)
+                                        .flatMap<AssignmentDetailResponse> {
+                                            Mono.error(
+                                                ResponseStatusException(
+                                                    HttpStatus.CONFLICT,
+                                                    "동일 코스/주차/순번 과제가 이미 존재합니다.",
+                                                )
                                             )
-                                        ).flatMap { assignment ->
-                                            val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
-                                            val requirementsMono = saveRequirements(assignmentId, requirementDrafts)
-                                            val examplesMono = saveExamples(assignmentId, exampleDrafts)
-                                            Mono.zip(requirementsMono, examplesMono)
-                                                .map { tuple ->
-                                                    toAssignmentDetailResponse(
-                                                        courseSlug = course.slug,
-                                                        assignment = assignment,
-                                                        requirements = tuple.t1,
-                                                        examples = tuple.t2,
-                                                    )
-                                                }
                                         }
-                                    }
-                                )
-                        }
-                    )
+                                        .switchIfEmpty(
+                                            Mono.defer {
+                                                assignmentRepository.save(
+                                                    Assignment(
+                                                        courseId = courseId.value,
+                                                        courseSlug = course.slug,
+                                                        createdBy = createdBy,
+                                                        weekNo = weekNo.value,
+                                                        orderInWeek = resolvedRequest.orderInWeek,
+                                                        startAt = resolvedRequest.startAt,
+                                                        endAt = resolvedRequest.endAt,
+                                                        metadata = resolvedRequest.metadata.toEntity(),
+                                                        status = AssignmentStatus.DRAFT,
+                                                        createdAt = Instant.now(),
+                                                        updatedAt = Instant.now(),
+                                                    )
+                                                ).flatMap { assignment ->
+                                                    val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
+                                                    val requirementsMono = saveRequirements(assignmentId, requirementDrafts)
+                                                    val examplesMono = saveExamples(assignmentId, exampleDrafts)
+                                                    Mono.zip(requirementsMono, examplesMono)
+                                                        .map { tuple ->
+                                                            toAssignmentDetailResponse(
+                                                                courseSlug = course.slug,
+                                                                assignment = assignment,
+                                                                requirements = tuple.t1,
+                                                                examples = tuple.t2,
+                                                            )
+                                                        }
+                                                }
+                                            }
+                                        )
+                                }
+                            )
+                    }
             }
     }
 
@@ -296,32 +298,36 @@ class CourseCommandService(
         val slug = parseCourseSlug(courseSlug)
         val parsedAssignmentId = parseAssignmentId(assignmentId)
         val parsedWeekNo = request.weekNo?.let { parseWeekNo(it) }
-        val requirementDrafts = request.requirements?.let { parseRequirementDrafts(it) }
-        val exampleDrafts = request.examples?.let { parseExampleDrafts(it) }
 
-        return findCourseBySlug(slug)
-            .flatMap { course ->
-                val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
-                    .switchIfEmpty(
-                        Mono.error(
-                            ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}",
+        return resolveUpdateRequest(request)
+            .flatMap { resolvedRequest ->
+                val requirementDrafts = resolvedRequest.requirements?.let { parseRequirementDrafts(it) }
+                val exampleDrafts = resolvedRequest.examples?.let { parseExampleDrafts(it) }
+
+                findCourseBySlug(slug)
+                    .flatMap { course ->
+                        val courseId = parseCourseId(requireNotNull(course.id))
+                        assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
+                            .switchIfEmpty(
+                                Mono.error(
+                                    ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}",
+                                    )
+                                )
                             )
-                        )
-                    )
-                    .flatMap { assignment ->
-                        updateAssignmentInternal(
-                            course = course,
-                            courseId = courseId,
-                            assignment = assignment,
-                            parsedAssignmentId = parsedAssignmentId,
-                            request = request,
-                            parsedWeekNo = parsedWeekNo,
-                            requirementDrafts = requirementDrafts,
-                            exampleDrafts = exampleDrafts,
-                        )
+                            .flatMap { assignment ->
+                                updateAssignmentInternal(
+                                    course = course,
+                                    courseId = courseId,
+                                    assignment = assignment,
+                                    parsedAssignmentId = parsedAssignmentId,
+                                    request = resolvedRequest,
+                                    parsedWeekNo = parsedWeekNo,
+                                    requirementDrafts = requirementDrafts,
+                                    exampleDrafts = exampleDrafts,
+                                )
+                            }
                     }
             }
     }
@@ -613,16 +619,7 @@ class CourseCommandService(
             return Mono.error(ResponseStatusException(HttpStatus.BAD_REQUEST, "endAt은 startAt보다 빠를 수 없습니다."))
         }
 
-        val metadata = request.metadata?.let {
-            com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata(
-                title = it.title.trim(),
-                difficulty = it.difficulty,
-                description = it.description.trim(),
-                timeLimitMinutes = it.timeLimitMinutes,
-                learningGoals = it.learningGoals.map(String::trim),
-                attributes = it.attributes,
-            )
-        } ?: assignment.metadata
+        val metadata = request.metadata?.toEntity() ?: assignment.metadata
 
         val candidate = assignment.copy(
             weekNo = targetWeekNo,
@@ -737,6 +734,56 @@ class CourseCommandService(
     private fun parseExampleDrafts(requests: List<CreateAssignmentExampleRequest>): AssignmentExampleDrafts =
         parseOrBadRequest { AssignmentExampleDrafts.fromRequests(requests) }
 
+    private fun resolveCreateRequest(request: CreateAssignmentRequest): Mono<CreateAssignmentRequest> {
+        val source = request.metadata.source() ?: return Mono.just(validateResolvedCreateRequest(request))
+        return assignmentImportService.import(source)
+            .map { imported ->
+                val resolvedExamples = if (request.examples.isEmpty()) imported.examples else request.examples
+                validateResolvedCreateRequest(
+                    request.copy(
+                        metadata = request.metadata.withImportedContent(imported),
+                        examples = resolvedExamples,
+                    )
+                )
+            }
+    }
+
+    private fun resolveUpdateRequest(request: UpdateAssignmentRequest): Mono<UpdateAssignmentRequest> {
+        val metadata = request.metadata ?: return Mono.just(request)
+        val source = metadata.source() ?: return Mono.just(validateResolvedUpdateRequest(request))
+        return assignmentImportService.import(source)
+            .map { imported ->
+                val resolvedExamples = if (request.examples.isNullOrEmpty()) imported.examples else request.examples
+                validateResolvedUpdateRequest(
+                    request.copy(
+                        metadata = metadata.withImportedContent(imported),
+                        examples = resolvedExamples,
+                    )
+                )
+            }
+    }
+
+    private fun validateResolvedCreateRequest(request: CreateAssignmentRequest): CreateAssignmentRequest {
+        if (request.metadata.title.isNullOrBlank()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "과제 제목이 필요합니다.")
+        }
+        if (request.metadata.description.isNullOrBlank()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "과제 설명이 필요합니다.")
+        }
+        return request
+    }
+
+    private fun validateResolvedUpdateRequest(request: UpdateAssignmentRequest): UpdateAssignmentRequest {
+        val metadata = request.metadata ?: return request
+        if (metadata.title != null && metadata.title.isBlank()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "과제 제목이 비어 있을 수 없습니다.")
+        }
+        if (metadata.description != null && metadata.description.isBlank()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "과제 설명이 비어 있을 수 없습니다.")
+        }
+        return request
+    }
+
     private fun <T> parseOrBadRequest(block: () -> T): T {
         return runCatching(block).getOrElse { error ->
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, error.message ?: "잘못된 요청입니다.")
@@ -785,14 +832,7 @@ class CourseCommandService(
         endAt = assignment.endAt,
         status = assignment.status,
         publishedAt = assignment.publishedAt,
-        metadata = com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataResponse(
-            title = assignment.metadata.title,
-            difficulty = assignment.metadata.difficulty,
-            description = assignment.metadata.description,
-            timeLimitMinutes = assignment.metadata.timeLimitMinutes,
-            learningGoals = assignment.metadata.learningGoals,
-            attributes = assignment.metadata.attributes,
-        ),
+        metadata = assignment.metadata.toResponse(),
         requirements = requirements,
         examples = examples,
     )
