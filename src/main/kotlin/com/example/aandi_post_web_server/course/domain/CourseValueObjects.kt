@@ -1,5 +1,7 @@
 package com.example.aandi_post_web_server.course.domain
 
+import java.util.UUID
+
 @JvmInline
 value class CourseSlug private constructor(val value: String) {
     companion object {
@@ -34,6 +36,20 @@ value class UserId private constructor(val value: String) {
 }
 
 @JvmInline
+value class PublicCode private constructor(val value: String) {
+    companion object {
+        private val PATTERN = Regex("^[A-Z]{2}\\d{3}$")
+
+        fun from(raw: String): PublicCode {
+            val normalized = raw.trim().uppercase()
+            require(normalized.isNotBlank()) { "publicCode는 비어 있을 수 없습니다." }
+            require(PATTERN.matches(normalized)) { "publicCode 형식이 올바르지 않습니다. 예: FL301" }
+            return PublicCode(normalized)
+        }
+    }
+}
+
+@JvmInline
 value class WeekNo private constructor(val value: Int) {
     companion object {
         fun from(raw: Int): WeekNo {
@@ -49,6 +65,7 @@ value class AssignmentId private constructor(val value: String) {
         fun from(raw: String): AssignmentId {
             val normalized = raw.trim()
             require(normalized.isNotBlank()) { "assignmentId는 비어 있을 수 없습니다." }
+            require(runCatching { UUID.fromString(normalized) }.isSuccess) { "assignmentId는 UUID 형식이어야 합니다." }
             return AssignmentId(normalized)
         }
     }

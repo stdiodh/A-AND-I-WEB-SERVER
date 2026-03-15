@@ -14,9 +14,6 @@ import com.example.aandi_post_web_server.common.openapi.ErrorEnvelopeDoc
 import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
-import com.example.aandi_post_web_server.course.enum.CoursePhase
-import com.example.aandi_post_web_server.course.enum.CourseStatus
-import com.example.aandi_post_web_server.course.enum.UserTrack
 import com.example.aandi_post_web_server.course.service.CourseV1Service
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -43,41 +40,35 @@ class CourseQueryV1Controller(
 ) {
 
     @Operation(
-        summary = "코스 목록 조회",
-        description = "track(FL/SP/NO), status, phase 조건으로 코스 목록을 조회합니다. NO는 공통 코스를 의미하며, FL/SP 조회 시 공통 코스도 함께 반환합니다.",
+        summary = "내 코스 목록 조회",
+        description = "로그인한 사용자가 현재 수강 중인 코스 목록을 보여줍니다. 별도 필터 없이 수강 중인 코스만 반환합니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseListEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "400", description = "잘못된 enum 파라미터(track/status/phase)", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping
-    fun getCourses(
-        @Parameter(description = "코스 상태", example = "PUBLISHED")
-        @RequestParam(required = false) status: CourseStatus?,
-        @Parameter(description = "과정 단계", example = "BASIC")
-        @RequestParam(required = false) phase: CoursePhase?,
-        @Parameter(description = "유저 트랙", example = "FL")
-        @RequestParam(required = false) track: UserTrack?,
-        authentication: Authentication,
-    ): Mono<ApiEnvelope<List<CourseResponse>>> {
+    fun getCourses(authentication: Authentication): Mono<ApiEnvelope<List<CourseResponse>>> {
         return courseV1Service
-            .getCourses(status, phase, track, authentication.name)
+            .getCourses(authentication.name)
             .collectList()
             .map { ApiEnvelope.success(it) }
     }
 
-    @Operation(summary = "코스 상세 조회", description = "courseSlug로 단일 코스를 조회합니다.")
+    @Operation(
+        summary = "코스 상세 조회",
+        description = "수강 중인 코스의 상세 정보를 보여줍니다. 수강 중이 아니거나 차단된 코스는 찾을 수 없는 것으로 응답합니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}")
     fun getCourse(
-        @Parameter(description = "코스 슬러그", example = "back-basic")
+        @Parameter(description = "코스를 구분하는 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
         authentication: Authentication,
     ): Mono<ApiEnvelope<CourseResponse>> {
@@ -85,34 +76,37 @@ class CourseQueryV1Controller(
     }
 
     @Operation(
-        summary = "코스 목차 요약 조회",
-        description = "프론트 목차 UI용 코스/과제 요약 데이터를 조회합니다. 과제는 weekNo/orderInWeek 순으로 정렬되며 checked 플래그를 제공합니다.",
+        summary = "코스 목차 조회",
+        description = "코스의 목차와 과제 요약을 보여줍니다. 수강 중이 아니거나 차단된 코스는 찾을 수 없는 것으로 응답합니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseOutlineEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/outline")
     fun getCourseOutline(
-        @Parameter(description = "코스 슬러그", example = "back-basic")
+        @Parameter(description = "코스를 구분하는 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
         authentication: Authentication,
     ): Mono<ApiEnvelope<CourseOutlineResponse>> {
         return courseV1Service.getCourseOutline(courseSlug, authentication.name).map { ApiEnvelope.success(it) }
     }
 
-    @Operation(summary = "코스 주차 목록 조회", description = "해당 코스의 주차 목록을 조회합니다.")
+    @Operation(
+        summary = "코스 주차 목록 조회",
+        description = "코스에 포함된 주차 목록을 보여줍니다. 수강 중이 아니거나 차단된 코스는 찾을 수 없는 것으로 응답합니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseWeekListEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/weeks")
     fun getWeeks(
-        @Parameter(description = "코스 슬러그", example = "back-basic")
+        @Parameter(description = "코스를 구분하는 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
         authentication: Authentication,
     ): Mono<ApiEnvelope<List<CourseWeekResponse>>> {
@@ -122,19 +116,22 @@ class CourseQueryV1Controller(
             .map { ApiEnvelope.success(it) }
     }
 
-    @Operation(summary = "주차별 과제 목록 조회", description = "특정 주차의 과제 목록을 조회합니다.")
+    @Operation(
+        summary = "주차별 과제 목록 조회",
+        description = "특정 주차의 과제 목록을 보여줍니다. 사용자에게는 공개 시작 시간(startAt)이 지난 과제만 반환합니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = AssignmentSummaryListEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "400", description = "잘못된 weekNo/status", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "400", description = "weekNo 또는 status 값이 올바르지 않음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/weeks/{weekNo}/assignments")
     fun getAssignmentsByWeek(
-        @Parameter(description = "코스 슬러그", example = "back-basic")
+        @Parameter(description = "코스를 구분하는 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
-        @Parameter(description = "주차 번호(1 이상)", example = "1")
+        @Parameter(description = "주차 번호", example = "1")
         @PathVariable weekNo: Int,
         @Parameter(description = "과제 상태", example = "PUBLISHED")
         @RequestParam(required = false) status: AssignmentStatus?,
@@ -151,21 +148,24 @@ class CourseQueryV1Controller(
             .map { ApiEnvelope.success(it) }
     }
 
-    @Operation(summary = "코스 과제 목록 조회", description = "코스 전체 과제를 조회하며 weekNo/status 필터를 지원합니다.")
+    @Operation(
+        summary = "코스 과제 목록 조회",
+        description = "코스의 과제 목록을 보여줍니다. 사용자에게는 공개 시작 시간(startAt)이 지난 과제만 반환합니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = AssignmentSummaryListEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "400", description = "잘못된 weekNo/status", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "400", description = "weekNo 또는 status 값이 올바르지 않음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/assignments")
     fun getAssignments(
-        @Parameter(description = "코스 슬러그", example = "back-basic")
+        @Parameter(description = "코스를 구분하는 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
-        @Parameter(description = "주차 번호(옵션)", example = "1")
+        @Parameter(description = "주차 번호", example = "1")
         @RequestParam(name = "weekNo", required = false) weekNo: Int?,
-        @Parameter(description = "과제 상태(옵션)", example = "PUBLISHED")
+        @Parameter(description = "과제 상태", example = "PUBLISHED")
         @RequestParam(required = false) status: AssignmentStatus?,
         authentication: Authentication,
     ): Mono<ApiEnvelope<List<AssignmentSummaryResponse>>> {
@@ -180,18 +180,21 @@ class CourseQueryV1Controller(
             .map { ApiEnvelope.success(it) }
     }
 
-    @Operation(summary = "과제 상세 조회", description = "courseSlug와 assignmentId로 과제 상세 정보를 조회합니다.")
+    @Operation(
+        summary = "과제 상세 조회",
+        description = "과제의 상세 정보를 보여줍니다. assignmentId는 과제 UUID를 사용하며, 사용자에게는 공개 시작 시간이 지난 과제만 보입니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = AssignmentDetailEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/assignments/{assignmentId}")
     fun getAssignmentDetail(
-        @Parameter(description = "코스 슬러그", example = "back-basic")
+        @Parameter(description = "코스를 구분하는 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
-        @Parameter(description = "과제 ID", example = "assignment-1")
+        @Parameter(description = "과제 UUID", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
         @PathVariable assignmentId: String,
         authentication: Authentication,
     ): Mono<ApiEnvelope<AssignmentDetailResponse>> {
@@ -202,16 +205,19 @@ class CourseQueryV1Controller(
         ).map { ApiEnvelope.success(it) }
     }
 
-    @Operation(summary = "과제 ID로 코스 조회", description = "assignmentId로 과제가 속한 코스를 조회합니다.")
+    @Operation(
+        summary = "과제가 속한 코스 조회",
+        description = "과제 UUID로 해당 과제가 속한 코스 정보를 보여줍니다. 수강 중이 아니거나 차단된 코스는 찾을 수 없는 것으로 응답합니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "과제 또는 코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "과제 또는 코스를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/assignments/{assignmentId}/course")
     fun getAssignmentCourse(
-        @Parameter(description = "과제 ID", example = "assignment-1")
+        @Parameter(description = "과제 UUID", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
         @PathVariable assignmentId: String,
         authentication: Authentication,
     ): Mono<ApiEnvelope<CourseResponse>> {

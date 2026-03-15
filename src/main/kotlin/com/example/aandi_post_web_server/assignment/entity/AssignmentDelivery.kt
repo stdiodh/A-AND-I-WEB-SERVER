@@ -1,6 +1,5 @@
 package com.example.aandi_post_web_server.assignment.entity
 
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.mapping.Document
@@ -13,8 +12,6 @@ data class AssignmentDelivery(
     val id: String? = null,
     val assignmentId: String,
     val userId: String,
-    val status: AssignmentDeliveryStatus = AssignmentDeliveryStatus.QUEUED,
     val deliveredAt: Instant? = null,
-    val failureReason: String? = null,
     val createdAt: Instant = Instant.now(),
 )

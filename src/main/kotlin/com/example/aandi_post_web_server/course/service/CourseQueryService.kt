@@ -1,16 +1,12 @@
 package com.example.aandi_post_web_server.course.service
 
 import com.example.aandi_post_web_server.assignment.domain.toResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentDeliveryResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentRequirementResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.entity.Assignment
-import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRequirementRepository
@@ -28,11 +24,7 @@ import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseWeek
-import com.example.aandi_post_web_server.course.enum.CoursePhase
-import com.example.aandi_post_web_server.course.enum.CourseStatus
-import com.example.aandi_post_web_server.course.enum.CourseTrack
 import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
-import com.example.aandi_post_web_server.course.enum.UserTrack
 import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
@@ -53,7 +45,6 @@ class CourseQueryService(
     private val assignmentRepository: AssignmentRepository,
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentExampleRepository: AssignmentExampleRepository,
-    private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
     private val clock: Clock = Clock.systemUTC(),
 ) {
 
@@ -74,22 +65,17 @@ class CourseQueryService(
         return findAccessibleCourseBySlug(slug, parsedUserId)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findAllByCourseIdAndStatus(courseId.value, AssignmentStatus.PUBLISHED)
+                assignmentRepository.findAllByCourseId(courseId.value)
+                    .filter { assignment -> isVisibleToUser(assignment) }
                     .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
                     .collectList()
                     .map { assignments -> toCourseOutlineResponse(course, assignments) }
             }
     }
 
-    fun getCourses(
-        status: CourseStatus?,
-        phase: CoursePhase?,
-        track: UserTrack?,
-        userId: String,
-    ): Flux<CourseResponse> {
-        val targetTrack = toCourseTrack(track)
+    fun getCourses(userId: String): Flux<CourseResponse> {
         val parsedUserId = parseUserId(userId)
-        return loadEnrolledCourses(parsedUserId, status, phase, targetTrack).map(::toCourseResponse)
+        return loadEnrolledCourses(parsedUserId).map(::toCourseResponse)
     }
 
     fun getEnrollments(courseSlug: String): Flux<CourseEnrollmentResponse> {
@@ -98,9 +84,9 @@ class CourseQueryService(
             .flatMapMany { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
                 courseEnrollmentRepository.findAllByCourseId(courseId.value)
+                    .map { enrollment -> toEnrollmentResponse(course.slug, enrollment) }
             }
-            .sort(compareByDescending<CourseEnrollment> { it.updatedAt })
-            .map(::toEnrollmentResponse)
+            .sort(compareByDescending<CourseEnrollmentResponse> { it.updatedAt })
     }
 
     fun getWeeks(courseSlug: String, userId: String): Flux<CourseWeekResponse> {
@@ -138,15 +124,16 @@ class CourseQueryService(
         val slug = parseCourseSlug(courseSlug)
         val parsedWeekNo = weekNo?.let { parseWeekNo(it) }
         val parsedUserId = parseUserId(userId)
-        val visibleStatus = resolveVisibleAssignmentStatus(status)
+        resolveVisibleAssignmentStatus(status)
 
         return findAccessibleCourseBySlug(slug, parsedUserId)
             .flatMapMany { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                findAssignmentsByFilter(courseId, parsedWeekNo, visibleStatus)
+                findAssignmentsByFilter(courseId, parsedWeekNo)
             }
+            .filter { assignment -> isVisibleToUser(assignment) }
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
-            .map(::toAssignmentSummaryResponse)
+            .map { assignment -> toAssignmentSummaryResponse(assignment, effectiveAssignment(assignment)) }
     }
 
     fun getAdminAssignments(
@@ -159,10 +146,11 @@ class CourseQueryService(
         return findCourseBySlug(slug)
             .flatMapMany { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                findAdminAssignmentsByFilter(courseId, parsedWeekNo, status)
+                findAdminAssignmentsByFilter(courseId, parsedWeekNo)
             }
+            .filter { assignment -> status == null || effectiveAssignmentStatus(assignment) == status }
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
-            .map(::toAssignmentSummaryResponse)
+            .map { assignment -> toAssignmentSummaryResponse(assignment, effectiveAssignment(assignment)) }
     }
 
     fun getAssignmentDetail(
@@ -179,7 +167,7 @@ class CourseQueryService(
                 val courseId = parseCourseId(requireNotNull(course.id))
                 assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
                     .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
-                    .flatMap { assignment -> ensurePublishedAssignment(assignment, parsedAssignmentId) }
+                    .flatMap { assignment -> ensureVisibleToUser(assignment, parsedAssignmentId) }
                     .flatMap { assignment -> loadAssignmentDetail(course.slug, assignment, parsedAssignmentId) }
             }
     }
@@ -204,7 +192,7 @@ class CourseQueryService(
         val parsedUserId = parseUserId(userId)
         return assignmentRepository.findById(parsedAssignmentId.value)
             .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
-            .flatMap { assignment -> ensurePublishedAssignment(assignment, parsedAssignmentId) }
+            .flatMap { assignment -> ensureVisibleToUser(assignment, parsedAssignmentId) }
             .flatMap { assignment ->
                 courseRepository.findById(assignment.courseId)
                     .switchIfEmpty(
@@ -222,77 +210,28 @@ class CourseQueryService(
             .map(::toCourseResponse)
     }
 
-    fun getDeliveries(
-        courseSlug: String,
-        assignmentId: String,
-        status: AssignmentDeliveryStatus?,
-    ): Flux<AssignmentDeliveryResponse> {
-        val slug = parseCourseSlug(courseSlug)
-        val parsedAssignmentId = parseAssignmentId(assignmentId)
-
-        return findCourseBySlug(slug)
-            .flatMapMany { course ->
-                val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
-                    .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
-                    .flatMapMany { loadDeliveries(parsedAssignmentId, status) }
-            }
-            .sort(compareByDescending<AssignmentDelivery> { it.deliveredAt ?: Instant.EPOCH })
-            .map {
-                AssignmentDeliveryResponse(
-                    userId = it.userId,
-                    status = it.status,
-                    deliveredAt = it.deliveredAt,
-                    failureReason = it.failureReason,
-                )
-            }
-    }
-
     private fun findAssignmentsByFilter(
         courseId: CourseId,
         weekNo: WeekNo?,
-        status: AssignmentStatus,
     ): Flux<Assignment> {
         if (weekNo != null) {
-            return assignmentRepository.findAllByCourseIdAndWeekNoAndStatus(courseId.value, weekNo.value, status)
+            return assignmentRepository.findAllByCourseIdAndWeekNo(courseId.value, weekNo.value)
         }
-        return assignmentRepository.findAllByCourseIdAndStatus(courseId.value, status)
+        return assignmentRepository.findAllByCourseId(courseId.value)
     }
 
     private fun findAdminAssignmentsByFilter(
         courseId: CourseId,
         weekNo: WeekNo?,
-        status: AssignmentStatus?,
     ): Flux<Assignment> {
-        if (weekNo != null && status != null) {
-            return assignmentRepository.findAllByCourseIdAndWeekNoAndStatus(courseId.value, weekNo.value, status)
-        }
         if (weekNo != null) {
             return assignmentRepository.findAllByCourseIdAndWeekNo(courseId.value, weekNo.value)
-        }
-        if (status != null) {
-            return assignmentRepository.findAllByCourseIdAndStatus(courseId.value, status)
         }
         return assignmentRepository.findAllByCourseId(courseId.value)
     }
 
-    private fun loadDeliveries(
-        assignmentId: AssignmentId,
-        status: AssignmentDeliveryStatus?,
-    ): Flux<AssignmentDelivery> {
-        if (status == null) {
-            return assignmentDeliveryRepository.findAllByAssignmentId(assignmentId.value)
-        }
-        return assignmentDeliveryRepository.findAllByAssignmentIdAndStatus(assignmentId.value, status)
-    }
-
-    private fun loadEnrolledCourses(
-        userId: UserId,
-        status: CourseStatus?,
-        phase: CoursePhase?,
-        targetTrack: CourseTrack?,
-    ): Flux<Course> {
-        return courseEnrollmentRepository.findAllByUserIdAndStatus(userId.value, EnrollmentStatus.ENROLLED)
+    private fun loadEnrolledCourses(userId: UserId): Flux<Course> {
+        return courseEnrollmentRepository.findAllByUserIdAndStatus(userId.value, EnrollmentStatus.ENABLED)
             .map { it.courseId }
             .distinct()
             .collectList()
@@ -301,9 +240,6 @@ class CourseQueryService(
                     return@flatMapMany Flux.empty()
                 }
                 courseRepository.findAllById(enrolledCourseIds)
-                    .filter { course -> status == null || course.status == status }
-                    .filter { course -> phase == null || course.metadata.phase == phase }
-                    .filter { course -> matchesTrack(course.fieldTag, targetTrack) }
             }
     }
 
@@ -322,7 +258,7 @@ class CourseQueryService(
 
     private fun ensureEnrolled(courseId: CourseId, userId: UserId): Mono<CourseEnrollment> {
         return courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, userId.value)
-            .filter { enrollment -> enrollment.status == EnrollmentStatus.ENROLLED }
+            .filter { enrollment -> enrollment.status == EnrollmentStatus.ENABLED }
             .switchIfEmpty(
                 Mono.error(
                     ResponseStatusException(HttpStatus.NOT_FOUND, "조회 가능한 코스를 찾을 수 없습니다.")
@@ -330,8 +266,8 @@ class CourseQueryService(
             )
     }
 
-    private fun ensurePublishedAssignment(assignment: Assignment, assignmentId: AssignmentId): Mono<Assignment> {
-        if (assignment.status != AssignmentStatus.PUBLISHED) {
+    private fun ensureVisibleToUser(assignment: Assignment, assignmentId: AssignmentId): Mono<Assignment> {
+        if (!isVisibleToUser(assignment)) {
             return Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${assignmentId.value}"))
         }
         return Mono.just(assignment)
@@ -349,18 +285,17 @@ class CourseQueryService(
             .zipWith(
                 assignmentExampleRepository
                     .findAllByAssignmentIdOrderBySeq(assignmentId.value)
-                    .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText, it.description) }
+                    .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText) }
                     .collectList()
             )
             .map { tuple ->
-                toAssignmentDetailResponse(courseSlug, assignment, tuple.t1, tuple.t2)
+                toAssignmentDetailResponse(courseSlug, assignment, effectiveAssignment(assignment), tuple.t1, tuple.t2)
             }
 
-    private fun resolveVisibleAssignmentStatus(status: AssignmentStatus?): AssignmentStatus {
-        if (status == null || status == AssignmentStatus.PUBLISHED) {
-            return AssignmentStatus.PUBLISHED
+    private fun resolveVisibleAssignmentStatus(status: AssignmentStatus?) {
+        if (status != null && status != AssignmentStatus.PUBLISHED) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "사용자 조회는 PUBLISHED 상태만 지원합니다.")
         }
-        throw ResponseStatusException(HttpStatus.BAD_REQUEST, "사용자 조회는 PUBLISHED 상태만 지원합니다.")
     }
 
     private fun parseCourseSlug(raw: String): CourseSlug =
@@ -377,32 +312,6 @@ class CourseQueryService(
 
     private fun parseAssignmentId(raw: String): AssignmentId =
         parseOrBadRequest { AssignmentId.from(raw) }
-
-    private fun toCourseTrack(userTrack: UserTrack?): CourseTrack? {
-        if (userTrack == null) {
-            return null
-        }
-        if (userTrack == UserTrack.NO) {
-            return CourseTrack.NO
-        }
-        if (userTrack == UserTrack.FL) {
-            return CourseTrack.FL
-        }
-        if (userTrack == UserTrack.SP) {
-            return CourseTrack.SP
-        }
-        return null
-    }
-
-    private fun matchesTrack(courseTrack: CourseTrack, requestedTrack: CourseTrack?): Boolean {
-        if (requestedTrack == null) {
-            return true
-        }
-        if (requestedTrack == CourseTrack.NO) {
-            return courseTrack == CourseTrack.NO
-        }
-        return courseTrack == requestedTrack || courseTrack == CourseTrack.NO
-    }
 
     private fun <T> parseOrBadRequest(block: () -> T): T {
         return runCatching(block).getOrElse { error ->
@@ -427,12 +336,14 @@ class CourseQueryService(
         updatedAt = course.updatedAt,
     )
 
-    private fun toEnrollmentResponse(enrollment: CourseEnrollment): CourseEnrollmentResponse = CourseEnrollmentResponse(
-        id = requireNotNull(enrollment.id),
+    private fun toEnrollmentResponse(courseSlug: String, enrollment: CourseEnrollment): CourseEnrollmentResponse = CourseEnrollmentResponse(
+        courseId = enrollment.courseId,
+        courseSlug = courseSlug,
         userId = enrollment.userId,
+        publicCode = enrollment.publicCode,
+        username = enrollment.username,
         status = enrollment.status,
         joinedAt = enrollment.joinedAt,
-        droppedAt = enrollment.droppedAt,
         bannedAt = enrollment.bannedAt,
         banReason = enrollment.banReason,
         updatedAt = enrollment.updatedAt,
@@ -481,19 +392,39 @@ class CourseQueryService(
 
     private fun isChecked(now: Instant, assignment: Assignment): Boolean = now.isAfter(assignment.endAt)
 
-    private fun toAssignmentSummaryResponse(assignment: Assignment): AssignmentSummaryResponse = AssignmentSummaryResponse(
+    private fun isVisibleToUser(assignment: Assignment): Boolean =
+        effectiveAssignmentStatus(assignment) == AssignmentStatus.PUBLISHED
+
+    private fun effectiveAssignmentStatus(assignment: Assignment, now: Instant = Instant.now(clock)): AssignmentStatus {
+        if (now >= assignment.startAt) {
+            return AssignmentStatus.PUBLISHED
+        }
+        return AssignmentStatus.DRAFT
+    }
+
+    private fun effectiveAssignment(assignment: Assignment, now: Instant = Instant.now(clock)): Assignment =
+        assignment.copy(
+            status = effectiveAssignmentStatus(assignment, now),
+            publishedAt = if (now >= assignment.startAt) assignment.publishedAt ?: assignment.startAt else null,
+        )
+
+    private fun toAssignmentSummaryResponse(
+        assignment: Assignment,
+        effectiveAssignment: Assignment,
+    ): AssignmentSummaryResponse = AssignmentSummaryResponse(
         id = requireNotNull(assignment.id),
         weekNo = assignment.weekNo,
         orderInWeek = assignment.orderInWeek,
         startAt = assignment.startAt,
         endAt = assignment.endAt,
-        status = assignment.status,
+        status = effectiveAssignment.status,
         metadata = assignment.metadata.toResponse(),
     )
 
     private fun toAssignmentDetailResponse(
         courseSlug: String,
         assignment: Assignment,
+        effectiveAssignment: Assignment,
         requirements: List<AssignmentRequirementResponse>,
         examples: List<AssignmentExampleResponse>,
     ): AssignmentDetailResponse = AssignmentDetailResponse(
@@ -503,10 +434,8 @@ class CourseQueryService(
         orderInWeek = assignment.orderInWeek,
         startAt = assignment.startAt,
         endAt = assignment.endAt,
-        status = assignment.status,
-        publishedAt = assignment.publishedAt,
-        metadata = assignment.metadata.toResponse(),
-        requirements = requirements,
-        examples = examples,
+        status = effectiveAssignment.status,
+        publishedAt = effectiveAssignment.publishedAt,
+        metadata = assignment.metadata.toResponse(requirements, examples),
     )
 }

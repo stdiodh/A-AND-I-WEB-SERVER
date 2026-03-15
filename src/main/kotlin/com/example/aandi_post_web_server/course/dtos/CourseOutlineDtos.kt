@@ -10,9 +10,9 @@ import java.time.Instant
 data class CourseOutlineHeaderResponse(
     @field:Schema(description = "코스 ID", example = "course-1")
     val id: String,
-    @field:Schema(description = "코스 슬러그", example = "cs-basic-fl")
+    @field:Schema(description = "코스를 구분하는 슬러그", example = "cs-basic-fl")
     val slug: String,
-    @field:Schema(description = "분야 태그", example = "FL")
+    @field:Schema(description = "트랙 태그", example = "FL")
     val fieldTag: CourseTrack,
     @field:Schema(description = "코스명", example = "기초 CS 과정")
     val title: String,
@@ -24,7 +24,7 @@ data class CourseOutlineHeaderResponse(
 
 @Schema(description = "목차용 과제 요약")
 data class CourseOutlineAssignmentItemResponse(
-    @field:Schema(description = "과제 ID", example = "assignment-1")
+    @field:Schema(description = "과제 UUID", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
     val assignmentId: String,
     @field:Schema(description = "주차 번호", example = "1")
     val weekNo: Int,
@@ -38,7 +38,7 @@ data class CourseOutlineAssignmentItemResponse(
     val startAt: Instant,
     @field:Schema(description = "종료 시각(KST(Asia/Seoul))", example = "2026-03-11T08:59:59+09:00")
     val endAt: Instant,
-    @field:Schema(description = "체크 표시 여부(완료=true)", example = "false")
+    @field:Schema(description = "완료 여부", example = "false")
     val checked: Boolean,
 )
 

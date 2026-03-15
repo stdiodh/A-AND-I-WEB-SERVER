@@ -43,10 +43,10 @@ data class CourseMetadataPayload(
 )
 data class CreateCourseRequest(
     @field:NotBlank
-    @field:Schema(description = "코스 슬러그(고유값)", example = "3rd-cs-basic")
+    @field:Schema(description = "코스를 구분하는 슬러그", example = "3rd-cs-basic")
     val slug: String,
     @field:NotNull
-    @field:Schema(description = "분야 태그(NO=공통, FL=프론트, SP=서버)", example = "NO")
+    @field:Schema(description = "트랙 태그(NO=공통, FL=프론트, SP=서버)", example = "NO")
     val fieldTag: CourseTrack,
     @field:NotNull
     @field:Schema(description = "과정 시작일", example = "2026-03-02")
@@ -78,7 +78,7 @@ data class CreateCourseRequest(
         """,
 )
 data class UpdateCourseRequest(
-    @field:Schema(description = "분야 태그(NO=공통, FL=프론트, SP=서버)", example = "NO")
+    @field:Schema(description = "트랙 태그(NO=공통, FL=프론트, SP=서버)", example = "NO")
     val fieldTag: CourseTrack? = null,
     @field:Schema(description = "과정 시작일", example = "2026-03-02")
     val startDate: LocalDate? = null,
@@ -106,9 +106,9 @@ data class CourseMetadataResponse(
 data class CourseResponse(
     @field:Schema(description = "코스 ID", example = "course-1")
     val id: String,
-    @field:Schema(description = "코스 슬러그", example = "fl-basic")
+    @field:Schema(description = "코스를 구분하는 슬러그", example = "fl-basic")
     val slug: String,
-    @field:Schema(description = "분야 태그(NO=공통, FL=프론트, SP=서버)", example = "NO")
+    @field:Schema(description = "트랙 태그(NO=공통, FL=프론트, SP=서버)", example = "NO")
     val fieldTag: CourseTrack,
     @field:Schema(description = "과정 시작일", example = "2026-03-02")
     val startDate: LocalDate,
@@ -129,14 +129,14 @@ data class CourseResponse(
     example =
         """
         {
-          "userId": "mekazon"
+          "publicCode": "FL301"
         }
         """,
 )
 data class EnrollCourseRequest(
     @field:NotBlank
-    @field:Schema(description = "유저 식별값", example = "user-1")
-    val userId: String,
+    @field:Schema(description = "등록할 사용자의 publicCode", example = "FL301")
+    val publicCode: String,
 )
 
 @Schema(
@@ -150,7 +150,7 @@ data class EnrollCourseRequest(
         """,
 )
 data class UpdateEnrollmentRequest(
-    @field:Schema(description = "변경할 수강 상태", example = "BANNED")
+    @field:Schema(description = "변경할 수강 상태(ENABLED, BANNED)", example = "BANNED")
     val status: EnrollmentStatus,
     @field:Schema(description = "BANNED 사유", example = "운영 정책 위반")
     val banReason: String? = null,
@@ -158,19 +158,23 @@ data class UpdateEnrollmentRequest(
 
 @Schema(description = "수강 정보 응답")
 data class CourseEnrollmentResponse(
-    @field:Schema(description = "수강 ID", example = "enroll-1")
-    val id: String,
-    @field:Schema(description = "유저 식별값", example = "user-1")
+    @field:Schema(description = "코스 ID", example = "course-1")
+    val courseId: String,
+    @field:Schema(description = "코스를 구분하는 슬러그", example = "fl-basic")
+    val courseSlug: String,
+    @field:Schema(description = "사용자 UUID", example = "user-1")
     val userId: String,
-    @field:Schema(description = "수강 상태", example = "ENROLLED")
+    @field:Schema(description = "유저 publicCode", example = "FL301")
+    val publicCode: String,
+    @field:Schema(description = "사용자 이름", example = "string")
+    val username: String,
+    @field:Schema(description = "수강 상태", example = "ENABLED")
     val status: EnrollmentStatus,
     @field:Schema(description = "등록 시각(KST(Asia/Seoul))", example = "2026-03-01T09:00:00+09:00")
     val joinedAt: Instant,
-    @field:Schema(description = "중도 포기 시각(KST(Asia/Seoul))")
-    val droppedAt: Instant?,
-    @field:Schema(description = "강제 제외 시각(KST(Asia/Seoul))")
+    @field:Schema(description = "차단 시각(KST(Asia/Seoul))")
     val bannedAt: Instant?,
-    @field:Schema(description = "강제 제외 사유")
+    @field:Schema(description = "차단 사유")
     val banReason: String?,
     @field:Schema(description = "최종 변경 시각(KST(Asia/Seoul))", example = "2026-03-02T09:00:00+09:00")
     val updatedAt: Instant,

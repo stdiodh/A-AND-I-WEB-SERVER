@@ -1,10 +1,7 @@
 package com.example.aandi_post_web_server.course.service
 
 import com.example.aandi_post_web_server.assignment.domain.AssignmentExampleDrafts
-import com.example.aandi_post_web_server.assignment.domain.AssignmentImportService
 import com.example.aandi_post_web_server.assignment.domain.toEntity
-import com.example.aandi_post_web_server.assignment.domain.source
-import com.example.aandi_post_web_server.assignment.domain.withImportedContent
 import com.example.aandi_post_web_server.assignment.domain.toResponse
 import com.example.aandi_post_web_server.assignment.domain.AssignmentRequirementDrafts
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
@@ -13,14 +10,12 @@ import com.example.aandi_post_web_server.assignment.dtos.AssignmentRequirementRe
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentExampleRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequirementRequest
-import com.example.aandi_post_web_server.assignment.dtos.PublishAssignmentResponse
-import com.example.aandi_post_web_server.assignment.dtos.TriggerDeliveriesResponse
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventMapper
+import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventPublisher
 import com.example.aandi_post_web_server.assignment.entity.Assignment
-import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
 import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
@@ -29,6 +24,7 @@ import com.example.aandi_post_web_server.assignment.repository.AssignmentRequire
 import com.example.aandi_post_web_server.course.domain.AssignmentId
 import com.example.aandi_post_web_server.course.domain.CourseId
 import com.example.aandi_post_web_server.course.domain.CourseSlug
+import com.example.aandi_post_web_server.course.domain.PublicCode
 import com.example.aandi_post_web_server.course.domain.UserId
 import com.example.aandi_post_web_server.course.domain.WeekNo
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
@@ -46,12 +42,17 @@ import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
 import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
+import com.example.aandi_post_web_server.submission.repository.AssignmentSubmissionRepository
+import com.example.aandi_post_web_server.user.client.AuthUserClient
+import com.example.aandi_post_web_server.user.entity.ReportUser
+import com.example.aandi_post_web_server.user.repository.ReportUserRepository
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
+import java.util.UUID
 
 @Service
 class CourseCommandService(
@@ -62,7 +63,11 @@ class CourseCommandService(
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentExampleRepository: AssignmentExampleRepository,
     private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
-    private val assignmentImportService: AssignmentImportService,
+    private val assignmentSubmissionRepository: AssignmentSubmissionRepository,
+    private val assignmentReportTestCaseEventMapper: AssignmentReportTestCaseEventMapper,
+    private val assignmentReportTestCaseEventPublisher: AssignmentReportTestCaseEventPublisher,
+    private val reportUserRepository: ReportUserRepository,
+    private val authUserClient: AuthUserClient,
 ) {
 
     fun createCourse(request: CreateCourseRequest): Mono<CourseResponse> {
@@ -118,34 +123,34 @@ class CourseCommandService(
 
     fun enrollMember(courseSlug: String, request: EnrollCourseRequest): Mono<CourseEnrollmentResponse> {
         val slug = parseCourseSlug(courseSlug)
-        val userId = parseUserId(request.userId)
+        val publicCode = parsePublicCode(request.publicCode)
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, userId.value)
-                    .flatMap { existing ->
-                        val now = Instant.now()
-                        val updated = existing.copy(
-                            status = EnrollmentStatus.ENROLLED,
-                            droppedAt = null,
-                            bannedAt = null,
-                            banReason = null,
-                            updatedAt = now,
-                        )
-                        courseEnrollmentRepository.save(updated)
-                    }
-                    .switchIfEmpty(
-                        courseEnrollmentRepository.save(
-                            CourseEnrollment(
-                                courseId = courseId.value,
-                                userId = userId.value,
-                                status = EnrollmentStatus.ENROLLED,
-                                joinedAt = Instant.now(),
-                                updatedAt = Instant.now(),
+                authUserClient.findByPublicCode(publicCode.value)
+                    .flatMap { authUser ->
+                        reportUserRepository.findByPublicCode(publicCode.value)
+                            .switchIfEmpty(
+                                Mono.error(
+                                    ResponseStatusException(
+                                        HttpStatus.UNPROCESSABLE_ENTITY,
+                                        "auth 서버에는 publicCode=${publicCode.value} 사용자가 존재하지만 report 서버에는 아직 동기화되지 않았습니다.",
+                                    )
+                                )
                             )
-                        )
-                    )
-                    .map(::toEnrollmentResponse)
+                            .flatMap { reportUser ->
+                                if (reportUser.id != authUser.id) {
+                                    Mono.error(
+                                        ResponseStatusException(
+                                            HttpStatus.UNPROCESSABLE_ENTITY,
+                                            "publicCode=${publicCode.value} 사용자의 auth/report userId가 일치하지 않습니다.",
+                                        )
+                                    )
+                                } else {
+                                    enrollUser(courseId, course.slug, reportUser)
+                                }
+                            }
+                    }
             }
     }
 
@@ -171,17 +176,8 @@ class CourseCommandService(
                     .flatMap { enrollment ->
                         val now = Instant.now()
                         val updated = when (request.status) {
-                            EnrollmentStatus.ENROLLED -> enrollment.copy(
-                                status = EnrollmentStatus.ENROLLED,
-                                droppedAt = null,
-                                bannedAt = null,
-                                banReason = null,
-                                updatedAt = now,
-                            )
-
-                            EnrollmentStatus.DROPPED -> enrollment.copy(
-                                status = EnrollmentStatus.DROPPED,
-                                droppedAt = now,
+                            EnrollmentStatus.ENABLED -> enrollment.copy(
+                                status = EnrollmentStatus.ENABLED,
                                 bannedAt = null,
                                 banReason = null,
                                 updatedAt = now,
@@ -194,7 +190,6 @@ class CourseCommandService(
                                 enrollment.copy(
                                     status = EnrollmentStatus.BANNED,
                                     bannedAt = now,
-                                    droppedAt = null,
                                     banReason = request.banReason.trim(),
                                     updatedAt = now,
                                 )
@@ -202,8 +197,28 @@ class CourseCommandService(
                         }
                         courseEnrollmentRepository.save(updated)
                     }
-                    .map(::toEnrollmentResponse)
+                    .map { enrollment -> toEnrollmentResponse(course.slug, enrollment) }
             }
+    }
+
+    fun deleteEnrollment(courseSlug: String, userId: String): Mono<Void> {
+        val slug = parseCourseSlug(courseSlug)
+        val parsedUserId = parseUserId(userId)
+        return findCourseBySlug(slug)
+            .flatMap { course ->
+                val courseId = parseCourseId(requireNotNull(course.id))
+                courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, parsedUserId.value)
+                    .switchIfEmpty(
+                        Mono.error(
+                            ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "코스에 등록된 사용자를 찾을 수 없습니다: ${parsedUserId.value}",
+                            )
+                        )
+                    )
+                    .flatMap { enrollment -> courseEnrollmentRepository.delete(enrollment) }
+            }
+            .then()
     }
 
     fun createAssignment(
@@ -218,8 +233,8 @@ class CourseCommandService(
         }
         return resolveCreateRequest(request)
             .flatMap { resolvedRequest ->
-                val requirementDrafts = parseRequirementDrafts(resolvedRequest.requirements)
-                val exampleDrafts = parseExampleDrafts(resolvedRequest.examples)
+                val requirementDrafts = parseRequirementDrafts(resolvedRequest.metadata.requirements)
+                val exampleDrafts = parseExampleDrafts(resolvedRequest.metadata.examples)
 
                 findCourseBySlug(slug)
                     .flatMap { course ->
@@ -244,7 +259,7 @@ class CourseCommandService(
                                         .switchIfEmpty(
                                             Mono.defer {
                                                 assignmentRepository.save(
-                                                    Assignment(
+                                                    createAssignmentEntity(
                                                         courseId = courseId.value,
                                                         courseSlug = course.slug,
                                                         createdBy = createdBy,
@@ -253,22 +268,21 @@ class CourseCommandService(
                                                         startAt = resolvedRequest.startAt,
                                                         endAt = resolvedRequest.endAt,
                                                         metadata = resolvedRequest.metadata.toEntity(),
-                                                        status = AssignmentStatus.DRAFT,
-                                                        createdAt = Instant.now(),
-                                                        updatedAt = Instant.now(),
                                                     )
                                                 ).flatMap { assignment ->
                                                     val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
                                                     val requirementsMono = saveRequirements(assignmentId, requirementDrafts)
                                                     val examplesMono = saveExamples(assignmentId, exampleDrafts)
                                                     Mono.zip(requirementsMono, examplesMono)
-                                                        .map { tuple ->
-                                                            toAssignmentDetailResponse(
+                                                        .flatMap { tuple ->
+                                                            val response = toAssignmentDetailResponse(
                                                                 courseSlug = course.slug,
                                                                 assignment = assignment,
                                                                 requirements = tuple.t1,
                                                                 examples = tuple.t2,
                                                             )
+                                                            publishCreatedTestCases(assignmentId.value, tuple.t2)
+                                                                .thenReturn(response)
                                                         }
                                                 }
                                             }
@@ -276,17 +290,6 @@ class CourseCommandService(
                                 }
                             )
                     }
-            }
-    }
-
-    fun publishAssignment(courseSlug: String, assignmentId: String): Mono<PublishAssignmentResponse> {
-        val slug = parseCourseSlug(courseSlug)
-        val parsedAssignmentId = parseAssignmentId(assignmentId)
-        return findCourseBySlug(slug)
-            .flatMap { course ->
-                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, requireNotNull(course.id))
-                    .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
-                    .flatMap { assignment -> publishAssignmentOrFail(assignment, course.slug) }
             }
     }
 
@@ -301,8 +304,8 @@ class CourseCommandService(
 
         return resolveUpdateRequest(request)
             .flatMap { resolvedRequest ->
-                val requirementDrafts = resolvedRequest.requirements?.let { parseRequirementDrafts(it) }
-                val exampleDrafts = resolvedRequest.examples?.let { parseExampleDrafts(it) }
+                val requirementDrafts = resolvedRequest.metadata?.let { parseRequirementDrafts(it.requirements) }
+                val exampleDrafts = resolvedRequest.metadata?.let { parseExampleDrafts(it.examples) }
 
                 findCourseBySlug(slug)
                     .flatMap { course ->
@@ -352,25 +355,6 @@ class CourseCommandService(
             .then()
     }
 
-    fun triggerDeliveries(courseSlug: String, assignmentId: String): Mono<TriggerDeliveriesResponse> {
-        val slug = parseCourseSlug(courseSlug)
-        val parsedAssignmentId = parseAssignmentId(assignmentId)
-        return findCourseBySlug(slug)
-            .flatMap { course ->
-                val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
-                    .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
-                    .flatMap { assignment ->
-                        triggerDeliveriesForAssignment(
-                            assignment = assignment,
-                            assignmentId = parsedAssignmentId,
-                            courseId = courseId,
-                            courseSlug = course.slug,
-                        )
-                    }
-            }
-    }
-
     private fun createCourseEntity(request: CreateCourseRequest, slug: CourseSlug): Mono<CourseResponse> {
         if (request.endDate.isBefore(request.startDate)) {
             return Mono.error(ResponseStatusException(HttpStatus.BAD_REQUEST, "endDate는 startDate보다 빠를 수 없습니다."))
@@ -394,94 +378,33 @@ class CourseCommandService(
         return courseRepository.save(course).map(::toCourseResponse)
     }
 
-    private fun publishAssignmentOrFail(
-        assignment: Assignment,
+    private fun createAssignmentEntity(
+        courseId: String,
         courseSlug: String,
-    ): Mono<PublishAssignmentResponse> {
-        if (assignment.status == AssignmentStatus.PUBLISHED) {
-            return Mono.just(
-                PublishAssignmentResponse(
-                    assignmentId = requireNotNull(assignment.id),
-                    courseSlug = courseSlug,
-                    status = assignment.status,
-                    publishedAt = assignment.publishedAt,
-                )
-            )
-        }
-        val published = assignment.copy(
-            status = AssignmentStatus.PUBLISHED,
-            publishedAt = assignment.publishedAt ?: Instant.now(),
-            updatedAt = Instant.now(),
+        createdBy: String,
+        weekNo: Int,
+        orderInWeek: Int,
+        startAt: Instant,
+        endAt: Instant,
+        metadata: com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata,
+    ): Assignment {
+        val now = Instant.now()
+        return Assignment(
+            id = UUID.randomUUID().toString(),
+            courseId = courseId,
+            courseSlug = courseSlug,
+            createdBy = createdBy,
+            weekNo = weekNo,
+            orderInWeek = orderInWeek,
+            startAt = startAt,
+            endAt = endAt,
+            metadata = metadata,
+            status = effectiveAssignmentStatus(startAt, now),
+            createdAt = now,
+            updatedAt = now,
+            publishedAt = effectivePublishedAt(startAt, null, now),
         )
-        return assignmentRepository.save(published).map {
-            PublishAssignmentResponse(
-                assignmentId = requireNotNull(it.id),
-                courseSlug = courseSlug,
-                status = it.status,
-                publishedAt = it.publishedAt,
-            )
-        }
     }
-
-    private fun triggerDeliveriesForAssignment(
-        assignment: Assignment,
-        assignmentId: AssignmentId,
-        courseId: CourseId,
-        courseSlug: String,
-    ): Mono<TriggerDeliveriesResponse> {
-        if (assignment.status != AssignmentStatus.PUBLISHED) {
-            return Mono.error(
-                ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "PUBLISHED 상태 과제만 배포할 수 있습니다.")
-            )
-        }
-        return loadEnrolledMembers(courseId)
-            .collectList()
-            .flatMap { enrollments ->
-                if (enrollments.isEmpty()) {
-                    return@flatMap Mono.just(emptyDeliveryResponse(assignmentId, courseSlug))
-                }
-                deliverToMembers(assignmentId, enrollments)
-                    .map { deliveries ->
-                        createDeliveryResponse(assignmentId, courseSlug, enrollments.size, deliveries)
-                    }
-            }
-    }
-
-    private fun loadEnrolledMembers(courseId: CourseId): Flux<CourseEnrollment> =
-        courseEnrollmentRepository.findAllByCourseIdAndStatus(courseId.value, EnrollmentStatus.ENROLLED)
-
-    private fun deliverToMembers(
-        assignmentId: AssignmentId,
-        enrollments: List<CourseEnrollment>,
-    ): Mono<List<AssignmentDelivery>> {
-        return Flux.fromIterable(enrollments)
-            .flatMap { enrollment -> upsertDelivered(assignmentId, parseUserId(enrollment.userId)) }
-            .collectList()
-    }
-
-    private fun emptyDeliveryResponse(
-        assignmentId: AssignmentId,
-        courseSlug: String,
-    ): TriggerDeliveriesResponse = TriggerDeliveriesResponse(
-        assignmentId = assignmentId.value,
-        courseSlug = courseSlug,
-        targetCount = 0,
-        deliveredCount = 0,
-        failedCount = 0,
-    )
-
-    private fun createDeliveryResponse(
-        assignmentId: AssignmentId,
-        courseSlug: String,
-        targetCount: Int,
-        deliveries: List<AssignmentDelivery>,
-    ): TriggerDeliveriesResponse = TriggerDeliveriesResponse(
-        assignmentId = assignmentId.value,
-        courseSlug = courseSlug,
-        targetCount = targetCount,
-        deliveredCount = deliveries.count { it.status == AssignmentDeliveryStatus.DELIVERED },
-        failedCount = deliveries.count { it.status == AssignmentDeliveryStatus.FAILED },
-    )
 
     private fun saveRequirements(
         assignmentId: AssignmentId,
@@ -507,7 +430,7 @@ class CourseCommandService(
             drafts.toEntities(assignmentId.value, Instant.now())
         )
             .sort(compareBy<AssignmentExample> { it.seq })
-            .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText, it.description) }
+            .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText) }
             .collectList()
     }
 
@@ -563,7 +486,12 @@ class CourseCommandService(
                         assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
+                        assignmentSubmissionRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentRepository.deleteAllById(assignmentIds).then()
+                    ).then(
+                        Flux.fromIterable(assignmentIds)
+                            .concatMap(::publishDeletedTestCases)
+                            .then()
                     )
                 }
             }
@@ -574,31 +502,6 @@ class CourseCommandService(
             courseWeekRepository.deleteAllByCourseId(courseId).then(),
             courseEnrollmentRepository.deleteAllByCourseId(courseId).then()
         )
-    }
-
-    private fun upsertDelivered(assignmentId: AssignmentId, userId: UserId): Mono<AssignmentDelivery> {
-        val now = Instant.now()
-        return assignmentDeliveryRepository.findByAssignmentIdAndUserId(assignmentId.value, userId.value)
-            .flatMap { existing ->
-                assignmentDeliveryRepository.save(
-                    existing.copy(
-                        status = AssignmentDeliveryStatus.DELIVERED,
-                        deliveredAt = now,
-                        failureReason = null,
-                    )
-                )
-            }
-            .switchIfEmpty(
-                assignmentDeliveryRepository.save(
-                    AssignmentDelivery(
-                        assignmentId = assignmentId.value,
-                        userId = userId.value,
-                        status = AssignmentDeliveryStatus.DELIVERED,
-                        deliveredAt = now,
-                        createdAt = now,
-                    )
-                )
-            )
     }
 
     private fun updateAssignmentInternal(
@@ -620,6 +523,7 @@ class CourseCommandService(
         }
 
         val metadata = request.metadata?.toEntity() ?: assignment.metadata
+        val now = Instant.now()
 
         val candidate = assignment.copy(
             weekNo = targetWeekNo,
@@ -627,7 +531,9 @@ class CourseCommandService(
             startAt = targetStartAt,
             endAt = targetEndAt,
             metadata = metadata,
-            updatedAt = Instant.now(),
+            status = effectiveAssignmentStatus(targetStartAt, now),
+            updatedAt = now,
+            publishedAt = effectivePublishedAt(targetStartAt, assignment.publishedAt, now),
         )
 
         val checkDuplicate = ensureAssignmentSlotAvailable(courseId, candidate, parsedAssignmentId)
@@ -643,8 +549,10 @@ class CourseCommandService(
             .flatMap { saved ->
                 loadOrReplaceRequirements(parsedAssignmentId, requirementDrafts)
                     .zipWith(loadOrReplaceExamples(parsedAssignmentId, exampleDrafts))
-                    .map { tuple ->
-                        toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
+                    .flatMap { tuple ->
+                        val response = toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
+                        publishUpdatedTestCases(parsedAssignmentId.value, tuple.t2)
+                            .thenReturn(response)
                     }
             }
     }
@@ -668,7 +576,7 @@ class CourseCommandService(
     ): Mono<List<AssignmentExampleResponse>> {
         if (drafts == null) {
             return assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId.value)
-                .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText, it.description) }
+                .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText) }
                 .collectList()
         }
         return assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId.value))
@@ -704,8 +612,48 @@ class CourseCommandService(
             assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
+            assignmentSubmissionRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentRepository.deleteById(assignmentId).then(),
+        ).then(publishDeletedTestCases(assignmentId))
+    }
+
+    private fun publishCreatedTestCases(
+        assignmentId: String,
+        examples: List<AssignmentExampleResponse>,
+    ): Mono<Void> =
+        assignmentReportTestCaseEventPublisher.publish(
+            assignmentReportTestCaseEventMapper.created(assignmentId, examples)
         )
+
+    private fun publishUpdatedTestCases(
+        assignmentId: String,
+        examples: List<AssignmentExampleResponse>,
+    ): Mono<Void> =
+        assignmentReportTestCaseEventPublisher.publish(
+            assignmentReportTestCaseEventMapper.updated(assignmentId, examples)
+        )
+
+    private fun publishDeletedTestCases(assignmentId: String): Mono<Void> =
+        assignmentReportTestCaseEventPublisher.publish(
+            assignmentReportTestCaseEventMapper.deleted(assignmentId)
+        )
+
+    private fun effectiveAssignmentStatus(startAt: Instant, now: Instant = Instant.now()): AssignmentStatus {
+        if (now >= startAt) {
+            return AssignmentStatus.PUBLISHED
+        }
+        return AssignmentStatus.DRAFT
+    }
+
+    private fun effectivePublishedAt(
+        startAt: Instant,
+        publishedAt: Instant?,
+        now: Instant = Instant.now(),
+    ): Instant? {
+        if (effectiveAssignmentStatus(startAt, now) == AssignmentStatus.PUBLISHED) {
+            return publishedAt ?: startAt
+        }
+        return null
     }
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> {
@@ -722,6 +670,9 @@ class CourseCommandService(
     private fun parseUserId(raw: String): UserId =
         parseOrBadRequest { UserId.from(raw) }
 
+    private fun parsePublicCode(raw: String): PublicCode =
+        parseOrBadRequest { PublicCode.from(raw) }
+
     private fun parseWeekNo(raw: Int): WeekNo =
         parseOrBadRequest { WeekNo.from(raw) }
 
@@ -735,32 +686,11 @@ class CourseCommandService(
         parseOrBadRequest { AssignmentExampleDrafts.fromRequests(requests) }
 
     private fun resolveCreateRequest(request: CreateAssignmentRequest): Mono<CreateAssignmentRequest> {
-        val source = request.metadata.source() ?: return Mono.just(validateResolvedCreateRequest(request))
-        return assignmentImportService.import(source)
-            .map { imported ->
-                val resolvedExamples = if (request.examples.isEmpty()) imported.examples else request.examples
-                validateResolvedCreateRequest(
-                    request.copy(
-                        metadata = request.metadata.withImportedContent(imported),
-                        examples = resolvedExamples,
-                    )
-                )
-            }
+        return Mono.just(validateResolvedCreateRequest(request))
     }
 
     private fun resolveUpdateRequest(request: UpdateAssignmentRequest): Mono<UpdateAssignmentRequest> {
-        val metadata = request.metadata ?: return Mono.just(request)
-        val source = metadata.source() ?: return Mono.just(validateResolvedUpdateRequest(request))
-        return assignmentImportService.import(source)
-            .map { imported ->
-                val resolvedExamples = if (request.examples.isNullOrEmpty()) imported.examples else request.examples
-                validateResolvedUpdateRequest(
-                    request.copy(
-                        metadata = metadata.withImportedContent(imported),
-                        examples = resolvedExamples,
-                    )
-                )
-            }
+        return Mono.just(validateResolvedUpdateRequest(request))
     }
 
     private fun validateResolvedCreateRequest(request: CreateAssignmentRequest): CreateAssignmentRequest {
@@ -807,16 +737,56 @@ class CourseCommandService(
         updatedAt = course.updatedAt,
     )
 
-    private fun toEnrollmentResponse(enrollment: CourseEnrollment): CourseEnrollmentResponse = CourseEnrollmentResponse(
-        id = requireNotNull(enrollment.id),
+    private fun toEnrollmentResponse(courseSlug: String, enrollment: CourseEnrollment): CourseEnrollmentResponse = CourseEnrollmentResponse(
+        courseId = enrollment.courseId,
+        courseSlug = courseSlug,
         userId = enrollment.userId,
+        publicCode = enrollment.publicCode,
+        username = enrollment.username,
         status = enrollment.status,
         joinedAt = enrollment.joinedAt,
-        droppedAt = enrollment.droppedAt,
         bannedAt = enrollment.bannedAt,
         banReason = enrollment.banReason,
         updatedAt = enrollment.updatedAt,
     )
+
+    private fun enrollUser(
+        courseId: CourseId,
+        courseSlug: String,
+        reportUser: ReportUser,
+    ): Mono<CourseEnrollmentResponse> {
+        return courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, reportUser.id)
+            .flatMap<CourseEnrollmentResponse> { existing ->
+                val message = if (existing.status == EnrollmentStatus.BANNED) {
+                    "차단된 사용자는 재등록할 수 없습니다: ${reportUser.publicCode}"
+                } else {
+                    "이미 등록된 사용자입니다. courseId=${courseId.value}, userId=${reportUser.id}"
+                }
+                Mono.error(
+                    ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        message,
+                    )
+                )
+            }
+            .switchIfEmpty(
+                Mono.defer {
+                    val now = Instant.now()
+                    courseEnrollmentRepository.save(
+                        CourseEnrollment(
+                            courseId = courseId.value,
+                            userId = reportUser.id,
+                            publicCode = reportUser.publicCode,
+                            username = reportUser.username,
+                            status = EnrollmentStatus.ENABLED,
+                            joinedAt = now,
+                            updatedAt = now,
+                        )
+                    )
+                        .map { enrollment -> toEnrollmentResponse(courseSlug, enrollment) }
+                }
+            )
+    }
 
     private fun toAssignmentDetailResponse(
         courseSlug: String,
@@ -830,10 +800,8 @@ class CourseCommandService(
         orderInWeek = assignment.orderInWeek,
         startAt = assignment.startAt,
         endAt = assignment.endAt,
-        status = assignment.status,
-        publishedAt = assignment.publishedAt,
-        metadata = assignment.metadata.toResponse(),
-        requirements = requirements,
-        examples = examples,
+        status = effectiveAssignmentStatus(assignment.startAt),
+        publishedAt = effectivePublishedAt(assignment.startAt, assignment.publishedAt),
+        metadata = assignment.metadata.toResponse(requirements, examples),
     )
 }

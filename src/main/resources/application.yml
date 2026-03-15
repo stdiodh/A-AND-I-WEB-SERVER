@@ -35,3 +35,13 @@ app:
     exposed-headers: ${APP_CORS_EXPOSED_HEADERS:}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:false}
     max-age-seconds: ${APP_CORS_MAX_AGE_SECONDS:3600}
+  events:
+    report-test-case:
+      enabled: ${APP_EVENTS_REPORT_TEST_CASE_ENABLED:false}
+      topic-arn: ${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN:}
+      region: ${APP_EVENTS_REPORT_TEST_CASE_REGION:ap-northeast-2}
+  auth:
+    user:
+      base-url: ${AUTH_SERVICE_BASE_URL:http://localhost:9000}
+  online-judge:
+    base-url: ${ONLINE_JUDGE_BASE_URL:http://localhost:8081}
