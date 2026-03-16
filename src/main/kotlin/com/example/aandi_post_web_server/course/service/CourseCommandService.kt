@@ -675,7 +675,7 @@ class CourseCommandService(
 
     private fun findReportUserByPublicCode(publicCode: PublicCode): Mono<ReportUser> =
         reportUserRepository.findByPublicCode(publicCode.value)
-            .switchIfEmpty(reportUserRepository.findByPublicCode(publicCode.legacyValue))
+            .switchIfEmpty(Mono.defer { reportUserRepository.findByPublicCode(publicCode.legacyValue) })
 
     private fun parseWeekNo(raw: Int): WeekNo =
         parseOrBadRequest { WeekNo.from(raw) }
