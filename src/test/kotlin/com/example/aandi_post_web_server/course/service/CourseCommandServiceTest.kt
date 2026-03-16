@@ -31,8 +31,6 @@ import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepos
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
 import com.example.aandi_post_web_server.submission.repository.AssignmentSubmissionRepository
-import com.example.aandi_post_web_server.user.client.AuthUserClient
-import com.example.aandi_post_web_server.user.client.AuthUserLookupPayload
 import com.example.aandi_post_web_server.user.entity.ReportUser
 import com.example.aandi_post_web_server.user.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
@@ -273,8 +271,6 @@ class CourseCommandServiceTest : StringSpec({
         )
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.authUserClient.findByPublicCode("#FL301", "Bearer admin-token"))
-            .thenReturn(Mono.just(AuthUserLookupPayload(id = "user-1", username = "mekazon", role = "USER", publicCode = "#FL301")))
         Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "user-1"))
             .thenReturn(Mono.empty())
@@ -285,7 +281,6 @@ class CourseCommandServiceTest : StringSpec({
             fixture.service.enrollMember(
                 courseSlug = "back-basic",
                 request = EnrollCourseRequest(publicCode = "FL301"),
-                authorizationHeader = "Bearer admin-token",
             )
         )
             .assertNext { enrollment ->
@@ -498,8 +493,6 @@ private class CommandFixture {
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
     val assignmentReportTestCaseEventPublisher = RecordingAssignmentReportTestCaseEventPublisher()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
-    val authUserClient: AuthUserClient = Mockito.mock(AuthUserClient::class.java)
-
     val service = CourseCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
@@ -512,7 +505,6 @@ private class CommandFixture {
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         reportUserRepository = reportUserRepository,
-        authUserClient = authUserClient,
     )
 
 }
