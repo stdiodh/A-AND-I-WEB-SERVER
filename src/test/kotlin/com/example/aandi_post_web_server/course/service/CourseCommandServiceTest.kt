@@ -267,15 +267,15 @@ class CourseCommandServiceTest : StringSpec({
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val reportUser = ReportUser(
             id = "user-1",
-            publicCode = "FL301",
+            publicCode = "#FL301",
             username = "mekazon",
             role = "USER",
         )
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.authUserClient.findByPublicCode("FL301"))
-            .thenReturn(Mono.just(AuthUserLookupPayload(id = "user-1", username = "mekazon", role = "USER", publicCode = "FL301")))
-        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("FL301")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.authUserClient.findByPublicCode("#FL301"))
+            .thenReturn(Mono.just(AuthUserLookupPayload(id = "user-1", username = "mekazon", role = "USER", publicCode = "#FL301")))
+        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "user-1"))
             .thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseEnrollmentRepository.save(ArgumentMatchers.any(CourseEnrollment::class.java)))
@@ -290,6 +290,7 @@ class CourseCommandServiceTest : StringSpec({
             .assertNext { enrollment ->
                 enrollment.status shouldBe EnrollmentStatus.ENABLED
                 enrollment.userId shouldBe "user-1"
+                enrollment.publicCode shouldBe "#FL301"
             }
             .verifyComplete()
     }

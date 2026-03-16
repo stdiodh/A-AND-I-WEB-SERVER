@@ -7,7 +7,7 @@ import java.time.Instant
 @Schema(description = "유저 동기화 요청")
 data class UserSyncRequest(
     @field:NotBlank
-    @field:Schema(description = "동기화할 사용자의 publicCode", example = "FL301")
+    @field:Schema(description = "동기화할 사용자의 publicCode(#이 없으면 자동으로 붙여 정규화합니다.)", example = "#AD001")
     val publicCode: String,
 )
 
@@ -15,7 +15,7 @@ data class UserSyncRequest(
 data class UserSyncResponse(
     @field:Schema(description = "사용자 UUID", example = "user-uuid-1")
     val userId: String,
-    @field:Schema(description = "유저 publicCode", example = "FL301")
+    @field:Schema(description = "유저 publicCode", example = "#AD001")
     val publicCode: String,
     @field:Schema(description = "사용자 이름", example = "string")
     val username: String,
