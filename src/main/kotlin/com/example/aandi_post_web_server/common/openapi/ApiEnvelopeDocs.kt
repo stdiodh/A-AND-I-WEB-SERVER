@@ -1,6 +1,7 @@
 package com.example.aandi_post_web_server.common.openapi
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
@@ -139,12 +140,26 @@ data class AssignmentSummaryListEnvelopeDoc(
 
 @Schema(
     description = "과제 상세 성공 응답",
-    example = """{"success":true,"data":{"assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","courseSlug":"fl-basic","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"PUBLISHED","publishedAt":"2026-03-03T00:00:00Z","metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","requirements":[{"sortOrder":1,"requirementText":"함수 분리 필수"}],"learningGoals":[{"sortOrder":1,"learningGoalText":"함수 분리"}],"examples":[{"seq":1,"inputText":"ADD 1\\nCLOSE","outputText":"+1"}],"problemDetail":{"inputDescription":"입력이 없다.","outputDescription":"Hello World!를 출력한다.","classification":{"algorithmStep":"STEP0","difficultyStep":1}},"submissionGuide":{"title":"문제 풀이 템플릿","description":"제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.","commentSections":["문제","해석","풀이"]},"codeTemplates":[{"language":"KOTLIN","commentTemplate":"/* ... */","functionTemplate":"fun solution(): String { ... }","runnableTemplate":"fun solution(): String { ... }"},{"language":"DART","commentTemplate":"/* ... */","functionTemplate":"String solution() { ... }","runnableTemplate":"String solution() { ... }"}],"attributes":{"language":"kotlin"}}},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
+    example = """{"success":true,"data":{"assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","courseSlug":"fl-basic","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"PUBLISHED","publishedAt":"2026-03-03T00:00:00Z","metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","requirements":[{"sortOrder":1,"requirementText":"함수 분리 필수"}],"learningGoals":[{"sortOrder":1,"learningGoalText":"함수 분리"}],"examples":[{"seq":1,"inputText":"ADD 1\\nCLOSE","outputText":"+1"}],"problemDetail":{"inputDescription":"입력이 없다.","outputDescription":"Hello World!를 출력한다.","classification":{"algorithmStep":"STEP0","difficultyStep":1}},"attributes":{"language":"kotlin"}}},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
 )
 data class AssignmentDetailEnvelopeDoc(
     @field:Schema(example = "true")
     val success: Boolean = true,
     val data: AssignmentDetailResponse? = null,
+    @field:Schema(nullable = true, example = "null")
+    val error: ApiErrorPayload? = null,
+    @field:Schema(example = "2026-03-09T12:00:00+09:00")
+    val timestamp: String = "2026-03-09T12:00:00+09:00",
+)
+
+@Schema(
+    description = "과제 제출 설정 성공 응답",
+    example = """{"success":true,"data":{"assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","courseSlug":"fl-basic","submissionGuide":{"title":"문제 풀이 템플릿","description":"제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.","commentSections":["문제","해석","풀이"]},"codeTemplates":[{"language":"KOTLIN","commentTemplate":"/* ... */","functionTemplate":"fun solution(): String { ... }","runnableTemplate":"fun solution(): String { ... }"},{"language":"DART","commentTemplate":"/* ... */","functionTemplate":"String solution() { ... }","runnableTemplate":"String solution() { ... }"}],"supportedLanguages":["KOTLIN","DART"]},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
+)
+data class AssignmentSubmissionConfigEnvelopeDoc(
+    @field:Schema(example = "true")
+    val success: Boolean = true,
+    val data: AssignmentSubmissionConfigResponse? = null,
     @field:Schema(nullable = true, example = "null")
     val error: ApiErrorPayload? = null,
     @field:Schema(example = "2026-03-09T12:00:00+09:00")

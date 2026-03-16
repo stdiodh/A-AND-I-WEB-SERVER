@@ -1,10 +1,12 @@
 package com.example.aandi_post_web_server.course.controller
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
 import com.example.aandi_post_web_server.common.openapi.AssignmentDetailEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.AssignmentSubmissionConfigEnvelopeDoc
 import com.example.aandi_post_web_server.common.openapi.AssignmentSummaryListEnvelopeDoc
 import com.example.aandi_post_web_server.common.openapi.CourseEnvelopeDoc
 import com.example.aandi_post_web_server.common.openapi.CourseListEnvelopeDoc
@@ -199,6 +201,31 @@ class CourseQueryV1Controller(
         authentication: Authentication,
     ): Mono<ApiEnvelope<AssignmentDetailResponse>> {
         return courseV1Service.getAssignmentDetail(
+            courseSlug = courseSlug,
+            assignmentId = assignmentId,
+            userId = authentication.name,
+        ).map { ApiEnvelope.success(it) }
+    }
+
+    @Operation(
+        summary = "과제 제출 설정 조회",
+        description = "과제 제출 설정을 별도로 조회합니다. 상세 조회에서는 문제 본문 중심 정보만 유지하고, submissionGuide/codeTemplates 는 이 API로 분리합니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = AssignmentSubmissionConfigEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+        ],
+    )
+    @GetMapping("/{courseSlug}/assignments/{assignmentId}/submission-config")
+    fun getAssignmentSubmissionConfig(
+        @Parameter(description = "코스를 구분하는 슬러그", example = "back-basic")
+        @PathVariable courseSlug: String,
+        @Parameter(description = "과제 UUID", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
+        @PathVariable assignmentId: String,
+        authentication: Authentication,
+    ): Mono<ApiEnvelope<AssignmentSubmissionConfigResponse>> {
+        return courseV1Service.getAssignmentSubmissionConfig(
             courseSlug = courseSlug,
             assignmentId = assignmentId,
             userId = authentication.name,

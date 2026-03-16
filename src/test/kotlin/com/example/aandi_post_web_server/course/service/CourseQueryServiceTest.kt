@@ -1,10 +1,16 @@
 package com.example.aandi_post_web_server.course.service
 
 import com.example.aandi_post_web_server.assignment.entity.Assignment
+import com.example.aandi_post_web_server.assignment.entity.AssignmentCodeTemplate
 import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
+import com.example.aandi_post_web_server.assignment.entity.AssignmentProblemClassification
+import com.example.aandi_post_web_server.assignment.entity.AssignmentProblemDetail
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
+import com.example.aandi_post_web_server.assignment.entity.AssignmentSubmissionGuide
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
 import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRequirementRepository
@@ -108,6 +114,40 @@ class CourseQueryServiceTest : StringSpec({
             .assertNext { detail ->
                 detail.id shouldBe assignmentId
                 detail.status shouldBe AssignmentStatus.DRAFT
+                detail.metadata.problemDetail?.classification?.algorithmStep shouldBe AssignmentProblemStep.STEP0
+            }
+            .verifyComplete()
+    }
+
+    "관리자 과제 제출 설정 조회는 submissionGuide 와 codeTemplates 를 별도 응답으로 반환한다" {
+        val fixture = QueryFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val draft = queryAssignment(id = assignmentId, courseId = "course-1").copy(
+            status = AssignmentStatus.DRAFT,
+            startAt = Instant.parse("2026-04-01T00:00:00Z"),
+            publishedAt = null,
+        )
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(draft))
+
+        StepVerifier.create(
+            fixture.service.getAdminAssignmentSubmissionConfig("back-basic", assignmentId)
+        )
+            .assertNext { config ->
+                config.assignmentId shouldBe assignmentId
+                config.courseSlug shouldBe "back-basic"
+                config.submissionGuide?.title shouldBe "문제 풀이 템플릿"
+                config.codeTemplates.map { it.language } shouldBe listOf(
+                    AssignmentTemplateLanguage.KOTLIN,
+                    AssignmentTemplateLanguage.DART,
+                )
+                config.supportedLanguages shouldBe listOf(
+                    AssignmentTemplateLanguage.KOTLIN,
+                    AssignmentTemplateLanguage.DART,
+                )
             }
             .verifyComplete()
     }
@@ -255,6 +295,41 @@ class CourseQueryServiceTest : StringSpec({
         error.statusCode shouldBe HttpStatus.BAD_REQUEST
     }
 
+    "사용자 과제 제출 설정 조회는 공개된 과제의 submissionGuide 와 codeTemplates 를 반환한다" {
+        val fixture = QueryFixture()
+        val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val enrollment = CourseEnrollment(
+            id = "enroll-1",
+            courseId = "course-1",
+            userId = userId,
+            status = EnrollmentStatus.ENABLED,
+        )
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val published = queryAssignment(id = assignmentId, courseId = "course-1")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", userId))
+            .thenReturn(Mono.just(enrollment))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(published))
+
+        StepVerifier.create(
+            fixture.service.getAssignmentSubmissionConfig("back-basic", assignmentId, userId)
+        )
+            .assertNext { config ->
+                config.assignmentId shouldBe assignmentId
+                config.courseSlug shouldBe "back-basic"
+                config.submissionGuide?.description shouldBe "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다."
+                config.codeTemplates.first().language shouldBe AssignmentTemplateLanguage.KOTLIN
+                config.supportedLanguages shouldBe listOf(
+                    AssignmentTemplateLanguage.KOTLIN,
+                    AssignmentTemplateLanguage.DART,
+                )
+            }
+            .verifyComplete()
+    }
+
     "과제 목록 조회는 requirements와 examples를 함께 반환한다" {
         val fixture = QueryFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
@@ -346,6 +421,29 @@ private fun queryAssignment(
             difficulty = AssignmentDifficulty.MID,
             description = "content",
             timeLimitMinutes = 60,
+            problemDetail = AssignmentProblemDetail(
+                inputDescription = "입력이 없다.",
+                outputDescription = "Hello World!를 출력한다.",
+                classification = AssignmentProblemClassification(
+                    algorithmStep = AssignmentProblemStep.STEP0,
+                    difficultyStep = 1,
+                ),
+            ),
+            submissionGuide = AssignmentSubmissionGuide(),
+            codeTemplates = listOf(
+                AssignmentCodeTemplate(
+                    language = AssignmentTemplateLanguage.KOTLIN,
+                    commentTemplate = "/* ... */",
+                    functionTemplate = "fun solution(): String { ... }",
+                    runnableTemplate = "fun solution(): String { ... }",
+                ),
+                AssignmentCodeTemplate(
+                    language = AssignmentTemplateLanguage.DART,
+                    commentTemplate = "/* ... */",
+                    functionTemplate = "String solution() { ... }",
+                    runnableTemplate = "String solution() { ... }",
+                ),
+            ),
         ),
         status = AssignmentStatus.PUBLISHED,
         createdAt = now,

@@ -1,6 +1,7 @@
 package com.example.aandi_post_web_server.course.service
 
 import com.example.aandi_post_web_server.assignment.domain.AssignmentExampleDrafts
+import com.example.aandi_post_web_server.assignment.domain.toDetailResponse
 import com.example.aandi_post_web_server.assignment.domain.toEntity
 import com.example.aandi_post_web_server.assignment.domain.toResponse
 import com.example.aandi_post_web_server.assignment.domain.AssignmentRequirementDrafts
@@ -790,6 +791,6 @@ class CourseCommandService(
         endAt = assignment.endAt,
         status = effectiveAssignmentStatus(assignment.startAt),
         publishedAt = effectivePublishedAt(assignment.startAt, assignment.publishedAt),
-        metadata = assignment.metadata.toResponse(requirements, examples),
+        metadata = assignment.metadata.toDetailResponse(requirements, examples),
     )
 }

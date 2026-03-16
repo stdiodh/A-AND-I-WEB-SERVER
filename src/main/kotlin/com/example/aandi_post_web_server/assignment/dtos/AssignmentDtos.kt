@@ -317,12 +317,47 @@ data class AssignmentMetadataResponse(
     val examples: List<AssignmentExampleResponse> = emptyList(),
     @field:Schema(description = "문제 상세 정보")
     val problemDetail: AssignmentProblemDetailResponse? = null,
+    // TODO: Remove submission settings from summary metadata after list consumers move to submission-config.
     @field:Schema(description = "제출 가이드")
     val submissionGuide: AssignmentSubmissionGuideResponse? = null,
     @field:Schema(description = "언어별 코드 템플릿")
     val codeTemplates: List<AssignmentCodeTemplateResponse> = emptyList(),
     @field:Schema(description = "확장 메타데이터")
     val attributes: Map<String, Any?>,
+)
+
+@Schema(description = "과제 상세 메타데이터 응답")
+data class AssignmentDetailMetadataResponse(
+    @field:Schema(description = "과제 제목", example = "터미널 계산기")
+    val title: String,
+    @field:Schema(description = "난이도", example = "MID")
+    val difficulty: AssignmentDifficulty,
+    @field:Schema(description = "과제 설명")
+    val description: String,
+    @field:Schema(description = "문제 요구 사항")
+    val requirements: List<AssignmentRequirementResponse> = emptyList(),
+    @field:Schema(description = "학습 목표")
+    val learningGoals: List<AssignmentLearningGoalResponse> = emptyList(),
+    @field:Schema(description = "예시 입출력")
+    val examples: List<AssignmentExampleResponse> = emptyList(),
+    @field:Schema(description = "문제 상세 정보")
+    val problemDetail: AssignmentProblemDetailResponse? = null,
+    @field:Schema(description = "확장 메타데이터")
+    val attributes: Map<String, Any?>,
+)
+
+@Schema(description = "과제 제출 설정 조회 응답")
+data class AssignmentSubmissionConfigResponse(
+    @field:Schema(description = "과제 UUID", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
+    val assignmentId: String,
+    @field:Schema(description = "코스를 구분하는 슬러그", example = "back-basic")
+    val courseSlug: String,
+    @field:Schema(description = "제출 가이드")
+    val submissionGuide: AssignmentSubmissionGuideResponse? = null,
+    @field:Schema(description = "언어별 코드 템플릿")
+    val codeTemplates: List<AssignmentCodeTemplateResponse> = emptyList(),
+    @field:Schema(description = "지원 언어")
+    val supportedLanguages: List<AssignmentTemplateLanguage> = emptyList(),
 )
 
 @Schema(description = "과제 요구사항 응답")
@@ -390,5 +425,5 @@ data class AssignmentDetailResponse(
     @field:Schema(description = "사용자에게 공개된 시각(KST/Asia/Seoul)")
     val publishedAt: Instant?,
     @field:Schema(description = "과제 메타데이터")
-    val metadata: AssignmentMetadataResponse,
+    val metadata: AssignmentDetailMetadataResponse,
 )
