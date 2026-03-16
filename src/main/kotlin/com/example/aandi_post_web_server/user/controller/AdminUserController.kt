@@ -14,8 +14,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.http.HttpHeaders
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
@@ -38,7 +40,8 @@ class AdminUserController(
     )
     @PostMapping("/sync")
     fun syncUser(
+        @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorizationHeader: String?,
         @Valid @RequestBody request: UserSyncRequest,
     ): Mono<ApiEnvelope<UserSyncResponse>> =
-        adminUserSyncService.syncByPublicCode(request).map { ApiEnvelope.success(it) }
+        adminUserSyncService.syncByPublicCode(request, authorizationHeader).map { ApiEnvelope.success(it) }
 }

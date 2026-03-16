@@ -18,7 +18,6 @@ import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepos
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
 import com.example.aandi_post_web_server.submission.repository.AssignmentSubmissionRepository
-import com.example.aandi_post_web_server.user.client.AuthUserClient
 import com.example.aandi_post_web_server.user.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -121,7 +120,6 @@ private class Fixture {
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
     val assignmentReportTestCaseEventPublisher = NoopAssignmentReportTestCaseEventPublisherForTest()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
-    val authUserClient: AuthUserClient = Mockito.mock(AuthUserClient::class.java)
 
     private val courseCommandService = CourseCommandService(
         courseRepository = courseRepository,
@@ -135,7 +133,6 @@ private class Fixture {
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         reportUserRepository = reportUserRepository,
-        authUserClient = authUserClient,
     )
 
     private val courseQueryService = CourseQueryService(

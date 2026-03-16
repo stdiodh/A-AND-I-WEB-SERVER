@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.ParameterizedTypeReference
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
@@ -24,7 +25,7 @@ class AuthUserClientConfig {
 class WebClientAuthUserClient(
     private val authUserWebClient: WebClient,
 ) : AuthUserClient {
-    override fun findByPublicCode(publicCode: String): Mono<AuthUserLookupPayload> {
+    override fun findByPublicCode(publicCode: String, authorizationHeader: String): Mono<AuthUserLookupPayload> {
         val responseType = object : ParameterizedTypeReference<AuthApiResponse<AuthUserLookupPayload>>() {}
         return authUserWebClient.get()
             .uri { builder ->
@@ -32,6 +33,7 @@ class WebClientAuthUserClient(
                     .queryParam("code", publicCode)
                     .build()
             }
+            .header(HttpHeaders.AUTHORIZATION, authorizationHeader)
             .retrieve()
             .onStatus({ status -> status == HttpStatus.NOT_FOUND }) {
                 Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "auth 서버에서 사용자를 찾을 수 없습니다: $publicCode"))

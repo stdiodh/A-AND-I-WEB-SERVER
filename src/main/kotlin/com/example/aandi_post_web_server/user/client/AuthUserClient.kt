@@ -3,7 +3,7 @@ package com.example.aandi_post_web_server.user.client
 import reactor.core.publisher.Mono
 
 interface AuthUserClient {
-    fun findByPublicCode(publicCode: String): Mono<AuthUserLookupPayload>
+    fun findByPublicCode(publicCode: String, authorizationHeader: String): Mono<AuthUserLookupPayload>
 }
 
 data class AuthApiResponse<T>(

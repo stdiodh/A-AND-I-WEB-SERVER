@@ -43,7 +43,6 @@ import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepos
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
 import com.example.aandi_post_web_server.submission.repository.AssignmentSubmissionRepository
-import com.example.aandi_post_web_server.user.client.AuthUserClient
 import com.example.aandi_post_web_server.user.entity.ReportUser
 import com.example.aandi_post_web_server.user.repository.ReportUserRepository
 import org.springframework.http.HttpStatus
@@ -67,7 +66,6 @@ class CourseCommandService(
     private val assignmentReportTestCaseEventMapper: AssignmentReportTestCaseEventMapper,
     private val assignmentReportTestCaseEventPublisher: AssignmentReportTestCaseEventPublisher,
     private val reportUserRepository: ReportUserRepository,
-    private val authUserClient: AuthUserClient,
 ) {
 
     fun createCourse(request: CreateCourseRequest): Mono<CourseResponse> {
@@ -127,30 +125,16 @@ class CourseCommandService(
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                authUserClient.findByPublicCode(publicCode.value)
-                    .flatMap { authUser ->
-                        findReportUserByPublicCode(publicCode)
-                            .switchIfEmpty(
-                                Mono.error(
-                                    ResponseStatusException(
-                                        HttpStatus.UNPROCESSABLE_ENTITY,
-                                        "auth 서버에는 publicCode=${publicCode.value} 사용자가 존재하지만 report 서버에는 아직 동기화되지 않았습니다.",
-                                    )
-                                )
+                findReportUserByPublicCode(publicCode)
+                    .switchIfEmpty(
+                        Mono.error(
+                            ResponseStatusException(
+                                HttpStatus.UNPROCESSABLE_ENTITY,
+                                "report 서버에서 publicCode=${publicCode.value} 사용자를 찾을 수 없습니다. auth 이벤트 동기화 여부를 확인해주세요.",
                             )
-                            .flatMap { reportUser ->
-                                if (reportUser.id != authUser.id) {
-                                    Mono.error(
-                                        ResponseStatusException(
-                                            HttpStatus.UNPROCESSABLE_ENTITY,
-                                            "publicCode=${publicCode.value} 사용자의 auth/report userId가 일치하지 않습니다.",
-                                        )
-                                    )
-                                } else {
-                                    enrollUser(courseId, course.slug, reportUser)
-                                }
-                            }
-                    }
+                        )
+                    )
+                    .flatMap { reportUser -> enrollUser(courseId, course.slug, reportUser) }
             }
     }
 

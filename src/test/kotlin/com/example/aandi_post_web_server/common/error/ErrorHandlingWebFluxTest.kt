@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpHeaders
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -50,7 +51,7 @@ class ErrorHandlingWebFluxTest : StringSpec() {
             Mockito.reset(adminUserSyncService)
             Mockito.doReturn(sampleUserSyncResponse())
                 .`when`(adminUserSyncService)
-                .syncByPublicCode(UserSyncRequest(publicCode = ""))
+                .syncByPublicCode(UserSyncRequest(publicCode = ""), "Bearer test-token")
         }
 
         "validation 실패 시 공통 에러 envelope를 반환한다" {
