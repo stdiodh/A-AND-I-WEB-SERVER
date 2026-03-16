@@ -51,6 +51,10 @@ class CourseV1ServiceTest : StringSpec({
             .thenReturn(Mono.just(enrollment))
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
             .thenReturn(Flux.just(visibleAssignment))
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+            .thenReturn(Flux.empty())
 
         StepVerifier.create(
             fixture.service.getAssignments(
