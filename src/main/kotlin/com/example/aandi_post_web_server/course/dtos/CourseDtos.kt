@@ -125,7 +125,7 @@ data class CourseResponse(
 )
 
 @Schema(
-    description = "수강생 등록 요청",
+    description = "수강생 등록 요청(report 서버에 동기화된 사용자를 기준으로 등록)",
     example =
         """
         {
@@ -135,7 +135,7 @@ data class CourseResponse(
 )
 data class EnrollCourseRequest(
     @field:NotBlank
-    @field:Schema(description = "등록할 사용자의 publicCode(#이 없으면 자동으로 붙여 정규화합니다.)", example = "#OR402")
+    @field:Schema(description = "등록할 사용자의 publicCode(#이 없으면 자동으로 붙여 정규화합니다. report 서버 users 컬렉션에 존재해야 합니다.)", example = "#OR402")
     val publicCode: String,
 )
 

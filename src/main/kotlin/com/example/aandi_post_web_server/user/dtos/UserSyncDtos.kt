@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import java.time.Instant
 
-@Schema(description = "유저 동기화 요청")
+@Schema(description = "유저 동기화 요청(auth 서버 사용자를 report 서버 users 컬렉션으로 동기화)")
 data class UserSyncRequest(
     @field:NotBlank
     @field:Schema(description = "동기화할 사용자의 publicCode(#이 없으면 자동으로 붙여 정규화합니다.)", example = "#AD001")
