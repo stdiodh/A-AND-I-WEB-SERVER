@@ -3,10 +3,6 @@
 package com.example.aandi_post_web_server.common.error
 
 import com.example.aandi_post_web_server.common.security.SecurityConfig
-import com.example.aandi_post_web_server.user.controller.AdminUserController
-import com.example.aandi_post_web_server.user.dtos.UserSyncRequest
-import com.example.aandi_post_web_server.user.dtos.UserSyncResponse
-import com.example.aandi_post_web_server.user.service.AdminUserSyncService
 import com.example.aandi_post_web_server.course.controller.CourseQueryV1Controller
 import com.example.aandi_post_web_server.course.controller.CourseV1Controller
 import com.example.aandi_post_web_server.course.service.CourseV1Service
@@ -17,14 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
-import org.springframework.http.HttpHeaders
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt
 import org.springframework.test.web.reactive.server.WebTestClient
-import reactor.core.publisher.Mono
-import java.time.Instant
 
-@WebFluxTest(controllers = [CourseV1Controller::class, CourseQueryV1Controller::class, AdminUserController::class])
+@WebFluxTest(controllers = [CourseV1Controller::class, CourseQueryV1Controller::class])
 @Import(
     SecurityConfig::class,
     RequestIdWebFilter::class,
@@ -42,16 +35,9 @@ class ErrorHandlingWebFluxTest : StringSpec() {
     @MockBean
     private lateinit var courseV1Service: CourseV1Service
 
-    @MockBean
-    private lateinit var adminUserSyncService: AdminUserSyncService
-
     init {
         beforeTest {
             Mockito.reset(courseV1Service)
-            Mockito.reset(adminUserSyncService)
-            Mockito.doReturn(sampleUserSyncResponse())
-                .`when`(adminUserSyncService)
-                .syncByPublicCode(UserSyncRequest(publicCode = ""), "Bearer test-token")
         }
 
         "validation 실패 시 공통 에러 envelope를 반환한다" {
@@ -60,7 +46,7 @@ class ErrorHandlingWebFluxTest : StringSpec() {
                     jwt.subject("2d61d1cb-2898-4319-ba62-d30bbd44eb21")
                 }.authorities(SimpleGrantedAuthority("ROLE_ADMIN")),
             ).post()
-                .uri("/v1/admin/users/sync")
+                .uri("/v1/admin/courses/back-basic/enrollments")
                 .header(RequestIdSupport.HEADER_NAME, "req-validation-001")
                 .bodyValue(
                     mapOf(
@@ -100,7 +86,7 @@ class ErrorHandlingWebFluxTest : StringSpec() {
 
         "Authorization 헤더가 없으면 401 공통 에러 envelope를 반환한다" {
             webTestClient.post()
-                .uri("/v1/admin/users/sync")
+                .uri("/v1/admin/courses/back-basic/enrollments")
                 .header(RequestIdSupport.HEADER_NAME, "req-auth-001")
                 .bodyValue(
                     mapOf(
@@ -136,16 +122,4 @@ class ErrorHandlingWebFluxTest : StringSpec() {
                 .jsonPath("$.timestamp").exists()
         }
     }
-
-    private fun sampleUserSyncResponse(): Mono<UserSyncResponse> =
-        Mono.just(
-            UserSyncResponse(
-                userId = "user-uuid-1",
-                publicCode = "#FL301",
-                username = "string",
-                synced = true,
-                source = "AUTH_SERVER",
-                syncedAt = Instant.parse("2026-03-14T02:00:00Z"),
-            ),
-        )
 }

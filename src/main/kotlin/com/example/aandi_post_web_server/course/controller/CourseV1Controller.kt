@@ -112,12 +112,13 @@ class CourseV1Controller(
     ): Mono<ApiEnvelope<Nothing?>> =
         courseV1Service.deleteCourse(courseSlug).thenReturn(ApiEnvelope.success(null))
 
-    @Operation(summary = "수강생 등록", description = "publicCode로 사용자를 찾아 코스 수강생으로 등록합니다. publicCode는 #이 없으면 자동으로 붙여 정규화하며, 등록 상태는 ENABLED로 시작합니다.")
+    @Operation(summary = "수강생 등록", description = "publicCode로 report 서버에 동기화된 사용자를 찾아 코스 수강생으로 등록합니다. publicCode는 #이 없으면 자동으로 붙여 정규화하며, 등록 상태는 ENABLED로 시작합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "등록 성공", content = [Content(schema = Schema(implementation = CourseEnrollmentEnvelopeDoc::class))]),
             ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
             ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "422", description = "report 서버에 동기화된 사용자를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
         ],
     )
     @PostMapping("/{courseSlug}/enrollments")

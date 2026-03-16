@@ -133,7 +133,7 @@ class CourseQueryService(
             }
             .filter { assignment -> isVisibleToUser(assignment) }
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
-            .map { assignment -> toAssignmentSummaryResponse(assignment, effectiveAssignment(assignment)) }
+            .flatMapSequential { assignment -> loadAssignmentSummary(assignment) }
     }
 
     fun getAdminAssignments(
@@ -150,7 +150,7 @@ class CourseQueryService(
             }
             .filter { assignment -> status == null || effectiveAssignmentStatus(assignment) == status }
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
-            .map { assignment -> toAssignmentSummaryResponse(assignment, effectiveAssignment(assignment)) }
+            .flatMapSequential { assignment -> loadAssignmentSummary(assignment) }
     }
 
     fun getAssignmentDetail(
@@ -292,6 +292,23 @@ class CourseQueryService(
                 toAssignmentDetailResponse(courseSlug, assignment, effectiveAssignment(assignment), tuple.t1, tuple.t2)
             }
 
+    private fun loadAssignmentSummary(assignment: Assignment): Mono<AssignmentSummaryResponse> {
+        val assignmentId = requireNotNull(assignment.id)
+        return assignmentRequirementRepository
+            .findAllByAssignmentIdOrderBySortOrder(assignmentId)
+            .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
+            .collectList()
+            .zipWith(
+                assignmentExampleRepository
+                    .findAllByAssignmentIdOrderBySeq(assignmentId)
+                    .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText) }
+                    .collectList()
+            )
+            .map { tuple ->
+                toAssignmentSummaryResponse(assignment, effectiveAssignment(assignment), tuple.t1, tuple.t2)
+            }
+    }
+
     private fun resolveVisibleAssignmentStatus(status: AssignmentStatus?) {
         if (status != null && status != AssignmentStatus.PUBLISHED) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "사용자 조회는 PUBLISHED 상태만 지원합니다.")
@@ -411,6 +428,8 @@ class CourseQueryService(
     private fun toAssignmentSummaryResponse(
         assignment: Assignment,
         effectiveAssignment: Assignment,
+        requirements: List<AssignmentRequirementResponse>,
+        examples: List<AssignmentExampleResponse>,
     ): AssignmentSummaryResponse = AssignmentSummaryResponse(
         id = requireNotNull(assignment.id),
         weekNo = assignment.weekNo,
@@ -418,7 +437,7 @@ class CourseQueryService(
         startAt = assignment.startAt,
         endAt = assignment.endAt,
         status = effectiveAssignment.status,
-        metadata = assignment.metadata.toResponse(),
+        metadata = assignment.metadata.toResponse(requirements, examples),
     )
 
     private fun toAssignmentDetailResponse(

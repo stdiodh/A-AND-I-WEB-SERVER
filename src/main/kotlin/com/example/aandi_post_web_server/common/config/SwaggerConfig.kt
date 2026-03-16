@@ -43,9 +43,10 @@ class SwaggerConfig(
     private fun swaggerInfo(): Info = Info()
         .title("Report Service API")
         .description(
-            "코스, 수강, 과제, 유저 동기화 API 문서입니다. " +
+            "코스, 수강, 과제 API 문서입니다. " +
                 "모든 API는 Bearer JWT를 사용합니다. " +
-                "과제 관련 assignmentId는 UUID를 사용하며, 사용자에게는 startAt이 지난 과제만 공개됩니다.",
+                "과제 관련 assignmentId는 UUID를 사용하며, 사용자에게는 startAt이 지난 과제만 공개됩니다. " +
+                "수강생 등록은 auth 이벤트로 report 서버에 동기화된 users 데이터를 기준으로 처리합니다.",
         )
         .version("v1")
         .license(License().name("Proprietary"))

@@ -1,6 +1,8 @@
 package com.example.aandi_post_web_server.course.service
 
 import com.example.aandi_post_web_server.assignment.entity.Assignment
+import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
+import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
@@ -60,6 +62,14 @@ class CourseQueryServiceTest : StringSpec({
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
             .thenReturn(Flux.just(draft, published))
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("7c53f1b3-0df8-4a9d-a56d-a5f50b96b7a1"))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("7c53f1b3-0df8-4a9d-a56d-a5f50b96b7a1"))
+            .thenReturn(Flux.empty())
 
         StepVerifier.create(
             fixture.service.getAdminAssignments(
@@ -210,6 +220,10 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Mono.just(enrollment))
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
             .thenReturn(Flux.just(published, futureDraft))
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+            .thenReturn(Flux.empty())
 
         StepVerifier.create(
             fixture.service.getAssignments(
@@ -239,6 +253,60 @@ class CourseQueryServiceTest : StringSpec({
         }
 
         error.statusCode shouldBe HttpStatus.BAD_REQUEST
+    }
+
+    "과제 목록 조회는 requirements와 examples를 함께 반환한다" {
+        val fixture = QueryFixture()
+        val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val enrollment = CourseEnrollment(
+            id = "enroll-1",
+            courseId = "course-1",
+            userId = userId,
+            status = EnrollmentStatus.ENABLED,
+        )
+        val published = queryAssignment(id = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111", courseId = "course-1")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", userId))
+            .thenReturn(Mono.just(enrollment))
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
+            .thenReturn(Flux.just(published))
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+            .thenReturn(
+                Flux.just(
+                    AssignmentRequirement(
+                        assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
+                        sortOrder = 1,
+                        requirementText = "함수 분리 필수",
+                    )
+                )
+            )
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+            .thenReturn(
+                Flux.just(
+                    AssignmentExample(
+                        assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
+                        seq = 1,
+                        inputText = "ADD 1",
+                        outputText = "1",
+                    )
+                )
+            )
+
+        StepVerifier.create(
+            fixture.service.getAssignments(
+                courseSlug = "back-basic",
+                weekNo = null,
+                status = AssignmentStatus.PUBLISHED,
+                userId = userId,
+            )
+        )
+            .assertNext {
+                it.metadata.requirements.map { requirement -> requirement.requirementText } shouldBe listOf("함수 분리 필수")
+                it.metadata.examples.map { example -> example.outputText } shouldBe listOf("1")
+            }
+            .verifyComplete()
     }
 })
 
