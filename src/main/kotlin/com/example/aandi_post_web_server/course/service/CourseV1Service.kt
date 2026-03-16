@@ -44,8 +44,8 @@ class CourseV1Service(
     fun getCourses(userId: String): Flux<CourseResponse> =
         courseQueryService.getCourses(userId)
 
-    fun enrollMember(courseSlug: String, request: EnrollCourseRequest): Mono<CourseEnrollmentResponse> =
-        courseCommandService.enrollMember(courseSlug, request)
+    fun enrollMember(courseSlug: String, request: EnrollCourseRequest, authorizationHeader: String?): Mono<CourseEnrollmentResponse> =
+        courseCommandService.enrollMember(courseSlug, request, authorizationHeader)
 
     fun updateEnrollmentStatus(
         courseSlug: String,

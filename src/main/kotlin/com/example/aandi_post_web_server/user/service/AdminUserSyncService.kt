@@ -17,9 +17,10 @@ class AdminUserSyncService(
     private val authUserClient: AuthUserClient,
     private val reportUserRepository: ReportUserRepository,
 ) {
-    fun syncByPublicCode(request: UserSyncRequest): Mono<UserSyncResponse> {
+    fun syncByPublicCode(request: UserSyncRequest, authorizationHeader: String?): Mono<UserSyncResponse> {
         val publicCode = parsePublicCode(request.publicCode)
-        return authUserClient.findByPublicCode(publicCode.value)
+        val authHeader = requireAuthorizationHeader(authorizationHeader)
+        return authUserClient.findByPublicCode(publicCode.value, authHeader)
             .flatMap { authUser ->
                 val now = Instant.now()
                 reportUserRepository.save(
@@ -50,4 +51,11 @@ class AdminUserSyncService(
     private fun parsePublicCode(raw: String): PublicCode =
         runCatching { PublicCode.from(raw) }
             .getOrElse { throw ResponseStatusException(HttpStatus.BAD_REQUEST, it.message ?: "잘못된 publicCode입니다.") }
+
+    private fun requireAuthorizationHeader(raw: String?): String {
+        if (raw.isNullOrBlank()) {
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authorization 헤더가 필요합니다.")
+        }
+        return raw
+    }
 }

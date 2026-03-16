@@ -273,7 +273,7 @@ class CourseCommandServiceTest : StringSpec({
         )
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.authUserClient.findByPublicCode("#FL301"))
+        Mockito.`when`(fixture.authUserClient.findByPublicCode("#FL301", "Bearer admin-token"))
             .thenReturn(Mono.just(AuthUserLookupPayload(id = "user-1", username = "mekazon", role = "USER", publicCode = "#FL301")))
         Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "user-1"))
@@ -285,6 +285,7 @@ class CourseCommandServiceTest : StringSpec({
             fixture.service.enrollMember(
                 courseSlug = "back-basic",
                 request = EnrollCourseRequest(publicCode = "FL301"),
+                authorizationHeader = "Bearer admin-token",
             )
         )
             .assertNext { enrollment ->

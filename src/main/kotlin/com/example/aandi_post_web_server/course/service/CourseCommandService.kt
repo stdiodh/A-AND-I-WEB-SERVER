@@ -121,13 +121,14 @@ class CourseCommandService(
             .then()
     }
 
-    fun enrollMember(courseSlug: String, request: EnrollCourseRequest): Mono<CourseEnrollmentResponse> {
+    fun enrollMember(courseSlug: String, request: EnrollCourseRequest, authorizationHeader: String?): Mono<CourseEnrollmentResponse> {
         val slug = parseCourseSlug(courseSlug)
         val publicCode = parsePublicCode(request.publicCode)
+        val authHeader = requireAuthorizationHeader(authorizationHeader)
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                authUserClient.findByPublicCode(publicCode.value)
+                authUserClient.findByPublicCode(publicCode.value, authHeader)
                     .flatMap { authUser ->
                         findReportUserByPublicCode(publicCode)
                             .switchIfEmpty(
@@ -676,6 +677,13 @@ class CourseCommandService(
     private fun findReportUserByPublicCode(publicCode: PublicCode): Mono<ReportUser> =
         reportUserRepository.findByPublicCode(publicCode.value)
             .switchIfEmpty(Mono.defer { reportUserRepository.findByPublicCode(publicCode.legacyValue) })
+
+    private fun requireAuthorizationHeader(raw: String?): String {
+        if (raw.isNullOrBlank()) {
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authorization 헤더가 필요합니다.")
+        }
+        return raw
+    }
 
     private fun parseWeekNo(raw: Int): WeekNo =
         parseOrBadRequest { WeekNo.from(raw) }
