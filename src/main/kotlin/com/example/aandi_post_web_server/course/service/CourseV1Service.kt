@@ -1,6 +1,7 @@
 package com.example.aandi_post_web_server.course.service
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
@@ -93,6 +94,12 @@ class CourseV1Service(
     ): Mono<AssignmentDetailResponse> =
         courseQueryService.getAdminAssignmentDetail(courseSlug, assignmentId)
 
+    fun getAdminAssignmentSubmissionConfig(
+        courseSlug: String,
+        assignmentId: String,
+    ): Mono<AssignmentSubmissionConfigResponse> =
+        courseQueryService.getAdminAssignmentSubmissionConfig(courseSlug, assignmentId)
+
     fun getAssignmentsByWeek(
         courseSlug: String,
         weekNo: Int,
@@ -115,6 +122,13 @@ class CourseV1Service(
         userId: String,
     ): Mono<AssignmentDetailResponse> =
         courseQueryService.getAssignmentDetail(courseSlug, assignmentId, userId)
+
+    fun getAssignmentSubmissionConfig(
+        courseSlug: String,
+        assignmentId: String,
+        userId: String,
+    ): Mono<AssignmentSubmissionConfigResponse> =
+        courseQueryService.getAssignmentSubmissionConfig(courseSlug, assignmentId, userId)
 
     fun getAssignmentCourse(assignmentId: String, userId: String): Mono<CourseResponse> =
         courseQueryService.getAssignmentCourse(assignmentId, userId)

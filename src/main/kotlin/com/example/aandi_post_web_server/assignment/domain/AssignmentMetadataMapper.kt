@@ -2,6 +2,7 @@ package com.example.aandi_post_web_server.assignment.domain
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentCodeTemplatePayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentCodeTemplateResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailMetadataResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemClassificationPayload
@@ -11,6 +12,7 @@ import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetail
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentRequirementResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentLearningGoalResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuidePayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuideResponse
 import com.example.aandi_post_web_server.assignment.entity.AssignmentCodeTemplate
@@ -54,6 +56,36 @@ fun AssignmentMetadata.toResponse(
     submissionGuide = submissionGuide?.toResponse(),
     codeTemplates = codeTemplates.map { it.toResponse() },
     attributes = attributes,
+)
+
+fun AssignmentMetadata.toDetailResponse(
+    requirements: List<AssignmentRequirementResponse> = emptyList(),
+    examples: List<AssignmentExampleResponse> = emptyList(),
+): AssignmentDetailMetadataResponse = AssignmentDetailMetadataResponse(
+    title = title,
+    difficulty = difficulty,
+    description = description,
+    requirements = requirements,
+    learningGoals = learningGoals.mapIndexed { index, learningGoal ->
+        AssignmentLearningGoalResponse(
+            sortOrder = index + 1,
+            learningGoalText = learningGoal,
+        )
+    },
+    examples = examples,
+    problemDetail = problemDetail?.toResponse(),
+    attributes = attributes,
+)
+
+fun AssignmentMetadata.toSubmissionConfigResponse(
+    assignmentId: String,
+    courseSlug: String,
+): AssignmentSubmissionConfigResponse = AssignmentSubmissionConfigResponse(
+    assignmentId = assignmentId,
+    courseSlug = courseSlug,
+    submissionGuide = submissionGuide?.toResponse(),
+    codeTemplates = codeTemplates.map { it.toResponse() },
+    supportedLanguages = codeTemplates.map { it.language }.distinct(),
 )
 
 private fun AssignmentProblemDetailPayload.toEntity(): AssignmentProblemDetail =

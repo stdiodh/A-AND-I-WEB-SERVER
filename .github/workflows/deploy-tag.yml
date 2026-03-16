@@ -110,8 +110,8 @@ jobs:
               echo "AUTH_JWT_SECRET must be at least 32 chars"
               exit 1
             fi
-            if [ "${APP_EVENTS_REPORT_TEST_CASE_ENABLED}" = "true" ] && [ -z "${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN}" ]; then
-              echo "APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN is required when APP_EVENTS_REPORT_TEST_CASE_ENABLED=true"
+            if [ "${APP_EVENTS_REPORT_TEST_CASE_ENABLED}" = "true" ] && [ -z "${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN:-}" ]; then
+              echo "APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN must not be blank when APP_EVENTS_REPORT_TEST_CASE_ENABLED=true"
               exit 1
             fi
 
@@ -135,8 +135,23 @@ jobs:
             AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
             EOF
 
-            # Keep EOF single-quoted so ${...} remains for docker compose env interpolation time.
-            cat <<'EOF' > "${APP_DIR}/docker-compose.yml"
+            report_test_case_compose_env_block=""
+            if [ "${APP_EVENTS_REPORT_TEST_CASE_ENABLED}" = "true" ]; then
+              cat >> "${APP_DIR}/.env.runtime" <<EOF
+            APP_EVENTS_REPORT_TEST_CASE_ENABLED=${APP_EVENTS_REPORT_TEST_CASE_ENABLED}
+            APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN=${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN}
+            APP_EVENTS_REPORT_TEST_CASE_REGION=${APP_EVENTS_REPORT_TEST_CASE_REGION}
+            EOF
+              report_test_case_compose_env_block=$(cat <<'EOF'
+                  APP_EVENTS_REPORT_TEST_CASE_ENABLED: ${APP_EVENTS_REPORT_TEST_CASE_ENABLED}
+                  APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN: ${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN}
+                  APP_EVENTS_REPORT_TEST_CASE_REGION: ${APP_EVENTS_REPORT_TEST_CASE_REGION}
+            EOF
+              )
+            fi
+
+            # Use an unquoted EOF so the optional env block is expanded into the compose file.
+            cat <<EOF > "${APP_DIR}/docker-compose.yml"
             services:
               mongodb:
                 image: mongo:7
@@ -172,6 +187,7 @@ jobs:
                   APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN: ${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN}
                   APP_EVENTS_REPORT_TEST_CASE_REGION: ${APP_EVENTS_REPORT_TEST_CASE_REGION}
                   AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+            ${report_test_case_compose_env_block}
 
             volumes:
               mongo_data:
