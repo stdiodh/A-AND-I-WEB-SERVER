@@ -135,22 +135,7 @@ jobs:
             AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
             EOF
 
-            report_test_case_compose_env_block=""
-            if [ "${APP_EVENTS_REPORT_TEST_CASE_ENABLED}" = "true" ]; then
-              cat >> "${APP_DIR}/.env.runtime" <<EOF
-            APP_EVENTS_REPORT_TEST_CASE_ENABLED=${APP_EVENTS_REPORT_TEST_CASE_ENABLED}
-            APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN=${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN}
-            APP_EVENTS_REPORT_TEST_CASE_REGION=${APP_EVENTS_REPORT_TEST_CASE_REGION}
-            EOF
-              report_test_case_compose_env_block=$(cat <<'EOF'
-                  APP_EVENTS_REPORT_TEST_CASE_ENABLED: ${APP_EVENTS_REPORT_TEST_CASE_ENABLED}
-                  APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN: ${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN}
-                  APP_EVENTS_REPORT_TEST_CASE_REGION: ${APP_EVENTS_REPORT_TEST_CASE_REGION}
-            EOF
-              )
-            fi
-
-            # Use an unquoted EOF so the optional env block is expanded into the compose file.
+            # Use an unquoted EOF so the compose file is rendered with the runtime env values.
             cat <<EOF > "${APP_DIR}/docker-compose.yml"
             services:
               mongodb:
@@ -187,7 +172,6 @@ jobs:
                   APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN: ${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN}
                   APP_EVENTS_REPORT_TEST_CASE_REGION: ${APP_EVENTS_REPORT_TEST_CASE_REGION}
                   AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
-            ${report_test_case_compose_env_block}
 
             volumes:
               mongo_data:
