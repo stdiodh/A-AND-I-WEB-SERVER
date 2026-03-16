@@ -8,7 +8,6 @@ import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
 import com.example.aandi_post_web_server.submission.dtos.AssignmentSubmissionAcceptedResponse
 import com.example.aandi_post_web_server.submission.dtos.AssignmentSubmissionResultResponse
-import com.example.aandi_post_web_server.user.dtos.UserSyncResponse
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(
@@ -90,19 +89,6 @@ data class CourseEnrollmentListEnvelopeDoc(
     @field:Schema(example = "true")
     val success: Boolean = true,
     val data: List<CourseEnrollmentResponse> = emptyList(),
-    @field:Schema(nullable = true, example = "null")
-    val error: ApiErrorPayload? = null,
-    @field:Schema(example = "2026-03-09T12:00:00+09:00")
-    val timestamp: String = "2026-03-09T12:00:00+09:00",
-)
-@Schema(
-    description = "유저 동기화 성공 응답",
-    example = """{"success":true,"data":{"userId":"user-uuid-1","publicCode":"#AD001","username":"string","synced":true,"source":"AUTH_SERVER","syncedAt":"2026-03-09T12:00:00+09:00"},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
-)
-data class UserSyncEnvelopeDoc(
-    @field:Schema(example = "true")
-    val success: Boolean = true,
-    val data: UserSyncResponse? = null,
     @field:Schema(nullable = true, example = "null")
     val error: ApiErrorPayload? = null,
     @field:Schema(example = "2026-03-09T12:00:00+09:00")
