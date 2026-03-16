@@ -18,7 +18,7 @@ class CourseValueObjectsTest : StringSpec({
     "CourseId/UserId/AssignmentId는 trim 후 저장된다" {
         CourseId.from(" course-1 ").value shouldBe "course-1"
         UserId.from(" user-1 ").value shouldBe "user-1"
-        AssignmentId.from(" assignment-1 ").value shouldBe "assignment-1"
+        AssignmentId.from(" 8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111 ").value shouldBe "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
     }
 
     "WeekNo는 1 이상만 허용한다" {

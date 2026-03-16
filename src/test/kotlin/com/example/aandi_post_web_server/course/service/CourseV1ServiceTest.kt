@@ -1,10 +1,11 @@
 package com.example.aandi_post_web_server.course.service
 
-import com.example.aandi_post_web_server.assignment.domain.AssignmentImportService
 import com.example.aandi_post_web_server.assignment.entity.Assignment
+import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEvent
+import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventMapper
+import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventPublisher
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRequirementRepository
@@ -16,6 +17,9 @@ import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
 import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
+import com.example.aandi_post_web_server.submission.repository.AssignmentSubmissionRepository
+import com.example.aandi_post_web_server.user.client.AuthUserClient
+import com.example.aandi_post_web_server.user.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.mockito.Mockito
@@ -26,7 +30,7 @@ import java.time.Instant
 import java.time.LocalDate
 
 class CourseV1ServiceTest : StringSpec({
-    "ENROLLED 사용자는 코스 과제를 조회할 수 있다" {
+    "ENABLED 사용자는 코스 과제를 조회할 수 있다" {
         val fixture = Fixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
@@ -34,14 +38,19 @@ class CourseV1ServiceTest : StringSpec({
             id = "enroll-1",
             courseId = "course-1",
             userId = userId,
-            status = EnrollmentStatus.ENROLLED,
+            status = EnrollmentStatus.ENABLED,
         )
-        val visibleAssignment = assignment(id = "a-1", courseId = "course-1", weekNo = 1, status = AssignmentStatus.PUBLISHED)
+        val visibleAssignment = assignment(
+            id = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
+            courseId = "course-1",
+            weekNo = 1,
+            status = AssignmentStatus.PUBLISHED,
+        )
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", userId))
             .thenReturn(Mono.just(enrollment))
-        Mockito.`when`(fixture.assignmentRepository.findAllByCourseIdAndStatus("course-1", AssignmentStatus.PUBLISHED))
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
             .thenReturn(Flux.just(visibleAssignment))
 
         StepVerifier.create(
@@ -53,13 +62,13 @@ class CourseV1ServiceTest : StringSpec({
             )
         )
             .assertNext {
-                it.id shouldBe "a-1"
+                it.id shouldBe "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
                 it.weekNo shouldBe 1
             }
             .verifyComplete()
     }
 
-    "ENROLLED 사용자는 delivery 정보가 없어도 과제 상세를 조회할 수 있다" {
+    "ENABLED 사용자는 delivery 정보가 없어도 과제 상세를 조회할 수 있다" {
         val fixture = Fixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
@@ -67,28 +76,33 @@ class CourseV1ServiceTest : StringSpec({
             id = "enroll-1",
             courseId = "course-1",
             userId = userId,
-            status = EnrollmentStatus.ENROLLED,
+            status = EnrollmentStatus.ENABLED,
         )
-        val assignment = assignment(id = "a-1", courseId = "course-1", weekNo = 1, status = AssignmentStatus.PUBLISHED)
+        val assignment = assignment(
+            id = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
+            courseId = "course-1",
+            weekNo = 1,
+            status = AssignmentStatus.PUBLISHED,
+        )
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", userId))
             .thenReturn(Mono.just(enrollment))
-        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId("a-1", "course-1")).thenReturn(Mono.just(assignment))
-        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("a-1"))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111", "course-1")).thenReturn(Mono.just(assignment))
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("a-1"))
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
             fixture.service.getAssignmentDetail(
                 courseSlug = "back-basic",
-                assignmentId = "a-1",
+                assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
                 userId = userId,
             )
         )
             .assertNext {
-                it.id shouldBe "a-1"
+                it.id shouldBe "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
                 it.courseSlug shouldBe "back-basic"
             }
             .verifyComplete()
@@ -103,8 +117,11 @@ private class Fixture {
     val assignmentRepository: AssignmentRepository = Mockito.mock(AssignmentRepository::class.java)
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
     val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
-    val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
-    val assignmentImportService: AssignmentImportService = Mockito.mock(AssignmentImportService::class.java)
+    val assignmentSubmissionRepository: AssignmentSubmissionRepository = Mockito.mock(AssignmentSubmissionRepository::class.java)
+    val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
+    val assignmentReportTestCaseEventPublisher = NoopAssignmentReportTestCaseEventPublisherForTest()
+    val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
+    val authUserClient: AuthUserClient = Mockito.mock(AuthUserClient::class.java)
 
     private val courseCommandService = CourseCommandService(
         courseRepository = courseRepository,
@@ -113,8 +130,12 @@ private class Fixture {
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentExampleRepository = assignmentExampleRepository,
-        assignmentDeliveryRepository = assignmentDeliveryRepository,
-        assignmentImportService = assignmentImportService,
+        assignmentDeliveryRepository = Mockito.mock(com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository::class.java),
+        assignmentSubmissionRepository = assignmentSubmissionRepository,
+        assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
+        assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
+        reportUserRepository = reportUserRepository,
+        authUserClient = authUserClient,
     )
 
     private val courseQueryService = CourseQueryService(
@@ -124,13 +145,17 @@ private class Fixture {
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentExampleRepository = assignmentExampleRepository,
-        assignmentDeliveryRepository = assignmentDeliveryRepository,
     )
 
     val service = CourseV1Service(
         courseCommandService = courseCommandService,
         courseQueryService = courseQueryService,
     )
+
+}
+
+private class NoopAssignmentReportTestCaseEventPublisherForTest : AssignmentReportTestCaseEventPublisher {
+    override fun publish(event: AssignmentReportTestCaseEvent): Mono<Void> = Mono.empty()
 }
 
 private fun assignment(

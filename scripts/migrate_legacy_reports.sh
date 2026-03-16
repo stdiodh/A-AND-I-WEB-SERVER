@@ -276,25 +276,6 @@ while IFS= read -r line; do
     exit 1
   fi
 
-  http_call POST "${API_BASE}/v1/admin/courses/${COURSE_SLUG}/assignments/${assignment_id}/publish" ""
-  if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" ]]; then
-    published=$((published + 1))
-  elif [[ "$HTTP_CODE" != "422" ]]; then
-    echo "publish failed (assignmentId=${assignment_id}): HTTP $HTTP_CODE" >&2
-    echo "$HTTP_BODY" >&2
-    exit 1
-  fi
-
-  if [[ "$DELIVER" == "true" ]]; then
-    http_call POST "${API_BASE}/v1/admin/courses/${COURSE_SLUG}/assignments/${assignment_id}/deliveries" ""
-    if [[ "$HTTP_CODE" != "200" && "$HTTP_CODE" != "201" ]]; then
-      echo "delivery failed (assignmentId=${assignment_id}): HTTP $HTTP_CODE" >&2
-      echo "$HTTP_BODY" >&2
-      exit 1
-    fi
-    delivered=$((delivered + 1))
-  fi
-
   echo "  - migrated week=${weekNo} seq=${seqInWeek} id=${assignment_id}"
 done < "$tmpdir/legacy_report_normalized.jsonl"
 

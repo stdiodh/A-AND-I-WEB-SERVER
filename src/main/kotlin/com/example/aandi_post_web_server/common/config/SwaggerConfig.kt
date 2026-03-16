@@ -42,7 +42,11 @@ class SwaggerConfig(
 
     private fun swaggerInfo(): Info = Info()
         .title("Report Service API")
-        .description("코스/과제 운영 API 문서")
+        .description(
+            "코스, 수강, 과제, 유저 동기화 API 문서입니다. " +
+                "모든 API는 Bearer JWT를 사용합니다. " +
+                "과제 관련 assignmentId는 UUID를 사용하며, 사용자에게는 startAt이 지난 과제만 공개됩니다.",
+        )
         .version("v1")
         .license(License().name("Proprietary"))
 
@@ -50,13 +54,13 @@ class SwaggerConfig(
     fun globalErrorResponseCustomizer(): OperationCustomizer {
         return OperationCustomizer { operation: Operation, _: HandlerMethod ->
             val responses = operation.responses ?: ApiResponses().also { operation.responses = it }
-            upsertErrorResponse(responses, "400", "Bad Request")
-            upsertErrorResponse(responses, "401", "Unauthorized")
-            upsertErrorResponse(responses, "403", "Forbidden")
-            upsertErrorResponse(responses, "404", "Not Found")
-            upsertErrorResponse(responses, "409", "Conflict")
-            upsertErrorResponse(responses, "422", "Unprocessable Entity")
-            upsertErrorResponse(responses, "500", "Internal Server Error")
+            upsertErrorResponse(responses, "400", "잘못된 요청")
+            upsertErrorResponse(responses, "401", "인증 필요")
+            upsertErrorResponse(responses, "403", "권한 없음")
+            upsertErrorResponse(responses, "404", "리소스를 찾을 수 없음")
+            upsertErrorResponse(responses, "409", "중복 또는 충돌")
+            upsertErrorResponse(responses, "422", "처리할 수 없는 요청")
+            upsertErrorResponse(responses, "500", "서버 내부 오류")
             operation
         }
     }
@@ -98,6 +102,10 @@ class SwaggerConfig(
                 "ENUM_MISMATCH_TRACK" to errorEnvelope(
                     "ENUM_MISMATCH",
                     "track 값 'FLL' 은(는) 올바르지 않습니다. 허용값: [NO, FL, SP]",
+                ),
+                "INVALID_ASSIGNMENT_ID" to errorEnvelope(
+                    "BAD_REQUEST",
+                    "assignmentId는 UUID 형식이어야 합니다.",
                 ),
                 "MISSING_REQUIRED_VALUE" to errorEnvelope("MISSING_REQUIRED_VALUE", "필수 요청 값이 누락되었습니다."),
                 "BAD_REQUEST" to errorEnvelope("BAD_REQUEST", "잘못된 요청입니다."),

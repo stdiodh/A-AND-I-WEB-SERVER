@@ -4,17 +4,10 @@ import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
-import com.example.aandi_post_web_server.assignment.enum.AssignmentSourcePlatform
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
-
-data class AssignmentProblemSource(
-    val platform: AssignmentSourcePlatform,
-    val problemId: Int,
-    val url: String? = null,
-)
 
 data class AssignmentProblemClassification(
     val algorithmStep: AssignmentProblemStep,
@@ -22,7 +15,6 @@ data class AssignmentProblemClassification(
 )
 
 data class AssignmentProblemDetail(
-    val source: AssignmentProblemSource? = null,
     val inputDescription: String? = null,
     val outputDescription: String? = null,
     val classification: AssignmentProblemClassification? = null,
@@ -41,6 +33,12 @@ data class AssignmentCodeTemplate(
     val runnableTemplate: String,
 )
 
+data class AssignmentHiddenTestCase(
+    val seq: Int,
+    val inputText: String,
+    val outputText: String,
+)
+
 data class AssignmentMetadata(
     val title: String,
     val difficulty: AssignmentDifficulty,
@@ -50,6 +48,7 @@ data class AssignmentMetadata(
     val problemDetail: AssignmentProblemDetail? = null,
     val submissionGuide: AssignmentSubmissionGuide? = null,
     val codeTemplates: List<AssignmentCodeTemplate> = emptyList(),
+    val hiddenTestCases: List<AssignmentHiddenTestCase> = emptyList(),
     val attributes: Map<String, Any?> = emptyMap(),
 )
 

@@ -3,7 +3,6 @@ package com.example.aandi_post_web_server.assignment.domain
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentExampleRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
@@ -42,7 +41,7 @@ class AssignmentDraftCollectionsTest : StringSpec({
     "AssignmentExampleDrafts는 요청을 엔티티로 변환한다" {
         val drafts = AssignmentExampleDrafts.fromRequests(
             listOf(
-                CreateAssignmentExampleRequest(seq = 1, inputText = "ADD 1", outputText = "+1", description = "기본"),
+                CreateAssignmentExampleRequest(seq = 1, inputText = "ADD 1", outputText = "+1"),
             )
         )
         val now = Instant.parse("2026-03-01T00:00:00Z")
@@ -51,16 +50,16 @@ class AssignmentDraftCollectionsTest : StringSpec({
 
         entities.size shouldBe 1
         entities.first().seq shouldBe 1
-        entities.first().description shouldBe "기본"
+        entities.first().description shouldBe null
         entities.first().createdAt shouldBe now
     }
 
     "DeliveredAssignmentIds는 assignmentId를 중복 제거해 보관한다" {
         val ids = DeliveredAssignmentIds.fromDeliveries(
             listOf(
-                AssignmentDelivery(assignmentId = "a-1", userId = "u-1", status = AssignmentDeliveryStatus.DELIVERED),
-                AssignmentDelivery(assignmentId = "a-1", userId = "u-2", status = AssignmentDeliveryStatus.DELIVERED),
-                AssignmentDelivery(assignmentId = "a-2", userId = "u-3", status = AssignmentDeliveryStatus.FAILED),
+                AssignmentDelivery(assignmentId = "a-1", userId = "u-1"),
+                AssignmentDelivery(assignmentId = "a-1", userId = "u-2"),
+                AssignmentDelivery(assignmentId = "a-2", userId = "u-3"),
             )
         )
 

@@ -16,7 +16,6 @@ data class AssignmentExampleDraft(
     val seq: Int,
     val inputText: String,
     val outputText: String,
-    val description: String?,
 )
 
 class AssignmentRequirementDrafts private constructor(
@@ -53,7 +52,6 @@ class AssignmentExampleDrafts private constructor(
                     seq = it.seq,
                     inputText = it.inputText,
                     outputText = it.outputText,
-                    description = it.description,
                 )
             }
             validateUniqueSeq(drafts)
@@ -75,7 +73,7 @@ class AssignmentExampleDrafts private constructor(
                 seq = it.seq,
                 inputText = it.inputText,
                 outputText = it.outputText,
-                description = it.description,
+                description = null,
                 createdAt = createdAt,
             )
         }

@@ -11,10 +11,10 @@ import java.time.format.DateTimeFormatter
 data class ApiEnvelope<T>(
     @field:Schema(description = "요청 성공 여부", example = "true")
     val success: Boolean,
-    @field:Schema(description = "성공 데이터. 실패 시 null", nullable = true)
+    @field:Schema(description = "성공 시 반환되는 데이터입니다. 실패하면 null입니다.", nullable = true)
     val data: T?,
     @field:Schema(
-        description = "실패 정보. 성공 시 null",
+        description = "실패 정보입니다. 성공하면 null입니다.",
         nullable = true,
         example = "null",
     )
@@ -45,10 +45,10 @@ data class ApiEnvelope<T>(
     }
 }
 
-@Schema(description = "공통 에러 페이로드")
+@Schema(description = "공통 에러 정보")
 data class ApiErrorPayload(
     @field:Schema(description = "에러 코드", example = "VALIDATION_ERROR")
     val code: String,
-    @field:Schema(description = "에러 메시지", example = "요청 값이 올바르지 않습니다.")
+    @field:Schema(description = "바로 이해할 수 있는 에러 메시지", example = "요청 값이 올바르지 않습니다.")
     val message: String,
 )

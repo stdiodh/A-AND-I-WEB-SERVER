@@ -1,13 +1,9 @@
 package com.example.aandi_post_web_server.course.service
 
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentDeliveryResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
-import com.example.aandi_post_web_server.assignment.dtos.PublishAssignmentResponse
-import com.example.aandi_post_web_server.assignment.dtos.TriggerDeliveriesResponse
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDeliveryStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
@@ -17,9 +13,6 @@ import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
 import com.example.aandi_post_web_server.course.dtos.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.dtos.UpdateCourseRequest
 import com.example.aandi_post_web_server.course.dtos.UpdateEnrollmentRequest
-import com.example.aandi_post_web_server.course.enum.CoursePhase
-import com.example.aandi_post_web_server.course.enum.CourseStatus
-import com.example.aandi_post_web_server.course.enum.UserTrack
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -48,13 +41,8 @@ class CourseV1Service(
     fun getCourseOutline(courseSlug: String, userId: String): Mono<CourseOutlineResponse> =
         courseQueryService.getCourseOutline(courseSlug, userId)
 
-    fun getCourses(
-        status: CourseStatus?,
-        phase: CoursePhase?,
-        track: UserTrack?,
-        userId: String,
-    ): Flux<CourseResponse> =
-        courseQueryService.getCourses(status, phase, track, userId)
+    fun getCourses(userId: String): Flux<CourseResponse> =
+        courseQueryService.getCourses(userId)
 
     fun enrollMember(courseSlug: String, request: EnrollCourseRequest): Mono<CourseEnrollmentResponse> =
         courseCommandService.enrollMember(courseSlug, request)
@@ -65,6 +53,9 @@ class CourseV1Service(
         request: UpdateEnrollmentRequest,
     ): Mono<CourseEnrollmentResponse> =
         courseCommandService.updateEnrollmentStatus(courseSlug, userId, request)
+
+    fun deleteEnrollment(courseSlug: String, userId: String): Mono<Void> =
+        courseCommandService.deleteEnrollment(courseSlug, userId)
 
     fun getEnrollments(courseSlug: String): Flux<CourseEnrollmentResponse> =
         courseQueryService.getEnrollments(courseSlug)
@@ -102,9 +93,6 @@ class CourseV1Service(
     ): Mono<AssignmentDetailResponse> =
         courseQueryService.getAdminAssignmentDetail(courseSlug, assignmentId)
 
-    fun publishAssignment(courseSlug: String, assignmentId: String): Mono<PublishAssignmentResponse> =
-        courseCommandService.publishAssignment(courseSlug, assignmentId)
-
     fun getAssignmentsByWeek(
         courseSlug: String,
         weekNo: Int,
@@ -130,14 +118,4 @@ class CourseV1Service(
 
     fun getAssignmentCourse(assignmentId: String, userId: String): Mono<CourseResponse> =
         courseQueryService.getAssignmentCourse(assignmentId, userId)
-
-    fun triggerDeliveries(courseSlug: String, assignmentId: String): Mono<TriggerDeliveriesResponse> =
-        courseCommandService.triggerDeliveries(courseSlug, assignmentId)
-
-    fun getDeliveries(
-        courseSlug: String,
-        assignmentId: String,
-        status: AssignmentDeliveryStatus?,
-    ): Flux<AssignmentDeliveryResponse> =
-        courseQueryService.getDeliveries(courseSlug, assignmentId, status)
 }

@@ -151,7 +151,7 @@ class ErrorResponseFactory {
 
     fun fromInvalidFormat(exchange: ServerWebExchange, ex: InvalidFormatException): ApiErrorResult {
         if (ex.targetType?.isEnum == true) {
-            val enumType = ex.targetType as Class<out Enum<*>>
+            val enumType = ex.targetType.asSubclass(Enum::class.java)
             val fieldPath = ex.path.joinToString(".") { it.fieldName ?: "[${it.index}]" }
             val message = enumMismatchMessage(
                 enumType = enumType,
