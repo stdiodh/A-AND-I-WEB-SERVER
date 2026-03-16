@@ -103,7 +103,7 @@ class ErrorHandlingWebFluxTest : StringSpec() {
                 .header(RequestIdSupport.HEADER_NAME, "req-auth-001")
                 .bodyValue(
                     mapOf(
-                        "publicCode" to "FL301",
+                        "publicCode" to "#FL301",
                     )
                 )
                 .exchange()
@@ -140,7 +140,7 @@ class ErrorHandlingWebFluxTest : StringSpec() {
         Mono.just(
             UserSyncResponse(
                 userId = "user-uuid-1",
-                publicCode = "FL301",
+                publicCode = "#FL301",
                 username = "string",
                 synced = true,
                 source = "AUTH_SERVER",

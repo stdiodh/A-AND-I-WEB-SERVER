@@ -129,13 +129,13 @@ data class CourseResponse(
     example =
         """
         {
-          "publicCode": "FL301"
+          "publicCode": "#OR402"
         }
         """,
 )
 data class EnrollCourseRequest(
     @field:NotBlank
-    @field:Schema(description = "등록할 사용자의 publicCode", example = "FL301")
+    @field:Schema(description = "등록할 사용자의 publicCode(#이 없으면 자동으로 붙여 정규화합니다.)", example = "#OR402")
     val publicCode: String,
 )
 
@@ -164,7 +164,7 @@ data class CourseEnrollmentResponse(
     val courseSlug: String,
     @field:Schema(description = "사용자 UUID", example = "user-1")
     val userId: String,
-    @field:Schema(description = "유저 publicCode", example = "FL301")
+    @field:Schema(description = "유저 publicCode", example = "#OR402")
     val publicCode: String,
     @field:Schema(description = "사용자 이름", example = "string")
     val username: String,

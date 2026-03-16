@@ -37,13 +37,17 @@ value class UserId private constructor(val value: String) {
 
 @JvmInline
 value class PublicCode private constructor(val value: String) {
+    val legacyValue: String
+        get() = value.removePrefix("#")
+
     companion object {
-        private val PATTERN = Regex("^[A-Z]{2}\\d{3}$")
+        private val PATTERN = Regex("^#[A-Z]{2}\\d{3}$")
 
         fun from(raw: String): PublicCode {
-            val normalized = raw.trim().uppercase()
-            require(normalized.isNotBlank()) { "publicCode는 비어 있을 수 없습니다." }
-            require(PATTERN.matches(normalized)) { "publicCode 형식이 올바르지 않습니다. 예: FL301" }
+            val trimmed = raw.trim().uppercase()
+            require(trimmed.isNotBlank()) { "publicCode는 비어 있을 수 없습니다." }
+            val normalized = if (trimmed.startsWith("#")) trimmed else "#$trimmed"
+            require(PATTERN.matches(normalized)) { "publicCode 형식이 올바르지 않습니다. 예: #FL301" }
             return PublicCode(normalized)
         }
     }

@@ -27,7 +27,7 @@ import reactor.core.publisher.Mono
 class AdminUserController(
     private val adminUserSyncService: AdminUserSyncService,
 ) {
-    @Operation(summary = "유저 동기화", description = "publicCode로 auth 서버 사용자를 찾아 report 서버 사용자 정보로 동기화합니다.")
+    @Operation(summary = "유저 동기화", description = "publicCode로 auth 서버 사용자를 찾아 report 서버 사용자 정보로 동기화합니다. publicCode는 #이 없으면 자동으로 붙여 정규화합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "동기화 성공", content = [Content(schema = Schema(implementation = UserSyncEnvelopeDoc::class))]),

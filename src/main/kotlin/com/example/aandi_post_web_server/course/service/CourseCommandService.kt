@@ -129,7 +129,7 @@ class CourseCommandService(
                 val courseId = parseCourseId(requireNotNull(course.id))
                 authUserClient.findByPublicCode(publicCode.value)
                     .flatMap { authUser ->
-                        reportUserRepository.findByPublicCode(publicCode.value)
+                        findReportUserByPublicCode(publicCode)
                             .switchIfEmpty(
                                 Mono.error(
                                     ResponseStatusException(
@@ -672,6 +672,10 @@ class CourseCommandService(
 
     private fun parsePublicCode(raw: String): PublicCode =
         parseOrBadRequest { PublicCode.from(raw) }
+
+    private fun findReportUserByPublicCode(publicCode: PublicCode): Mono<ReportUser> =
+        reportUserRepository.findByPublicCode(publicCode.value)
+            .switchIfEmpty(Mono.defer { reportUserRepository.findByPublicCode(publicCode.legacyValue) })
 
     private fun parseWeekNo(raw: Int): WeekNo =
         parseOrBadRequest { WeekNo.from(raw) }

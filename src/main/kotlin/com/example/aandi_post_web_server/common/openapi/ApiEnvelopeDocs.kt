@@ -70,7 +70,7 @@ data class CourseEnvelopeDoc(
 
 @Schema(
     description = "수강 단건 성공 응답",
-    example = """{"success":true,"data":{"courseId":"course-1","courseSlug":"fl-basic","userId":"user-uuid-1","publicCode":"FL301","username":"string","status":"ENABLED","joinedAt":"2026-03-05T09:20:18Z","bannedAt":null,"banReason":null,"updatedAt":"2026-03-05T09:20:18Z"},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
+    example = """{"success":true,"data":{"courseId":"course-1","courseSlug":"fl-basic","userId":"user-uuid-1","publicCode":"#OR402","username":"string","status":"ENABLED","joinedAt":"2026-03-05T09:20:18Z","bannedAt":null,"banReason":null,"updatedAt":"2026-03-05T09:20:18Z"},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
 )
 data class CourseEnrollmentEnvelopeDoc(
     @field:Schema(example = "true")
@@ -84,7 +84,7 @@ data class CourseEnrollmentEnvelopeDoc(
 
 @Schema(
     description = "수강 목록 성공 응답",
-    example = """{"success":true,"data":[{"courseId":"course-1","courseSlug":"fl-basic","userId":"user-uuid-1","publicCode":"FL301","username":"string","status":"ENABLED","joinedAt":"2026-03-05T09:20:18Z","bannedAt":null,"banReason":null,"updatedAt":"2026-03-05T09:20:18Z"}],"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
+    example = """{"success":true,"data":[{"courseId":"course-1","courseSlug":"fl-basic","userId":"user-uuid-1","publicCode":"#OR402","username":"string","status":"ENABLED","joinedAt":"2026-03-05T09:20:18Z","bannedAt":null,"banReason":null,"updatedAt":"2026-03-05T09:20:18Z"}],"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
 )
 data class CourseEnrollmentListEnvelopeDoc(
     @field:Schema(example = "true")
@@ -97,7 +97,7 @@ data class CourseEnrollmentListEnvelopeDoc(
 )
 @Schema(
     description = "유저 동기화 성공 응답",
-    example = """{"success":true,"data":{"userId":"user-uuid-1","publicCode":"FL301","username":"string","synced":true,"source":"AUTH_SERVER","syncedAt":"2026-03-09T12:00:00+09:00"},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
+    example = """{"success":true,"data":{"userId":"user-uuid-1","publicCode":"#AD001","username":"string","synced":true,"source":"AUTH_SERVER","syncedAt":"2026-03-09T12:00:00+09:00"},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
 )
 data class UserSyncEnvelopeDoc(
     @field:Schema(example = "true")
