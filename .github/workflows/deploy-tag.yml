@@ -26,6 +26,9 @@ jobs:
       AUTH_AUDIENCE: ${{ vars.AUTH_AUDIENCE || 'aandiclub-api' }}
       AUTH_JWT_CLOCK_SKEW_SECONDS: ${{ vars.AUTH_JWT_CLOCK_SKEW_SECONDS || '30' }}
       ONLINE_JUDGE_BASE_URL: ${{ vars.ONLINE_JUDGE_BASE_URL || 'http://localhost:8081' }}
+      APP_EVENTS_REPORT_TEST_CASE_ENABLED: ${{ vars.APP_EVENTS_REPORT_TEST_CASE_ENABLED || 'false' }}
+      APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN: ${{ vars.APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN || '' }}
+      APP_EVENTS_REPORT_TEST_CASE_REGION: ${{ vars.APP_EVENTS_REPORT_TEST_CASE_REGION || 'ap-northeast-2' }}
 
     steps:
       - name: Checkout
@@ -83,13 +86,16 @@ jobs:
           AUTH_AUDIENCE: ${{ env.AUTH_AUDIENCE }}
           AUTH_JWT_CLOCK_SKEW_SECONDS: ${{ env.AUTH_JWT_CLOCK_SKEW_SECONDS }}
           ONLINE_JUDGE_BASE_URL: ${{ env.ONLINE_JUDGE_BASE_URL }}
+          APP_EVENTS_REPORT_TEST_CASE_ENABLED: ${{ env.APP_EVENTS_REPORT_TEST_CASE_ENABLED }}
+          APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN: ${{ env.APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN }}
+          APP_EVENTS_REPORT_TEST_CASE_REGION: ${{ env.APP_EVENTS_REPORT_TEST_CASE_REGION }}
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
         with:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
           port: ${{ vars.AWS_PORT || '22' }}
-          envs: AWS_REGION,IMAGE_URI,APP_DIR,MONGO_DB_NAME,SWAGGER_URL,AUTH_ISSUER_URI,AUTH_SERVICE_BASE_URL,AUTH_AUDIENCE,AUTH_JWT_CLOCK_SKEW_SECONDS,ONLINE_JUDGE_BASE_URL,AUTH_JWT_SECRET
+          envs: AWS_REGION,IMAGE_URI,APP_DIR,MONGO_DB_NAME,SWAGGER_URL,AUTH_ISSUER_URI,AUTH_SERVICE_BASE_URL,AUTH_AUDIENCE,AUTH_JWT_CLOCK_SKEW_SECONDS,ONLINE_JUDGE_BASE_URL,APP_EVENTS_REPORT_TEST_CASE_ENABLED,APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN,APP_EVENTS_REPORT_TEST_CASE_REGION,AUTH_JWT_SECRET
           script: |
             set -euo pipefail
 
@@ -102,6 +108,10 @@ jobs:
             done
             if [ "${#AUTH_JWT_SECRET}" -lt 32 ]; then
               echo "AUTH_JWT_SECRET must be at least 32 chars"
+              exit 1
+            fi
+            if [ "${APP_EVENTS_REPORT_TEST_CASE_ENABLED}" = "true" ] && [ -z "${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN:-}" ]; then
+              echo "APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN must not be blank when APP_EVENTS_REPORT_TEST_CASE_ENABLED=true"
               exit 1
             fi
 
@@ -122,8 +132,23 @@ jobs:
             AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
             EOF
 
-            # Keep EOF single-quoted so ${...} remains for docker compose env interpolation time.
-            cat <<'EOF' > "${APP_DIR}/docker-compose.yml"
+            report_test_case_compose_env_block=""
+            if [ "${APP_EVENTS_REPORT_TEST_CASE_ENABLED}" = "true" ]; then
+              cat >> "${APP_DIR}/.env.runtime" <<EOF
+            APP_EVENTS_REPORT_TEST_CASE_ENABLED=${APP_EVENTS_REPORT_TEST_CASE_ENABLED}
+            APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN=${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN}
+            APP_EVENTS_REPORT_TEST_CASE_REGION=${APP_EVENTS_REPORT_TEST_CASE_REGION}
+            EOF
+              report_test_case_compose_env_block=$(cat <<'EOF'
+                  APP_EVENTS_REPORT_TEST_CASE_ENABLED: ${APP_EVENTS_REPORT_TEST_CASE_ENABLED}
+                  APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN: ${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN}
+                  APP_EVENTS_REPORT_TEST_CASE_REGION: ${APP_EVENTS_REPORT_TEST_CASE_REGION}
+            EOF
+              )
+            fi
+
+            # Use an unquoted EOF so the optional env block is expanded into the compose file.
+            cat <<EOF > "${APP_DIR}/docker-compose.yml"
             services:
               mongodb:
                 image: mongo:7
@@ -156,6 +181,7 @@ jobs:
                   AUTH_JWT_CLOCK_SKEW_SECONDS: ${AUTH_JWT_CLOCK_SKEW_SECONDS}
                   ONLINE_JUDGE_BASE_URL: ${ONLINE_JUDGE_BASE_URL}
                   AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+            ${report_test_case_compose_env_block}
 
             volumes:
               mongo_data:
@@ -166,7 +192,7 @@ jobs:
             docker compose --env-file .env.runtime up -d --remove-orphans
 
             docker exec aandi-report-server sh -lc \
-              'echo "AUTH_JWT_SECRET_LEN=$(echo -n "${AUTH_JWT_SECRET:-}" | wc -c)"; env | egrep "AUTH_ISSUER_URI|AUTH_SERVICE_BASE_URL|AUTH_AUDIENCE|AUTH_JWT_CLOCK_SKEW_SECONDS|ONLINE_JUDGE_BASE_URL"'
+              'echo "AUTH_JWT_SECRET_LEN=$(echo -n "${AUTH_JWT_SECRET:-}" | wc -c)"; env | egrep "AUTH_ISSUER_URI|AUTH_SERVICE_BASE_URL|AUTH_AUDIENCE|AUTH_JWT_CLOCK_SKEW_SECONDS|ONLINE_JUDGE_BASE_URL|APP_EVENTS_REPORT_TEST_CASE_ENABLED|APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN|APP_EVENTS_REPORT_TEST_CASE_REGION"'
 
             rm -f "${APP_DIR}/.env.runtime"
 
