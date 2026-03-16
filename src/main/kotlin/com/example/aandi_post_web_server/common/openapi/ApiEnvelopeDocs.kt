@@ -8,7 +8,6 @@ import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
 import com.example.aandi_post_web_server.submission.dtos.AssignmentSubmissionAcceptedResponse
-import com.example.aandi_post_web_server.submission.dtos.AssignmentSubmissionResultResponse
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(
@@ -168,7 +167,7 @@ data class AssignmentSubmissionConfigEnvelopeDoc(
 
 @Schema(
     description = "과제 제출 접수 성공 응답",
-    example = """{"success":true,"data":{"submissionId":"67d3a37e5f0c1e42c0f4a123","assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","status":"PENDING","streamUrl":"/v1/courses/fl-basic/assignments/8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111/submissions/67d3a37e5f0c1e42c0f4a123/stream","resultUrl":"/v1/courses/fl-basic/assignments/8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111/submissions/67d3a37e5f0c1e42c0f4a123","createdAt":"2026-03-15T12:00:00+09:00"},"error":null,"timestamp":"2026-03-15T12:00:00+09:00"}""",
+    example = """{"success":true,"data":{"submissionId":"a6ef9d5d-2fe3-4d4b-a41e-4483e6f0d9e2","streamUrl":"/v1/submissions/a6ef9d5d-2fe3-4d4b-a41e-4483e6f0d9e2/stream"},"error":null,"timestamp":"2026-03-16T12:00:00+09:00"}""",
 )
 data class AssignmentSubmissionAcceptedEnvelopeDoc(
     @field:Schema(example = "true")
@@ -176,22 +175,8 @@ data class AssignmentSubmissionAcceptedEnvelopeDoc(
     val data: AssignmentSubmissionAcceptedResponse? = null,
     @field:Schema(nullable = true, example = "null")
     val error: ApiErrorPayload? = null,
-    @field:Schema(example = "2026-03-15T12:00:00+09:00")
-    val timestamp: String = "2026-03-15T12:00:00+09:00",
-)
-
-@Schema(
-    description = "과제 제출 결과 성공 응답",
-    example = """{"success":true,"data":{"submissionId":"67d3a37e5f0c1e42c0f4a123","assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","language":"KOTLIN","status":"ACCEPTED","testCases":[{"caseId":1,"status":"PASSED","timeMs":12.3,"memoryMb":4.2,"output":"8","error":null}],"createdAt":"2026-03-15T12:00:00+09:00","completedAt":"2026-03-15T12:00:10+09:00"},"error":null,"timestamp":"2026-03-15T12:00:10+09:00"}""",
-)
-data class AssignmentSubmissionResultEnvelopeDoc(
-    @field:Schema(example = "true")
-    val success: Boolean = true,
-    val data: AssignmentSubmissionResultResponse? = null,
-    @field:Schema(nullable = true, example = "null")
-    val error: ApiErrorPayload? = null,
-    @field:Schema(example = "2026-03-15T12:00:10+09:00")
-    val timestamp: String = "2026-03-15T12:00:10+09:00",
+    @field:Schema(example = "2026-03-16T12:00:00+09:00")
+    val timestamp: String = "2026-03-16T12:00:00+09:00",
 )
 
 @Schema(

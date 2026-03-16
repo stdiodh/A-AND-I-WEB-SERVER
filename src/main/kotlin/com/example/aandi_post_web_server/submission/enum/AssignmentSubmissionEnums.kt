@@ -16,12 +16,3 @@ enum class AssignmentSubmissionStatus {
     RUNTIME_ERROR,
     COMPILE_ERROR,
 }
-
-enum class AssignmentSubmissionTestCaseStatus {
-    PASSED,
-    WRONG_ANSWER,
-    TIME_LIMIT_EXCEEDED,
-    MEMORY_LIMIT_EXCEEDED,
-    RUNTIME_ERROR,
-    COMPILE_ERROR,
-}
