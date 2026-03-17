@@ -1,46 +1,24 @@
-# A-AND-I-WEB-SERVER
+# 📱 A&I : Android and iOS Development
 
-코스, 주차별 과제, 수강 상태를 관리하는 WebFlux 기반 WEB-SERVER 입니다.
+<img src="https://github.com/user-attachments/assets/b98d32a0-7f19-4112-89d7-81cb4c9ec86a" width="300"/>
 
-## OJ 연동 구조
 
-- `/v1/courses/**` 는 WEB-SERVER 책임입니다.
-- `/v1/submissions/**` 는 ONLINE-JUDGE-SERVER 책임입니다.
-- WEB-SERVER 는 과제 CRUD 와 examples 관리만 담당합니다.
-- ONLINE-JUDGE-SERVER 는 problemId 기준 테스트 케이스 저장, 제출 생성, 채점, SSE 스트림, 결과 조회를 담당합니다.
-- 과제 생성/수정/삭제 또는 examples 전체 교체가 일어나면 WEB-SERVER 는 assignment UUID를 `problemId`로 사용해 최종 전체 `testCases[]` snapshot 을 SNS Topic으로 발행합니다.
-- ONLINE-JUDGE-SERVER `v1.2.2` 는 같은 `problemId` 이벤트를 다시 받으면 기존 테스트 케이스를 새 배열로 overwrite 합니다.
+**인덕대학교 모바일 앱 개발 동아리 A&I에 오신 것을 환영합니다!** 😊  
+저희는 모두가 즐겁고 Lean한 분위기에서 **더 나은 방향을 함께 연구하는 동아리**입니다. 🔥
 
-### Problem Sync Payload
+## 👨‍🏫 프로젝트 소개
 
-WEB-SERVER 가 발행하는 OJ 호환 payload 핵심 필드는 아래와 같습니다.
+본 프로젝트는 A&I 3기 동아리원을 대상으로 한  
+**레포트 공유 및 제출 웹 서비스**입니다.
 
-- `problemId`: assignment UUID
-- `testCases`: 항상 배열
-- `testCases[].caseId`: example seq
-- `testCases[].input`: 항상 배열이며 현재 WEB-SERVER 는 `[inputText]` 규칙으로 직렬화
-- `testCases[].output`: example outputText
-
-과제 삭제 시에는 아래처럼 빈 배열을 발행합니다.
-
-```json
-{
-  "eventType": "REPORT_TEST_CASE_DELETED",
-  "problemId": "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
-  "testCases": []
-}
-```
-
-### Submission Routing
-
-- 제출 생성, 제출 결과 조회, 제출 히스토리, SSE 스트림은 모두 ONLINE-JUDGE-SERVER 책임입니다.
-- Gateway 는 `/v1/submissions/**`, `/v1/problems/{problemId}/submissions/me`, `/v1/admin/submissions` 를 OJ로 직접 라우팅합니다.
-- WEB-SERVER 는 제출 API를 중복 구현하지 않습니다.
+- 과제를 자동 공개하고,
+- 과제 제출 시스템을 제공하며,
+- 로그인을 기반으로 한 심화 기능을 제공합니다.
 
 ## ⏰ 개발 기간
 
 - **2025년 03월 07일 ~ 진행 중**
-- 이 저장소는 **A-AND-I-WEB-SERVER 백엔드 저장소**입니다.
+- 이 저장소는 **Back-End Repository**입니다.
 
 
 ## 👥 프로젝트 팀원
@@ -97,7 +75,7 @@ WEB-SERVER 가 발행하는 OJ 호환 payload 핵심 필드는 아래와 같습�
 
 ```bash
 git clone <repository-url>
-cd A-AND-I-WEB-SERVER
+cd A-AND-I-REPORT-SERVER
 ./gradlew build
 ```
 
@@ -110,18 +88,10 @@ cd A-AND-I-WEB-SERVER
 *   **MONGO_DB_URL**: MongoDB 연결 URI (예: `mongodb://localhost:27017/aandi`)
 *   **SWAGGER_URL**: Swagger UI 접근 URL (예: `http://localhost:8080`)
 
-**OJ problem sync 사용 시 추가 환경 변수:**
-*   **APP_EVENTS_REPORT_TEST_CASE_ENABLED**: `true` 일 때 SNS publish 활성화
-*   **APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN**: OJ problem sync 용 SNS Topic ARN
-*   **APP_EVENTS_REPORT_TEST_CASE_REGION**: SNS region
-
 `.env` 파일 예시:
 ```properties
 MONGO_DB_URL=mongodb://localhost:27017/aandi
 SWAGGER_URL=http://localhost:8080
-APP_EVENTS_REPORT_TEST_CASE_ENABLED=false
-APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN=
-APP_EVENTS_REPORT_TEST_CASE_REGION=ap-northeast-2
 ```
 
 > **Note**: 환경 변수를 설정하지 않으면 애플리케이션 실행 시 에러가 발생할 수 있습니다.
