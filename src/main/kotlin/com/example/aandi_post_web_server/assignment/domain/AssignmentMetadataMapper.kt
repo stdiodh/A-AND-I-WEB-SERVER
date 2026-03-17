@@ -12,7 +12,6 @@ import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetail
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentRequirementResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentLearningGoalResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuidePayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuideResponse
 import com.example.aandi_post_web_server.assignment.entity.AssignmentCodeTemplate
@@ -75,17 +74,6 @@ fun AssignmentMetadata.toDetailResponse(
     examples = examples,
     problemDetail = problemDetail?.toResponse(),
     attributes = attributes,
-)
-
-fun AssignmentMetadata.toSubmissionConfigResponse(
-    assignmentId: String,
-    courseSlug: String,
-): AssignmentSubmissionConfigResponse = AssignmentSubmissionConfigResponse(
-    assignmentId = assignmentId,
-    courseSlug = courseSlug,
-    submissionGuide = submissionGuide?.toResponse(),
-    codeTemplates = codeTemplates.map { it.toResponse() },
-    supportedLanguages = codeTemplates.map { it.language }.distinct(),
 )
 
 private fun AssignmentProblemDetailPayload.toEntity(): AssignmentProblemDetail =

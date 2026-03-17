@@ -1,13 +1,11 @@
 package com.example.aandi_post_web_server.common.openapi
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
-import com.example.aandi_post_web_server.submission.dtos.AssignmentSubmissionAcceptedResponse
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(
@@ -149,34 +147,6 @@ data class AssignmentDetailEnvelopeDoc(
     val error: ApiErrorPayload? = null,
     @field:Schema(example = "2026-03-09T12:00:00+09:00")
     val timestamp: String = "2026-03-09T12:00:00+09:00",
-)
-
-@Schema(
-    description = "과제 제출 설정 성공 응답",
-    example = """{"success":true,"data":{"assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","courseSlug":"fl-basic","submissionGuide":{"title":"문제 풀이 템플릿","description":"제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.","commentSections":["문제","해석","풀이"]},"codeTemplates":[{"language":"KOTLIN","commentTemplate":"/* ... */","functionTemplate":"fun solution(): String { ... }","runnableTemplate":"fun solution(): String { ... }"},{"language":"DART","commentTemplate":"/* ... */","functionTemplate":"String solution() { ... }","runnableTemplate":"String solution() { ... }"}],"supportedLanguages":["KOTLIN","DART"]},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
-)
-data class AssignmentSubmissionConfigEnvelopeDoc(
-    @field:Schema(example = "true")
-    val success: Boolean = true,
-    val data: AssignmentSubmissionConfigResponse? = null,
-    @field:Schema(nullable = true, example = "null")
-    val error: ApiErrorPayload? = null,
-    @field:Schema(example = "2026-03-09T12:00:00+09:00")
-    val timestamp: String = "2026-03-09T12:00:00+09:00",
-)
-
-@Schema(
-    description = "과제 제출 접수 성공 응답",
-    example = """{"success":true,"data":{"submissionId":"a6ef9d5d-2fe3-4d4b-a41e-4483e6f0d9e2","streamUrl":"/v1/submissions/a6ef9d5d-2fe3-4d4b-a41e-4483e6f0d9e2/stream"},"error":null,"timestamp":"2026-03-16T12:00:00+09:00"}""",
-)
-data class AssignmentSubmissionAcceptedEnvelopeDoc(
-    @field:Schema(example = "true")
-    val success: Boolean = true,
-    val data: AssignmentSubmissionAcceptedResponse? = null,
-    @field:Schema(nullable = true, example = "null")
-    val error: ApiErrorPayload? = null,
-    @field:Schema(example = "2026-03-16T12:00:00+09:00")
-    val timestamp: String = "2026-03-16T12:00:00+09:00",
 )
 
 @Schema(

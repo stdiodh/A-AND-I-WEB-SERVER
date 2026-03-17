@@ -8,7 +8,8 @@ data class AssignmentReportTestCaseEvent(
 )
 
 data class AssignmentReportTestCase(
-    val input: String,
+    val caseId: Int,
+    val input: List<String>,
     val output: String,
 )
 

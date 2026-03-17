@@ -317,7 +317,6 @@ data class AssignmentMetadataResponse(
     val examples: List<AssignmentExampleResponse> = emptyList(),
     @field:Schema(description = "문제 상세 정보")
     val problemDetail: AssignmentProblemDetailResponse? = null,
-    // TODO: Remove submission settings from summary metadata after list consumers move to submission-config.
     @field:Schema(description = "제출 가이드")
     val submissionGuide: AssignmentSubmissionGuideResponse? = null,
     @field:Schema(description = "언어별 코드 템플릿")
@@ -344,20 +343,6 @@ data class AssignmentDetailMetadataResponse(
     val problemDetail: AssignmentProblemDetailResponse? = null,
     @field:Schema(description = "확장 메타데이터")
     val attributes: Map<String, Any?>,
-)
-
-@Schema(description = "과제 제출 설정 조회 응답")
-data class AssignmentSubmissionConfigResponse(
-    @field:Schema(description = "과제 UUID", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
-    val assignmentId: String,
-    @field:Schema(description = "코스를 구분하는 슬러그", example = "back-basic")
-    val courseSlug: String,
-    @field:Schema(description = "제출 가이드")
-    val submissionGuide: AssignmentSubmissionGuideResponse? = null,
-    @field:Schema(description = "언어별 코드 템플릿")
-    val codeTemplates: List<AssignmentCodeTemplateResponse> = emptyList(),
-    @field:Schema(description = "지원 언어")
-    val supportedLanguages: List<AssignmentTemplateLanguage> = emptyList(),
 )
 
 @Schema(description = "과제 요구사항 응답")

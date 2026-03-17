@@ -1,14 +1,12 @@
 package com.example.aandi_post_web_server.course.controller
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
 import com.example.aandi_post_web_server.common.openapi.AssignmentDetailEnvelopeDoc
-import com.example.aandi_post_web_server.common.openapi.AssignmentSubmissionConfigEnvelopeDoc
 import com.example.aandi_post_web_server.common.openapi.AssignmentSummaryListEnvelopeDoc
 import com.example.aandi_post_web_server.common.openapi.CourseEnrollmentEnvelopeDoc
 import com.example.aandi_post_web_server.common.openapi.CourseEnrollmentListEnvelopeDoc
@@ -219,27 +217,7 @@ class CourseV1Controller(
     ): Mono<ApiEnvelope<AssignmentDetailResponse>> =
         courseV1Service.getAdminAssignmentDetail(courseSlug, assignmentId).map { ApiEnvelope.success(it) }
 
-    @Operation(
-        summary = "과제 제출 설정 조회",
-        description = "과제 제출 설정을 별도로 조회합니다. 상세 조회에서는 문제 본문 중심 정보만 유지하고, submissionGuide/codeTemplates 는 이 API로 분리합니다.",
-    )
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = AssignmentSubmissionConfigEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "코스 또는 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
-        ],
-    )
-    @GetMapping("/{courseSlug}/assignments/{assignmentId}/submission-config")
-    fun getAdminAssignmentSubmissionConfig(
-        @Parameter(description = "코스를 구분하는 슬러그", example = "back-basic")
-        @PathVariable courseSlug: String,
-        @Parameter(description = "과제 UUID", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
-        @PathVariable assignmentId: String,
-    ): Mono<ApiEnvelope<AssignmentSubmissionConfigResponse>> =
-        courseV1Service.getAdminAssignmentSubmissionConfig(courseSlug, assignmentId).map { ApiEnvelope.success(it) }
-
-    @Operation(summary = "과제 생성", description = "코스 안에 새 과제를 만듭니다. 과제 ID는 UUID로 자동 생성됩니다.")
+    @Operation(summary = "과제 생성", description = "코스 안에 새 과제를 만듭니다. 과제 ID는 UUID로 자동 생성되며, examples 전체 배열 snapshot 이 OJ problem sync 이벤트로 함께 발행됩니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "생성 성공", content = [Content(schema = Schema(implementation = AssignmentDetailEnvelopeDoc::class))]),
@@ -258,7 +236,7 @@ class CourseV1Controller(
     ): Mono<ApiEnvelope<AssignmentDetailResponse>> =
         courseV1Service.createAssignment(courseSlug, request, authentication.name).map { ApiEnvelope.success(it) }
 
-    @Operation(summary = "과제 수정", description = "과제 정보를 수정합니다. requirements와 examples를 보내면 기존 값이 전체 교체됩니다.")
+    @Operation(summary = "과제 수정", description = "과제 정보를 수정합니다. requirements와 examples를 보내면 기존 값이 전체 교체되며, examples 변경 후 최종 전체 배열 snapshot 을 다시 OJ problem sync 이벤트로 발행합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "수정 성공", content = [Content(schema = Schema(implementation = AssignmentDetailEnvelopeDoc::class))]),
@@ -278,7 +256,7 @@ class CourseV1Controller(
     ): Mono<ApiEnvelope<AssignmentDetailResponse>> =
         courseV1Service.updateAssignment(courseSlug, assignmentId, request).map { ApiEnvelope.success(it) }
 
-    @Operation(summary = "과제 삭제", description = "과제와 연결된 요구사항, 학습 목표, 예시 데이터를 함께 삭제합니다.")
+    @Operation(summary = "과제 삭제", description = "과제와 연결된 요구사항, 학습 목표, 예시 데이터를 함께 삭제합니다. 삭제 시에는 해당 assignment UUID에 대해 testCases: [] problem sync 이벤트를 발행합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "삭제 성공", content = [Content(schema = Schema(implementation = EmptyEnvelopeDoc::class))]),

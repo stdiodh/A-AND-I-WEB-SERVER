@@ -2,11 +2,9 @@ package com.example.aandi_post_web_server.course.service
 
 import com.example.aandi_post_web_server.assignment.domain.toDetailResponse
 import com.example.aandi_post_web_server.assignment.domain.toResponse
-import com.example.aandi_post_web_server.assignment.domain.toSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentRequirementResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
@@ -187,50 +185,6 @@ class CourseQueryService(
                 assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
                     .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
                     .flatMap { assignment -> loadAssignmentDetail(course.slug, assignment, parsedAssignmentId) }
-            }
-    }
-
-    fun getAssignmentSubmissionConfig(
-        courseSlug: String,
-        assignmentId: String,
-        userId: String,
-    ): Mono<AssignmentSubmissionConfigResponse> {
-        val slug = parseCourseSlug(courseSlug)
-        val parsedAssignmentId = parseAssignmentId(assignmentId)
-        val parsedUserId = parseUserId(userId)
-
-        return findAccessibleCourseBySlug(slug, parsedUserId)
-            .flatMap { course ->
-                val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
-                    .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
-                    .flatMap { assignment -> ensureVisibleToUser(assignment, parsedAssignmentId) }
-                    .map { assignment ->
-                        assignment.metadata.toSubmissionConfigResponse(
-                            assignmentId = requireNotNull(assignment.id),
-                            courseSlug = course.slug,
-                        )
-                    }
-            }
-    }
-
-    fun getAdminAssignmentSubmissionConfig(
-        courseSlug: String,
-        assignmentId: String,
-    ): Mono<AssignmentSubmissionConfigResponse> {
-        val slug = parseCourseSlug(courseSlug)
-        val parsedAssignmentId = parseAssignmentId(assignmentId)
-        return findCourseBySlug(slug)
-            .flatMap { course ->
-                val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
-                    .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
-                    .map { assignment ->
-                        assignment.metadata.toSubmissionConfigResponse(
-                            assignmentId = requireNotNull(assignment.id),
-                            courseSlug = course.slug,
-                        )
-                    }
             }
     }
 

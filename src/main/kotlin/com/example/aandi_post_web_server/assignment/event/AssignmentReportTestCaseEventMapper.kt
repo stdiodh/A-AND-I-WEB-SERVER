@@ -32,7 +32,11 @@ class AssignmentReportTestCaseEventMapper {
 
     private fun toTestCase(example: AssignmentExampleResponse): AssignmentReportTestCase =
         AssignmentReportTestCase(
-            input = example.inputText,
+            caseId = example.seq,
+            input = example.inputText.toJudgeInputArgs(),
             output = example.outputText,
         )
+
+    private fun String.toJudgeInputArgs(): List<String> =
+        listOf(this)
 }

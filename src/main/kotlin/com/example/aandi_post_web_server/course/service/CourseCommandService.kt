@@ -43,7 +43,6 @@ import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
 import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
-import com.example.aandi_post_web_server.submission.repository.AssignmentSubmissionRepository
 import com.example.aandi_post_web_server.user.entity.ReportUser
 import com.example.aandi_post_web_server.user.repository.ReportUserRepository
 import org.springframework.http.HttpStatus
@@ -63,7 +62,6 @@ class CourseCommandService(
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentExampleRepository: AssignmentExampleRepository,
     private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
-    private val assignmentSubmissionRepository: AssignmentSubmissionRepository,
     private val assignmentReportTestCaseEventMapper: AssignmentReportTestCaseEventMapper,
     private val assignmentReportTestCaseEventPublisher: AssignmentReportTestCaseEventPublisher,
     private val reportUserRepository: ReportUserRepository,
@@ -471,7 +469,6 @@ class CourseCommandService(
                         assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
-                        assignmentSubmissionRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentRepository.deleteAllById(assignmentIds).then()
                     ).then(
                         Flux.fromIterable(assignmentIds)
@@ -536,7 +533,7 @@ class CourseCommandService(
                     .zipWith(loadOrReplaceExamples(parsedAssignmentId, exampleDrafts))
                     .flatMap { tuple ->
                         val response = toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
-                        publishUpdatedTestCases(parsedAssignmentId.value, tuple.t2)
+                        publishUpdatedTestCasesIfExamplesChanged(parsedAssignmentId.value, exampleDrafts, tuple.t2)
                             .thenReturn(response)
                     }
             }
@@ -597,7 +594,6 @@ class CourseCommandService(
             assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
-            assignmentSubmissionRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentRepository.deleteById(assignmentId).then(),
         ).then(publishDeletedTestCases(assignmentId))
     }
@@ -617,6 +613,17 @@ class CourseCommandService(
         assignmentReportTestCaseEventPublisher.publish(
             assignmentReportTestCaseEventMapper.updated(assignmentId, examples)
         )
+
+    private fun publishUpdatedTestCasesIfExamplesChanged(
+        assignmentId: String,
+        exampleDrafts: AssignmentExampleDrafts?,
+        examples: List<AssignmentExampleResponse>,
+    ): Mono<Void> {
+        if (exampleDrafts == null) {
+            return Mono.empty()
+        }
+        return publishUpdatedTestCases(assignmentId, examples)
+    }
 
     private fun publishDeletedTestCases(assignmentId: String): Mono<Void> =
         assignmentReportTestCaseEventPublisher.publish(
