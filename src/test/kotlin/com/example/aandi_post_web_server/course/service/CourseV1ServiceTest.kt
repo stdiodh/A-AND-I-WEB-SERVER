@@ -17,7 +17,6 @@ import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
 import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
-import com.example.aandi_post_web_server.submission.repository.AssignmentSubmissionRepository
 import com.example.aandi_post_web_server.user.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -120,7 +119,6 @@ private class Fixture {
     val assignmentRepository: AssignmentRepository = Mockito.mock(AssignmentRepository::class.java)
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
     val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
-    val assignmentSubmissionRepository: AssignmentSubmissionRepository = Mockito.mock(AssignmentSubmissionRepository::class.java)
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
     val assignmentReportTestCaseEventPublisher = NoopAssignmentReportTestCaseEventPublisherForTest()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
@@ -131,9 +129,8 @@ private class Fixture {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentExampleRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
         assignmentDeliveryRepository = Mockito.mock(com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository::class.java),
-        assignmentSubmissionRepository = assignmentSubmissionRepository,
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         reportUserRepository = reportUserRepository,
@@ -145,7 +142,7 @@ private class Fixture {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentExampleRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
     )
 
     val service = CourseV1Service(

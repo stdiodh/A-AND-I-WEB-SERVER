@@ -40,5 +40,3 @@ app:
       enabled: ${APP_EVENTS_REPORT_TEST_CASE_ENABLED:false}
       topic-arn: ${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN:}
       region: ${APP_EVENTS_REPORT_TEST_CASE_REGION:ap-northeast-2}
-  online-judge:
-    base-url: ${APP_ONLINE_JUDGE_BASE_URL:${ONLINE_JUDGE_BASE_URL:http://localhost:8081}}

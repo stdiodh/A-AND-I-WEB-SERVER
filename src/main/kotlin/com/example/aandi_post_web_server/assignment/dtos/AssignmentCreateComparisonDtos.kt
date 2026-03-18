@@ -1,6 +1,7 @@
 package com.example.aandi_post_web_server.assignment.dtos
 
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
 
@@ -40,18 +41,20 @@ data class AssignmentCreateComparisonMetadataResponse(
     val requirements: List<AssignmentRequirementResponse> = emptyList(),
     @field:Schema(description = "학습 정리 목표")
     val learningGoals: List<AssignmentLearningGoalResponse> = emptyList(),
-    @field:Schema(description = "예제 입출력")
-    val examples: List<AssignmentCreateComparisonExampleResponse> = emptyList(),
+    @field:Schema(description = "테스트 케이스")
+    val testCases: List<AssignmentCreateComparisonTestCaseResponse> = emptyList(),
 )
 
-@Schema(description = "과제 생성 비교용 예제 입출력 응답")
-data class AssignmentCreateComparisonExampleResponse(
-    @field:Schema(description = "예시 순번", example = "1")
+@Schema(description = "과제 생성 비교용 테스트 케이스 응답")
+data class AssignmentCreateComparisonTestCaseResponse(
+    @field:Schema(description = "테스트 케이스 순번", example = "1")
     val seq: Int,
     @field:Schema(description = "입력 예시", example = "ADD 1\\nCLOSE")
     val inputText: String,
     @field:Schema(description = "출력 예시", example = "+1")
     val outputText: String,
+    @field:Schema(description = "공개 여부", example = "PUBLIC")
+    val visibility: AssignmentTestCaseVisibility,
 )
 
 fun CreateAssignmentRequest.toCreateComparisonItemResponse(): AssignmentCreateComparisonItemResponse =
@@ -77,11 +80,12 @@ fun AssignmentDetailResponse.toCreateComparisonItemResponse(): AssignmentCreateC
             problemDescription = metadata.description,
             requirements = metadata.requirements,
             learningGoals = metadata.learningGoals,
-            examples = metadata.examples.map {
-                AssignmentCreateComparisonExampleResponse(
+            testCases = metadata.testCases.map {
+                AssignmentCreateComparisonTestCaseResponse(
                     seq = it.seq,
                     inputText = it.inputText,
                     outputText = it.outputText,
+                    visibility = it.visibility,
                 )
             },
         ),
@@ -104,11 +108,12 @@ private fun AssignmentMetadataPayload.toCreateComparisonMetadataResponse(): Assi
                 learningGoalText = it.learningGoalText,
             )
         },
-        examples = examples.map {
-            AssignmentCreateComparisonExampleResponse(
+        testCases = testCases.map {
+            AssignmentCreateComparisonTestCaseResponse(
                 seq = it.seq,
                 inputText = it.inputText,
                 outputText = it.outputText,
+                visibility = it.visibility,
             )
         },
     )

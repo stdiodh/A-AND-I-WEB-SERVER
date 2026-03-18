@@ -1,0 +1,4 @@
+package com.example.aandi_post_web_server.assignment.dtos
+
+typealias CreateAssignmentExampleRequest = CreateAssignmentTestCaseRequest
+typealias AssignmentExampleResponse = AssignmentTestCaseResponse

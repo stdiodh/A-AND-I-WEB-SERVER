@@ -2,22 +2,18 @@
 
 package com.example.aandi_post_web_server.course.controller
 
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentCodeTemplateResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailMetadataResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemClassificationResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuideResponse
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.security.SecurityConfig
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
@@ -116,28 +112,6 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .jsonPath("$.data.metadata.problemDetail.classification.algorithmStep").isEqualTo("STEP0")
                 .jsonPath("$.data.metadata.codeTemplates").doesNotExist()
                 .jsonPath("$.data.metadata.submissionGuide").doesNotExist()
-        }
-
-        "과제 제출 설정 조회 API는 USER 토큰으로 호출하면 성공한다" {
-            val response = sampleAssignmentSubmissionConfigResponse()
-            val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
-            Mockito.`when`(courseV1Service.getAssignmentSubmissionConfig("back-basic", assignmentId, userId))
-                .thenReturn(Mono.just(response))
-
-            webTestClient.mutateWith(
-                mockJwt().jwt { jwt ->
-                    jwt.subject(userId)
-                }.authorities(SimpleGrantedAuthority("ROLE_USER")),
-            ).get()
-                .uri("/v1/courses/back-basic/assignments/$assignmentId/submission-config")
-                .exchange()
-                .expectStatus().isOk
-                .expectBody()
-                .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
-                .jsonPath("$.data.courseSlug").isEqualTo("back-basic")
-                .jsonPath("$.data.submissionGuide.title").isEqualTo("문제 풀이 템플릿")
-                .jsonPath("$.data.codeTemplates[0].language").isEqualTo("KOTLIN")
-                .jsonPath("$.data.supportedLanguages[0]").isEqualTo("KOTLIN")
         }
 
         "과제 ID로 코스 조회 API는 USER 토큰으로 호출하면 성공한다" {
@@ -420,24 +394,6 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .jsonPath("$.data.metadata.submissionGuide").doesNotExist()
         }
 
-        "admin 과제 제출 설정 조회 API는 ADMIN 토큰으로 호출하면 성공한다" {
-            val response = sampleAssignmentSubmissionConfigResponse()
-            Mockito.`when`(courseV1Service.getAdminAssignmentSubmissionConfig("back-basic", assignmentId))
-                .thenReturn(Mono.just(response))
-
-            webTestClient.mutateWith(
-                mockJwt().authorities(SimpleGrantedAuthority("ROLE_ADMIN")),
-            ).get()
-                .uri("/v1/admin/courses/back-basic/assignments/$assignmentId/submission-config")
-                .exchange()
-                .expectStatus().isOk
-                .expectBody()
-                .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
-                .jsonPath("$.data.courseSlug").isEqualTo("back-basic")
-                .jsonPath("$.data.submissionGuide.title").isEqualTo("문제 풀이 템플릿")
-                .jsonPath("$.data.codeTemplates[1].language").isEqualTo("DART")
-        }
-
         "admin 과제 수정 API는 ADMIN이 아니면 403을 반환한다" {
             webTestClient.mutateWith(
                 mockJwt().authorities(SimpleGrantedAuthority("ROLE_USER")),
@@ -536,32 +492,6 @@ private fun sampleAssignmentDetailResponse(): AssignmentDetailResponse {
         ),
     )
 }
-
-private fun sampleAssignmentSubmissionConfigResponse(): AssignmentSubmissionConfigResponse =
-    AssignmentSubmissionConfigResponse(
-        assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
-        courseSlug = "back-basic",
-        submissionGuide = AssignmentSubmissionGuideResponse(
-            title = "문제 풀이 템플릿",
-            description = "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.",
-            commentSections = listOf("문제", "해석", "풀이"),
-        ),
-        codeTemplates = listOf(
-            AssignmentCodeTemplateResponse(
-                language = AssignmentTemplateLanguage.KOTLIN,
-                commentTemplate = "/* ... */",
-                functionTemplate = "fun solution(): String { ... }",
-                runnableTemplate = "fun solution(): String { ... }",
-            ),
-            AssignmentCodeTemplateResponse(
-                language = AssignmentTemplateLanguage.DART,
-                commentTemplate = "/* ... */",
-                functionTemplate = "String solution() { ... }",
-                runnableTemplate = "String solution() { ... }",
-            ),
-        ),
-        supportedLanguages = listOf(AssignmentTemplateLanguage.KOTLIN, AssignmentTemplateLanguage.DART),
-    )
 
 private fun sampleCourseOutlineResponse(): CourseOutlineResponse {
     return CourseOutlineResponse(

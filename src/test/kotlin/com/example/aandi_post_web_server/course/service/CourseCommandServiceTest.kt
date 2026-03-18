@@ -30,7 +30,6 @@ import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
 import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
-import com.example.aandi_post_web_server.submission.repository.AssignmentSubmissionRepository
 import com.example.aandi_post_web_server.user.entity.ReportUser
 import com.example.aandi_post_web_server.user.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
@@ -86,7 +85,6 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(2))
         Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(2))
         Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(4))
-        Mockito.`when`(fixture.assignmentSubmissionRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(0))
         Mockito.`when`(fixture.assignmentRepository.deleteAllById(assignmentIds)).thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseWeekRepository.deleteAllByCourseId("course-1")).thenReturn(Mono.just(3))
         Mockito.`when`(fixture.courseEnrollmentRepository.deleteAllByCourseId("course-1")).thenReturn(Mono.just(5))
@@ -98,11 +96,11 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.assignmentRequirementRepository).deleteAllByAssignmentIdIn(assignmentIds)
         Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(assignmentIds)
         Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(assignmentIds)
-        Mockito.verify(fixture.assignmentSubmissionRepository).deleteAllByAssignmentIdIn(assignmentIds)
         Mockito.verify(fixture.assignmentRepository).deleteAllById(assignmentIds)
-        fixture.assignmentReportTestCaseEventPublisher.events.map { it.uuid } shouldBe assignmentIds
+        fixture.assignmentReportTestCaseEventPublisher.events.map { it.assignmentId } shouldBe assignmentIds
         fixture.assignmentReportTestCaseEventPublisher.events.forEach {
-            it.eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_DELETED
+            it.eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
+            it.assignmentStatus shouldBe null
             it.testCases shouldBe emptyList()
         }
         Mockito.verify(fixture.courseWeekRepository).deleteAllByCourseId("course-1")
@@ -119,7 +117,6 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
             .thenReturn(Mono.just(assignment))
-        Mockito.`when`(fixture.assignmentSubmissionRepository.deleteAllByAssignmentIdIn(listOf(assignmentId))).thenReturn(Mono.just(0))
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId))).thenReturn(Mono.just(1))
         Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId))).thenReturn(Mono.just(1))
         Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId))).thenReturn(Mono.just(0))
@@ -131,10 +128,10 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.assignmentRequirementRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
-        Mockito.verify(fixture.assignmentSubmissionRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentRepository).deleteById(assignmentId)
-        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_DELETED
-        fixture.assignmentReportTestCaseEventPublisher.events.single().uuid shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentStatus shouldBe null
         fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldBe emptyList()
     }
@@ -362,10 +359,10 @@ class CourseCommandServiceTest : StringSpec({
                 title = "Hello World!",
                 difficulty = AssignmentDifficulty.LOW,
                 description = "문제 설명",
-                examples = listOf(
+                testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
-                        inputText = "1 2",
+                        inputText = "ADD 1\nCLOSE",
                         outputText = "3",
                     )
                 ),
@@ -403,10 +400,12 @@ class CourseCommandServiceTest : StringSpec({
             .verifyComplete()
 
         fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_CREATED
-        java.util.UUID.fromString(fixture.assignmentReportTestCaseEventPublisher.events.single().uuid).toString() shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().uuid
-        fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().uuid
+        java.util.UUID.fromString(fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId).toString() shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentStatus shouldBe AssignmentStatus.PUBLISHED
+        fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe "1 2"
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().seq shouldBe 1
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe "ADD 1\nCLOSE"
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().output shouldBe "3"
     }
 
@@ -420,7 +419,7 @@ class CourseCommandServiceTest : StringSpec({
                 title = "updated title",
                 difficulty = AssignmentDifficulty.LOW,
                 description = "updated description",
-                examples = listOf(
+                testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
                         inputText = "updated input",
@@ -472,11 +471,68 @@ class CourseCommandServiceTest : StringSpec({
             .verifyComplete()
 
         fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
-        fixture.assignmentReportTestCaseEventPublisher.events.single().uuid shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentStatus shouldBe AssignmentStatus.PUBLISHED
         fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().seq shouldBe 1
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe "updated input"
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().output shouldBe "updated output"
+    }
+
+    "examples 를 건드리지 않는 과제 수정은 OJ test case 이벤트를 재발행하지 않는다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.just(CourseWeek(id = "week-1", courseId = "course-1", weekNo = 1, title = "1주차")))
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as Assignment) }
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+            .thenReturn(
+                Flux.just(
+                    AssignmentExample(
+                        id = "ex-1",
+                        assignmentId = assignmentId,
+                        seq = 1,
+                        inputText = "persisted input",
+                        outputText = "persisted output",
+                    )
+                )
+            )
+
+        StepVerifier.create(
+            fixture.service.updateAssignment(
+                courseSlug = "back-basic",
+                assignmentId = assignmentId,
+                request = UpdateAssignmentRequest(orderInWeek = 2),
+            )
+        )
+            .assertNext { updated ->
+                updated.orderInWeek shouldBe 2
+                updated.metadata.examples shouldHaveSize 1
+            }
+            .verifyComplete()
+
+        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
     }
 
 })
@@ -489,7 +545,6 @@ private class CommandFixture {
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
     val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
     val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
-    val assignmentSubmissionRepository: AssignmentSubmissionRepository = Mockito.mock(AssignmentSubmissionRepository::class.java)
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
     val assignmentReportTestCaseEventPublisher = RecordingAssignmentReportTestCaseEventPublisher()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
@@ -499,9 +554,8 @@ private class CommandFixture {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentExampleRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
-        assignmentSubmissionRepository = assignmentSubmissionRepository,
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         reportUserRepository = reportUserRepository,

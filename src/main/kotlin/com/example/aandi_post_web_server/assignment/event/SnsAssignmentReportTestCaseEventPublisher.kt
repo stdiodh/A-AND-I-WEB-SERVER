@@ -13,11 +13,17 @@ class SnsAssignmentReportTestCaseEventPublisher(
 
     override fun publish(event: AssignmentReportTestCaseEvent): Mono<Void> {
         val message = objectMapper.writeValueAsString(event)
-        val request = PublishRequest.builder()
+        val requestBuilder = PublishRequest.builder()
             .topicArn(topicArn)
             .subject(event.eventType.name)
             .message(message)
-            .build()
-        return Mono.fromFuture(snsAsyncClient.publish(request)).then()
+
+        if (topicArn.endsWith(".fifo")) {
+            requestBuilder
+                .messageGroupId(event.assignmentId)
+                .messageDeduplicationId(event.eventId)
+        }
+
+        return Mono.fromFuture(snsAsyncClient.publish(requestBuilder.build())).then()
     }
 }

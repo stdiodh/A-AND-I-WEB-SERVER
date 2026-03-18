@@ -119,39 +119,6 @@ class CourseQueryServiceTest : StringSpec({
             .verifyComplete()
     }
 
-    "관리자 과제 제출 설정 조회는 submissionGuide 와 codeTemplates 를 별도 응답으로 반환한다" {
-        val fixture = QueryFixture()
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
-        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
-        val draft = queryAssignment(id = assignmentId, courseId = "course-1").copy(
-            status = AssignmentStatus.DRAFT,
-            startAt = Instant.parse("2026-04-01T00:00:00Z"),
-            publishedAt = null,
-        )
-
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
-            .thenReturn(Mono.just(draft))
-
-        StepVerifier.create(
-            fixture.service.getAdminAssignmentSubmissionConfig("back-basic", assignmentId)
-        )
-            .assertNext { config ->
-                config.assignmentId shouldBe assignmentId
-                config.courseSlug shouldBe "back-basic"
-                config.submissionGuide?.title shouldBe "문제 풀이 템플릿"
-                config.codeTemplates.map { it.language } shouldBe listOf(
-                    AssignmentTemplateLanguage.KOTLIN,
-                    AssignmentTemplateLanguage.DART,
-                )
-                config.supportedLanguages shouldBe listOf(
-                    AssignmentTemplateLanguage.KOTLIN,
-                    AssignmentTemplateLanguage.DART,
-                )
-            }
-            .verifyComplete()
-    }
-
     "코스 조회는 ENABLED 상태로 수강 중인 코스만 반환한다" {
         val fixture = QueryFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
@@ -295,41 +262,6 @@ class CourseQueryServiceTest : StringSpec({
         error.statusCode shouldBe HttpStatus.BAD_REQUEST
     }
 
-    "사용자 과제 제출 설정 조회는 공개된 과제의 submissionGuide 와 codeTemplates 를 반환한다" {
-        val fixture = QueryFixture()
-        val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
-        val enrollment = CourseEnrollment(
-            id = "enroll-1",
-            courseId = "course-1",
-            userId = userId,
-            status = EnrollmentStatus.ENABLED,
-        )
-        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
-        val published = queryAssignment(id = assignmentId, courseId = "course-1")
-
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", userId))
-            .thenReturn(Mono.just(enrollment))
-        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
-            .thenReturn(Mono.just(published))
-
-        StepVerifier.create(
-            fixture.service.getAssignmentSubmissionConfig("back-basic", assignmentId, userId)
-        )
-            .assertNext { config ->
-                config.assignmentId shouldBe assignmentId
-                config.courseSlug shouldBe "back-basic"
-                config.submissionGuide?.description shouldBe "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다."
-                config.codeTemplates.first().language shouldBe AssignmentTemplateLanguage.KOTLIN
-                config.supportedLanguages shouldBe listOf(
-                    AssignmentTemplateLanguage.KOTLIN,
-                    AssignmentTemplateLanguage.DART,
-                )
-            }
-            .verifyComplete()
-    }
-
     "과제 목록 조회는 requirements와 examples를 함께 반환한다" {
         val fixture = QueryFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
@@ -399,7 +331,7 @@ private class QueryFixture {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentExampleRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
     )
 }
 

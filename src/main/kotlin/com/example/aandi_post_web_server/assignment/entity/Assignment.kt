@@ -33,12 +33,6 @@ data class AssignmentCodeTemplate(
     val runnableTemplate: String,
 )
 
-data class AssignmentHiddenTestCase(
-    val seq: Int,
-    val inputText: String,
-    val outputText: String,
-)
-
 data class AssignmentMetadata(
     val title: String,
     val difficulty: AssignmentDifficulty,
@@ -48,7 +42,6 @@ data class AssignmentMetadata(
     val problemDetail: AssignmentProblemDetail? = null,
     val submissionGuide: AssignmentSubmissionGuide? = null,
     val codeTemplates: List<AssignmentCodeTemplate> = emptyList(),
-    val hiddenTestCases: List<AssignmentHiddenTestCase> = emptyList(),
     val attributes: Map<String, Any?> = emptyMap(),
 )
 
