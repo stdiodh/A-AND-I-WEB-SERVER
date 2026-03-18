@@ -10,13 +10,12 @@ import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemClassi
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetailPayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentRequirementResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentLearningGoalResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionConfigResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuidePayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuideResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.entity.AssignmentCodeTemplate
-import com.example.aandi_post_web_server.assignment.entity.AssignmentHiddenTestCase
 import com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata
 import com.example.aandi_post_web_server.assignment.entity.AssignmentProblemClassification
 import com.example.aandi_post_web_server.assignment.entity.AssignmentProblemDetail
@@ -32,14 +31,13 @@ fun AssignmentMetadataPayload.toEntity(): AssignmentMetadata {
         problemDetail = problemDetail?.toEntity(),
         submissionGuide = submissionGuide?.toEntity(),
         codeTemplates = resolveCodeTemplates(codeTemplates),
-        hiddenTestCases = hiddenTestCases.sortedBy { it.seq }.map { it.toHiddenTestCase() },
         attributes = attributes,
     )
 }
 
 fun AssignmentMetadata.toResponse(
     requirements: List<AssignmentRequirementResponse> = emptyList(),
-    examples: List<AssignmentExampleResponse> = emptyList(),
+    testCases: List<AssignmentTestCaseResponse> = emptyList(),
 ): AssignmentMetadataResponse = AssignmentMetadataResponse(
     title = title,
     difficulty = difficulty,
@@ -51,7 +49,7 @@ fun AssignmentMetadata.toResponse(
             learningGoalText = learningGoal,
         )
     },
-    examples = examples,
+    testCases = testCases,
     problemDetail = problemDetail?.toResponse(),
     submissionGuide = submissionGuide?.toResponse(),
     codeTemplates = codeTemplates.map { it.toResponse() },
@@ -60,7 +58,7 @@ fun AssignmentMetadata.toResponse(
 
 fun AssignmentMetadata.toDetailResponse(
     requirements: List<AssignmentRequirementResponse> = emptyList(),
-    examples: List<AssignmentExampleResponse> = emptyList(),
+    testCases: List<AssignmentTestCaseResponse> = emptyList(),
 ): AssignmentDetailMetadataResponse = AssignmentDetailMetadataResponse(
     title = title,
     difficulty = difficulty,
@@ -72,7 +70,7 @@ fun AssignmentMetadata.toDetailResponse(
             learningGoalText = learningGoal,
         )
     },
-    examples = examples,
+    testCases = testCases,
     problemDetail = problemDetail?.toResponse(),
     attributes = attributes,
 )
@@ -117,13 +115,6 @@ private fun AssignmentCodeTemplatePayload.toEntity(): AssignmentCodeTemplate =
         commentTemplate = commentTemplate.trim(),
         functionTemplate = functionTemplate.trim(),
         runnableTemplate = runnableTemplate.trim(),
-    )
-
-private fun com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentExampleRequest.toHiddenTestCase(): AssignmentHiddenTestCase =
-    AssignmentHiddenTestCase(
-        seq = seq,
-        inputText = inputText.trim(),
-        outputText = outputText.trim(),
     )
 
 private fun AssignmentProblemDetail.toResponse(): AssignmentProblemDetailResponse =

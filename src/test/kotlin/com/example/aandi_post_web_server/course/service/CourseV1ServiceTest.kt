@@ -131,7 +131,7 @@ private class Fixture {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentExampleRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
         assignmentDeliveryRepository = Mockito.mock(com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository::class.java),
         assignmentSubmissionRepository = assignmentSubmissionRepository,
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
@@ -145,7 +145,7 @@ private class Fixture {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentExampleRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
     )
 
     val service = CourseV1Service(

@@ -1,27 +1,27 @@
 package com.example.aandi_post_web_server.course.service
 
-import com.example.aandi_post_web_server.assignment.domain.AssignmentExampleDrafts
+import com.example.aandi_post_web_server.assignment.domain.AssignmentTestCaseDrafts
 import com.example.aandi_post_web_server.assignment.domain.toDetailResponse
 import com.example.aandi_post_web_server.assignment.domain.toEntity
 import com.example.aandi_post_web_server.assignment.domain.toResponse
 import com.example.aandi_post_web_server.assignment.domain.AssignmentRequirementDrafts
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentRequirementResponse
-import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentExampleRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequirementRequest
+import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentTestCaseRequest
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventMapper
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventPublisher
 import com.example.aandi_post_web_server.assignment.entity.Assignment
-import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
+import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository
-import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRequirementRepository
+import com.example.aandi_post_web_server.assignment.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.course.domain.AssignmentId
 import com.example.aandi_post_web_server.course.domain.CourseId
 import com.example.aandi_post_web_server.course.domain.CourseSlug
@@ -61,7 +61,7 @@ class CourseCommandService(
     private val courseWeekRepository: CourseWeekRepository,
     private val assignmentRepository: AssignmentRepository,
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
-    private val assignmentExampleRepository: AssignmentExampleRepository,
+    private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
     private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
     private val assignmentSubmissionRepository: AssignmentSubmissionRepository,
     private val assignmentReportTestCaseEventMapper: AssignmentReportTestCaseEventMapper,
@@ -219,7 +219,7 @@ class CourseCommandService(
         return resolveCreateRequest(request)
             .flatMap { resolvedRequest ->
                 val requirementDrafts = parseRequirementDrafts(resolvedRequest.metadata.requirements)
-                val exampleDrafts = parseExampleDrafts(resolvedRequest.metadata.examples)
+                val testCaseDrafts = parseTestCaseDrafts(resolvedRequest.metadata.testCases)
 
                 findCourseBySlug(slug)
                     .flatMap { course ->
@@ -257,16 +257,16 @@ class CourseCommandService(
                                                 ).flatMap { assignment ->
                                                     val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
                                                     val requirementsMono = saveRequirements(assignmentId, requirementDrafts)
-                                                    val examplesMono = saveExamples(assignmentId, exampleDrafts)
-                                                    Mono.zip(requirementsMono, examplesMono)
+                                                    val testCasesMono = saveTestCases(assignmentId, testCaseDrafts)
+                                                    Mono.zip(requirementsMono, testCasesMono)
                                                         .flatMap { tuple ->
                                                             val response = toAssignmentDetailResponse(
                                                                 courseSlug = course.slug,
                                                                 assignment = assignment,
                                                                 requirements = tuple.t1,
-                                                                examples = tuple.t2,
+                                                                testCases = tuple.t2,
                                                             )
-                                                            publishCreatedTestCases(assignmentId.value, tuple.t2)
+                                                            publishCreatedTestCases(assignment, tuple.t2)
                                                                 .thenReturn(response)
                                                         }
                                                 }
@@ -290,7 +290,7 @@ class CourseCommandService(
         return resolveUpdateRequest(request)
             .flatMap { resolvedRequest ->
                 val requirementDrafts = resolvedRequest.metadata?.let { parseRequirementDrafts(it.requirements) }
-                val exampleDrafts = resolvedRequest.metadata?.let { parseExampleDrafts(it.examples) }
+                val testCaseDrafts = resolvedRequest.metadata?.let { parseTestCaseDrafts(it.testCases) }
 
                 findCourseBySlug(slug)
                     .flatMap { course ->
@@ -313,7 +313,7 @@ class CourseCommandService(
                                     request = resolvedRequest,
                                     parsedWeekNo = parsedWeekNo,
                                     requirementDrafts = requirementDrafts,
-                                    exampleDrafts = exampleDrafts,
+                                    testCaseDrafts = testCaseDrafts,
                                 )
                             }
                     }
@@ -405,17 +405,17 @@ class CourseCommandService(
             .collectList()
     }
 
-    private fun saveExamples(
+    private fun saveTestCases(
         assignmentId: AssignmentId,
-        drafts: AssignmentExampleDrafts,
-    ): Mono<List<AssignmentExampleResponse>> {
+        drafts: AssignmentTestCaseDrafts,
+    ): Mono<List<AssignmentTestCaseResponse>> {
         if (drafts.isEmpty()) return Mono.just(emptyList())
 
-        return assignmentExampleRepository.saveAll(
+        return assignmentTestCaseRepository.saveAll(
             drafts.toEntities(assignmentId.value, Instant.now())
         )
-            .sort(compareBy<AssignmentExample> { it.seq })
-            .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText) }
+            .sort(compareBy<AssignmentTestCase> { it.seq })
+            .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
             .collectList()
     }
 
@@ -469,7 +469,7 @@ class CourseCommandService(
                 } else {
                     Mono.whenDelayError(
                         assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
-                        assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
+                        assignmentTestCaseRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentSubmissionRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentRepository.deleteAllById(assignmentIds).then()
@@ -497,7 +497,7 @@ class CourseCommandService(
         request: UpdateAssignmentRequest,
         parsedWeekNo: WeekNo?,
         requirementDrafts: AssignmentRequirementDrafts?,
-        exampleDrafts: AssignmentExampleDrafts?,
+        testCaseDrafts: AssignmentTestCaseDrafts?,
     ): Mono<AssignmentDetailResponse> {
         val targetWeekNo = parsedWeekNo?.value ?: assignment.weekNo
         val targetOrderInWeek = request.orderInWeek ?: assignment.orderInWeek
@@ -531,15 +531,15 @@ class CourseCommandService(
         return checkWeek
             .then(checkDuplicate)
             .then(assignmentRepository.save(candidate))
-            .flatMap { saved ->
-                loadOrReplaceRequirements(parsedAssignmentId, requirementDrafts)
-                    .zipWith(loadOrReplaceExamples(parsedAssignmentId, exampleDrafts))
-                    .flatMap { tuple ->
-                        val response = toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
-                        publishUpdatedTestCases(parsedAssignmentId.value, tuple.t2)
-                            .thenReturn(response)
+                    .flatMap { saved ->
+                        loadOrReplaceRequirements(parsedAssignmentId, requirementDrafts)
+                    .zipWith(loadOrReplaceTestCases(parsedAssignmentId, testCaseDrafts))
+                            .flatMap { tuple ->
+                                val response = toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
+                                publishUpdatedTestCases(saved, tuple.t2)
+                                    .thenReturn(response)
+                            }
                     }
-            }
     }
 
     private fun loadOrReplaceRequirements(
@@ -555,17 +555,17 @@ class CourseCommandService(
             .then(saveRequirements(assignmentId, drafts))
     }
 
-    private fun loadOrReplaceExamples(
+    private fun loadOrReplaceTestCases(
         assignmentId: AssignmentId,
-        drafts: AssignmentExampleDrafts?,
-    ): Mono<List<AssignmentExampleResponse>> {
+        drafts: AssignmentTestCaseDrafts?,
+    ): Mono<List<AssignmentTestCaseResponse>> {
         if (drafts == null) {
-            return assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId.value)
-                .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText) }
+            return assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId.value)
+                .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
                 .collectList()
         }
-        return assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId.value))
-            .then(saveExamples(assignmentId, drafts))
+        return assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId.value))
+            .then(saveTestCases(assignmentId, drafts))
     }
 
     private fun ensureAssignmentSlotAvailable(
@@ -595,7 +595,7 @@ class CourseCommandService(
     private fun deleteAssignmentCascade(assignmentId: String): Mono<Void> {
         return Mono.whenDelayError(
             assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
-            assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
+            assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentSubmissionRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentRepository.deleteById(assignmentId).then(),
@@ -603,19 +603,19 @@ class CourseCommandService(
     }
 
     private fun publishCreatedTestCases(
-        assignmentId: String,
-        examples: List<AssignmentExampleResponse>,
+        assignment: Assignment,
+        testCases: List<AssignmentTestCaseResponse>,
     ): Mono<Void> =
         assignmentReportTestCaseEventPublisher.publish(
-            assignmentReportTestCaseEventMapper.created(assignmentId, examples)
+            assignmentReportTestCaseEventMapper.created(assignment, testCases)
         )
 
     private fun publishUpdatedTestCases(
-        assignmentId: String,
-        examples: List<AssignmentExampleResponse>,
+        assignment: Assignment,
+        testCases: List<AssignmentTestCaseResponse>,
     ): Mono<Void> =
         assignmentReportTestCaseEventPublisher.publish(
-            assignmentReportTestCaseEventMapper.updated(assignmentId, examples)
+            assignmentReportTestCaseEventMapper.updated(assignment, testCases)
         )
 
     private fun publishDeletedTestCases(assignmentId: String): Mono<Void> =
@@ -671,8 +671,8 @@ class CourseCommandService(
     private fun parseRequirementDrafts(requests: List<CreateAssignmentRequirementRequest>): AssignmentRequirementDrafts =
         parseOrBadRequest { AssignmentRequirementDrafts.fromRequests(requests) }
 
-    private fun parseExampleDrafts(requests: List<CreateAssignmentExampleRequest>): AssignmentExampleDrafts =
-        parseOrBadRequest { AssignmentExampleDrafts.fromRequests(requests) }
+    private fun parseTestCaseDrafts(requests: List<CreateAssignmentTestCaseRequest>): AssignmentTestCaseDrafts =
+        parseOrBadRequest { AssignmentTestCaseDrafts.fromRequests(requests) }
 
     private fun resolveCreateRequest(request: CreateAssignmentRequest): Mono<CreateAssignmentRequest> {
         return Mono.just(validateResolvedCreateRequest(request))
@@ -781,7 +781,7 @@ class CourseCommandService(
         courseSlug: String,
         assignment: Assignment,
         requirements: List<AssignmentRequirementResponse>,
-        examples: List<AssignmentExampleResponse>,
+        testCases: List<AssignmentTestCaseResponse>,
     ): AssignmentDetailResponse = AssignmentDetailResponse(
         id = requireNotNull(assignment.id),
         courseSlug = courseSlug,
@@ -791,6 +791,6 @@ class CourseCommandService(
         endAt = assignment.endAt,
         status = effectiveAssignmentStatus(assignment.startAt),
         publishedAt = effectivePublishedAt(assignment.startAt, assignment.publishedAt),
-        metadata = assignment.metadata.toDetailResponse(requirements, examples),
+        metadata = assignment.metadata.toDetailResponse(requirements, testCases),
     )
 }
