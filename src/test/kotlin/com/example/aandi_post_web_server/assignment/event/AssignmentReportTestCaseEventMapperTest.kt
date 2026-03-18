@@ -50,10 +50,10 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
         event.testCases shouldHaveSize 2
     }
 
-    "delete 이벤트는 빈 testCases 배열을 담은 problem update payload 를 만든다" {
+    "delete 이벤트는 빈 testCases 배열을 담은 problem delete payload 를 만든다" {
         val event = mapper.deleted("assignment-uuid")
 
-        event.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
+        event.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_DELETED
         event.problemId shouldBe "assignment-uuid"
         event.testCases shouldBe emptyList()
     }

@@ -99,7 +99,7 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.assignmentRepository).deleteAllById(assignmentIds)
         fixture.assignmentReportTestCaseEventPublisher.events.map { it.problemId } shouldBe assignmentIds
         fixture.assignmentReportTestCaseEventPublisher.events.forEach {
-            it.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
+            it.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_DELETED
             it.testCases shouldBe emptyList()
         }
         Mockito.verify(fixture.courseWeekRepository).deleteAllByCourseId("course-1")
@@ -128,7 +128,7 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentRepository).deleteById(assignmentId)
-        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_DELETED
         fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldBe emptyList()
     }

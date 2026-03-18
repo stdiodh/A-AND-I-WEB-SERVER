@@ -256,7 +256,7 @@ class CourseV1Controller(
     ): Mono<ApiEnvelope<AssignmentDetailResponse>> =
         courseV1Service.updateAssignment(courseSlug, assignmentId, request).map { ApiEnvelope.success(it) }
 
-    @Operation(summary = "과제 삭제", description = "과제와 연결된 요구사항, 학습 목표, 테스트케이스 데이터를 함께 삭제합니다. 삭제 시에는 해당 assignment UUID에 대해 testCases: [] problem sync 이벤트를 발행합니다.")
+    @Operation(summary = "과제 삭제", description = "과제와 연결된 요구사항, 학습 목표, 테스트케이스 데이터를 함께 삭제합니다. 삭제 시에는 해당 assignment UUID에 대해 PROBLEM_DELETED 와 testCases: [] problem sync 이벤트를 발행합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "삭제 성공", content = [Content(schema = Schema(implementation = EmptyEnvelopeDoc::class))]),

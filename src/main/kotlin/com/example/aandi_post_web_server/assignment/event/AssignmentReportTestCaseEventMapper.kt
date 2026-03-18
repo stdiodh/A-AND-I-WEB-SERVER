@@ -36,7 +36,7 @@ class AssignmentReportTestCaseEventMapper {
 
     fun deleted(assignmentId: String): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
-            eventType = AssignmentReportTestCaseEventType.PROBLEM_UPDATED,
+            eventType = AssignmentReportTestCaseEventType.PROBLEM_DELETED,
             problemId = assignmentId,
             testCases = emptyList(),
         )

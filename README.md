@@ -51,6 +51,9 @@
 ### 🔄 ONLINE-JUDGE 연동
 - 제출 생성, 결과 조회, 히스토리, SSE stream 책임은 ONLINE-JUDGE-SERVER 가 담당합니다.
 - WEB-SERVER 는 과제와 테스트케이스를 관리하고, 공개 테스트케이스만 OJ problem sync 이벤트로 발행합니다.
+- 이벤트는 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED` 형식을 사용합니다.
+- `problemId` 는 항상 `assignmentId(UUID)` 이고, `testCases.input` 은 항상 배열이며 현재는 `[inputText]` 규칙으로 직렬화합니다.
+- `submission-config` 조회 API는 WEB-SERVER 에 유지됩니다.
 
 ## 🗂️ ERD
 
