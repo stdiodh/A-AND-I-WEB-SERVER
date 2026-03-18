@@ -97,10 +97,9 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(assignmentIds)
         Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(assignmentIds)
         Mockito.verify(fixture.assignmentRepository).deleteAllById(assignmentIds)
-        fixture.assignmentReportTestCaseEventPublisher.events.map { it.assignmentId } shouldBe assignmentIds
+        fixture.assignmentReportTestCaseEventPublisher.events.map { it.problemId } shouldBe assignmentIds
         fixture.assignmentReportTestCaseEventPublisher.events.forEach {
-            it.eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
-            it.assignmentStatus shouldBe null
+            it.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
             it.testCases shouldBe emptyList()
         }
         Mockito.verify(fixture.courseWeekRepository).deleteAllByCourseId("course-1")
@@ -129,9 +128,7 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentRepository).deleteById(assignmentId)
-        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
-        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId shouldBe assignmentId
-        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentStatus shouldBe null
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
         fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldBe emptyList()
     }
@@ -347,7 +344,7 @@ class CourseCommandServiceTest : StringSpec({
             .findByCourseIdAndWeekNoAndOrderInWeek("course-1", 2, 1)
     }
 
-    "과제 생성은 REPORT_TEST_CASE_CREATED 이벤트를 발행한다" {
+    "과제 생성은 PROBLEM_CREATED 이벤트를 발행한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val request = CreateAssignmentRequest(
@@ -399,17 +396,15 @@ class CourseCommandServiceTest : StringSpec({
             }
             .verifyComplete()
 
-        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_CREATED
-        java.util.UUID.fromString(fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId).toString() shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId
-        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentStatus shouldBe AssignmentStatus.PUBLISHED
-        fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_CREATED
+        java.util.UUID.fromString(fixture.assignmentReportTestCaseEventPublisher.events.single().problemId).toString() shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().problemId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().seq shouldBe 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe "ADD 1\nCLOSE"
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().caseId shouldBe 1
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe listOf("ADD 1\nCLOSE")
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().output shouldBe "3"
     }
 
-    "과제 수정은 일부 케이스 삭제가 있어도 최종 전체 배열로 REPORT_TEST_CASE_UPDATED 를 발행한다" {
+    "과제 수정은 일부 케이스 삭제가 있어도 최종 전체 배열로 PROBLEM_UPDATED 를 발행한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
@@ -470,13 +465,11 @@ class CourseCommandServiceTest : StringSpec({
             }
             .verifyComplete()
 
-        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
-        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId shouldBe assignmentId
-        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentStatus shouldBe AssignmentStatus.PUBLISHED
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
         fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().seq shouldBe 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe "updated input"
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().caseId shouldBe 1
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe listOf("updated input")
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().output shouldBe "updated output"
     }
 

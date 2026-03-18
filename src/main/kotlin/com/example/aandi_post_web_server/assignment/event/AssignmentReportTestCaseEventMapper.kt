@@ -4,8 +4,6 @@ import com.example.aandi_post_web_server.assignment.dtos.AssignmentTestCaseRespo
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import org.springframework.stereotype.Component
-import java.time.Instant
-import java.util.UUID
 
 @Component
 class AssignmentReportTestCaseEventMapper {
@@ -15,11 +13,7 @@ class AssignmentReportTestCaseEventMapper {
         testCases: List<AssignmentTestCaseResponse>,
     ): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
-            eventId = UUID.randomUUID().toString(),
-            eventType = AssignmentReportTestCaseEventType.REPORT_TEST_CASE_CREATED,
-            occurredAt = Instant.now(),
-            assignmentId = requireNotNull(assignment.id),
-            assignmentStatus = assignment.status,
+            eventType = AssignmentReportTestCaseEventType.PROBLEM_CREATED,
             problemId = requireNotNull(assignment.id),
             testCases = testCases
                 .filter { it.visibility == AssignmentTestCaseVisibility.PUBLIC }
@@ -32,11 +26,7 @@ class AssignmentReportTestCaseEventMapper {
         testCases: List<AssignmentTestCaseResponse>,
     ): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
-            eventId = UUID.randomUUID().toString(),
-            eventType = AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED,
-            occurredAt = Instant.now(),
-            assignmentId = requireNotNull(assignment.id),
-            assignmentStatus = assignment.status,
+            eventType = AssignmentReportTestCaseEventType.PROBLEM_UPDATED,
             problemId = requireNotNull(assignment.id),
             testCases = testCases
                 .filter { it.visibility == AssignmentTestCaseVisibility.PUBLIC }
@@ -46,19 +36,15 @@ class AssignmentReportTestCaseEventMapper {
 
     fun deleted(assignmentId: String): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
-            eventId = UUID.randomUUID().toString(),
-            eventType = AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED,
-            occurredAt = Instant.now(),
-            assignmentId = assignmentId,
-            assignmentStatus = null,
+            eventType = AssignmentReportTestCaseEventType.PROBLEM_UPDATED,
             problemId = assignmentId,
             testCases = emptyList(),
         )
 
     private fun toTestCase(testCase: AssignmentTestCaseResponse): AssignmentReportTestCase =
         AssignmentReportTestCase(
-            seq = testCase.seq,
-            input = testCase.inputText,
+            caseId = testCase.seq,
+            input = listOf(testCase.inputText),
             output = testCase.outputText,
         )
 }
