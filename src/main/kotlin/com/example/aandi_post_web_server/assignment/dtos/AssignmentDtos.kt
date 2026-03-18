@@ -4,6 +4,8 @@ import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
+import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import io.swagger.v3.oas.annotations.media.Schema
@@ -106,8 +108,8 @@ data class AssignmentMetadataPayload(
     val requirements: List<CreateAssignmentRequirementRequest> = emptyList(),
     @field:Schema(description = "학습 목표")
     val learningGoals: List<CreateAssignmentLearningGoalRequest> = emptyList(),
-    @field:Schema(description = "예시 입출력")
-    val examples: List<CreateAssignmentExampleRequest> = emptyList(),
+    @field:Schema(description = "테스트 케이스")
+    val testCases: List<CreateAssignmentTestCaseRequest> = emptyList(),
     @field:Valid
     @field:Schema(description = "문제 상세 정보")
     val problemDetail: AssignmentProblemDetailPayload? = null,
@@ -117,8 +119,6 @@ data class AssignmentMetadataPayload(
     @field:Valid
     @field:Schema(description = "언어별 코드 템플릿")
     val codeTemplates: List<AssignmentCodeTemplatePayload> = emptyList(),
-    @field:Schema(description = "숨은 테스트 케이스(옵션, 사용자 응답에는 노출되지 않음)")
-    val hiddenTestCases: List<CreateAssignmentExampleRequest> = emptyList(),
     @field:Schema(description = "확장 메타데이터")
     val attributes: Map<String, Any?> = emptyMap(),
 )
@@ -143,10 +143,10 @@ data class CreateAssignmentLearningGoalRequest(
     val learningGoalText: String,
 )
 
-@Schema(description = "과제 예시 입출력 생성 요청")
-data class CreateAssignmentExampleRequest(
+@Schema(description = "과제 테스트 케이스 생성 요청")
+data class CreateAssignmentTestCaseRequest(
     @field:Min(1)
-    @field:Schema(description = "예시 순번", example = "1")
+    @field:Schema(description = "테스트 케이스 순번", example = "1")
     val seq: Int,
     @field:NotBlank
     @field:Schema(description = "입력 예시", example = "ADD 1\\nCLOSE")
@@ -154,6 +154,8 @@ data class CreateAssignmentExampleRequest(
     @field:NotBlank
     @field:Schema(description = "출력 예시", example = "+1")
     val outputText: String,
+    @field:Schema(description = "공개 여부", example = "PUBLIC")
+    val visibility: AssignmentTestCaseVisibility = AssignmentTestCaseVisibility.PUBLIC,
 )
 
 @Schema(
@@ -181,11 +183,12 @@ data class CreateAssignmentExampleRequest(
                 "learningGoalText": "함수 분리"
               }
             ],
-            "examples": [
+            "testCases": [
               {
                 "seq": 1,
                 "inputText": "ADD 1\\nCLOSE",
-                "outputText": "+1"
+                "outputText": "+1",
+                "visibility": "PUBLIC"
               }
             ],
             "problemDetail": {
@@ -259,11 +262,12 @@ data class CreateAssignmentRequest(
                 "learningGoalText": "함수 분리"
               }
             ],
-            "examples": [
+            "testCases": [
               {
                 "seq": 1,
                 "inputText": "ADD 1\\nCLOSE",
-                "outputText": "+1"
+                "outputText": "+1",
+                "visibility": "PUBLIC"
               }
             ],
             "problemDetail": {
@@ -313,8 +317,8 @@ data class AssignmentMetadataResponse(
     val requirements: List<AssignmentRequirementResponse> = emptyList(),
     @field:Schema(description = "학습 목표")
     val learningGoals: List<AssignmentLearningGoalResponse> = emptyList(),
-    @field:Schema(description = "예시 입출력")
-    val examples: List<AssignmentExampleResponse> = emptyList(),
+    @field:Schema(description = "테스트 케이스")
+    val testCases: List<AssignmentTestCaseResponse> = emptyList(),
     @field:Schema(description = "문제 상세 정보")
     val problemDetail: AssignmentProblemDetailResponse? = null,
     @field:Schema(description = "제출 가이드")
@@ -323,7 +327,11 @@ data class AssignmentMetadataResponse(
     val codeTemplates: List<AssignmentCodeTemplateResponse> = emptyList(),
     @field:Schema(description = "확장 메타데이터")
     val attributes: Map<String, Any?>,
-)
+) {
+    @get:JsonIgnore
+    val examples: List<AssignmentTestCaseResponse>
+        get() = testCases
+}
 
 @Schema(description = "과제 상세 메타데이터 응답")
 data class AssignmentDetailMetadataResponse(
@@ -337,13 +345,17 @@ data class AssignmentDetailMetadataResponse(
     val requirements: List<AssignmentRequirementResponse> = emptyList(),
     @field:Schema(description = "학습 목표")
     val learningGoals: List<AssignmentLearningGoalResponse> = emptyList(),
-    @field:Schema(description = "예시 입출력")
-    val examples: List<AssignmentExampleResponse> = emptyList(),
+    @field:Schema(description = "테스트 케이스")
+    val testCases: List<AssignmentTestCaseResponse> = emptyList(),
     @field:Schema(description = "문제 상세 정보")
     val problemDetail: AssignmentProblemDetailResponse? = null,
     @field:Schema(description = "확장 메타데이터")
     val attributes: Map<String, Any?>,
-)
+) {
+    @get:JsonIgnore
+    val examples: List<AssignmentTestCaseResponse>
+        get() = testCases
+}
 
 @Schema(description = "과제 요구사항 응답")
 data class AssignmentRequirementResponse(
@@ -361,14 +373,16 @@ data class AssignmentLearningGoalResponse(
     val learningGoalText: String,
 )
 
-@Schema(description = "과제 예시 입출력 응답")
-data class AssignmentExampleResponse(
-    @field:Schema(description = "예시 순번", example = "1")
+@Schema(description = "과제 테스트 케이스 응답")
+data class AssignmentTestCaseResponse(
+    @field:Schema(description = "테스트 케이스 순번", example = "1")
     val seq: Int,
     @field:Schema(description = "입력 예시", example = "ADD 1\\nCLOSE")
     val inputText: String,
     @field:Schema(description = "출력 예시", example = "+1")
     val outputText: String,
+    @field:Schema(description = "공개 여부", example = "PUBLIC")
+    val visibility: AssignmentTestCaseVisibility = AssignmentTestCaseVisibility.PUBLIC,
 )
 
 @Schema(description = "과제 요약 응답")

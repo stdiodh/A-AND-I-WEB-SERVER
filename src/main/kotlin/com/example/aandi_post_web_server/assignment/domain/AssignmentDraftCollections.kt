@@ -1,10 +1,11 @@
 package com.example.aandi_post_web_server.assignment.domain
 
-import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentExampleRequest
+import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentTestCaseRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequirementRequest
-import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
+import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import java.time.Instant
 
 data class AssignmentRequirementDraft(
@@ -12,10 +13,11 @@ data class AssignmentRequirementDraft(
     val requirementText: String,
 )
 
-data class AssignmentExampleDraft(
+data class AssignmentTestCaseDraft(
     val seq: Int,
     val inputText: String,
     val outputText: String,
+    val visibility: AssignmentTestCaseVisibility,
 )
 
 class AssignmentRequirementDrafts private constructor(
@@ -42,37 +44,39 @@ class AssignmentRequirementDrafts private constructor(
     }
 }
 
-class AssignmentExampleDrafts private constructor(
-    private val values: List<AssignmentExampleDraft>,
+class AssignmentTestCaseDrafts private constructor(
+    private val values: List<AssignmentTestCaseDraft>,
 ) {
     companion object {
-        fun fromRequests(requests: List<CreateAssignmentExampleRequest>): AssignmentExampleDrafts {
+        fun fromRequests(requests: List<CreateAssignmentTestCaseRequest>): AssignmentTestCaseDrafts {
             val drafts = requests.map {
-                AssignmentExampleDraft(
+                AssignmentTestCaseDraft(
                     seq = it.seq,
                     inputText = it.inputText,
                     outputText = it.outputText,
+                    visibility = it.visibility,
                 )
             }
             validateUniqueSeq(drafts)
-            return AssignmentExampleDrafts(drafts)
+            return AssignmentTestCaseDrafts(drafts)
         }
 
-        private fun validateUniqueSeq(drafts: List<AssignmentExampleDraft>) {
+        private fun validateUniqueSeq(drafts: List<AssignmentTestCaseDraft>) {
             val seqValues = drafts.map { it.seq }
-            require(seqValues.distinct().size == seqValues.size) { "examples.seq 값은 과제 내에서 유일해야 합니다." }
+            require(seqValues.distinct().size == seqValues.size) { "testCases.seq 값은 과제 내에서 유일해야 합니다." }
         }
     }
 
     fun isEmpty(): Boolean = values.isEmpty()
 
-    fun toEntities(assignmentId: String, createdAt: Instant): List<AssignmentExample> {
+    fun toEntities(assignmentId: String, createdAt: Instant): List<AssignmentTestCase> {
         return values.map {
-            AssignmentExample(
+            AssignmentTestCase(
                 assignmentId = assignmentId,
                 seq = it.seq,
                 inputText = it.inputText,
                 outputText = it.outputText,
+                visibility = it.visibility,
                 description = null,
                 createdAt = createdAt,
             )

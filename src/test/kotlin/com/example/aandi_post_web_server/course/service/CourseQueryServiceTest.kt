@@ -331,7 +331,7 @@ private class QueryFixture {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentExampleRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
     )
 }
 

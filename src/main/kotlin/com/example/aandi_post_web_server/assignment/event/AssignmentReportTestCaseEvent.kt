@@ -1,15 +1,21 @@
 package com.example.aandi_post_web_server.assignment.event
 
+import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
+import java.time.Instant
+
 data class AssignmentReportTestCaseEvent(
+    val eventId: String,
     val eventType: AssignmentReportTestCaseEventType,
-    val uuid: String,
+    val occurredAt: Instant,
+    val assignmentId: String,
+    val assignmentStatus: AssignmentStatus?,
     val problemId: String,
     val testCases: List<AssignmentReportTestCase>,
 )
 
 data class AssignmentReportTestCase(
-    val caseId: Int,
-    val input: List<String>,
+    val seq: Int,
+    val input: String,
     val output: String,
 )
 

@@ -1,42 +1,64 @@
 package com.example.aandi_post_web_server.assignment.event
 
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentTestCaseResponse
+import com.example.aandi_post_web_server.assignment.entity.Assignment
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import org.springframework.stereotype.Component
+import java.time.Instant
+import java.util.UUID
 
 @Component
 class AssignmentReportTestCaseEventMapper {
 
-    fun created(assignmentId: String, examples: List<AssignmentExampleResponse>): AssignmentReportTestCaseEvent =
+    fun created(
+        assignment: Assignment,
+        testCases: List<AssignmentTestCaseResponse>,
+    ): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
+            eventId = UUID.randomUUID().toString(),
             eventType = AssignmentReportTestCaseEventType.REPORT_TEST_CASE_CREATED,
-            uuid = assignmentId,
-            problemId = assignmentId,
-            testCases = examples.map(::toTestCase),
+            occurredAt = Instant.now(),
+            assignmentId = requireNotNull(assignment.id),
+            assignmentStatus = assignment.status,
+            problemId = requireNotNull(assignment.id),
+            testCases = testCases
+                .filter { it.visibility == AssignmentTestCaseVisibility.PUBLIC }
+                .sortedBy { it.seq }
+                .map(::toTestCase),
         )
 
-    fun updated(assignmentId: String, examples: List<AssignmentExampleResponse>): AssignmentReportTestCaseEvent =
+    fun updated(
+        assignment: Assignment,
+        testCases: List<AssignmentTestCaseResponse>,
+    ): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
+            eventId = UUID.randomUUID().toString(),
             eventType = AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED,
-            uuid = assignmentId,
-            problemId = assignmentId,
-            testCases = examples.map(::toTestCase),
+            occurredAt = Instant.now(),
+            assignmentId = requireNotNull(assignment.id),
+            assignmentStatus = assignment.status,
+            problemId = requireNotNull(assignment.id),
+            testCases = testCases
+                .filter { it.visibility == AssignmentTestCaseVisibility.PUBLIC }
+                .sortedBy { it.seq }
+                .map(::toTestCase),
         )
 
     fun deleted(assignmentId: String): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
-            eventType = AssignmentReportTestCaseEventType.REPORT_TEST_CASE_DELETED,
-            uuid = assignmentId,
+            eventId = UUID.randomUUID().toString(),
+            eventType = AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED,
+            occurredAt = Instant.now(),
+            assignmentId = assignmentId,
+            assignmentStatus = null,
             problemId = assignmentId,
             testCases = emptyList(),
         )
 
-    private fun toTestCase(example: AssignmentExampleResponse): AssignmentReportTestCase =
+    private fun toTestCase(testCase: AssignmentTestCaseResponse): AssignmentReportTestCase =
         AssignmentReportTestCase(
-            caseId = example.seq,
-            input = example.inputText.toJudgeInputArgs(),
-            output = example.outputText,
+            seq = testCase.seq,
+            input = testCase.inputText,
+            output = testCase.outputText,
         )
-
-    private fun String.toJudgeInputArgs(): List<String> =
-        listOf(this)
 }

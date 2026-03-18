@@ -3,14 +3,15 @@ package com.example.aandi_post_web_server.course.service
 import com.example.aandi_post_web_server.assignment.domain.toDetailResponse
 import com.example.aandi_post_web_server.assignment.domain.toResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentRequirementResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRequirementRepository
+import com.example.aandi_post_web_server.assignment.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.course.domain.AssignmentId
 import com.example.aandi_post_web_server.course.domain.CourseId
 import com.example.aandi_post_web_server.course.domain.CourseSlug
@@ -45,7 +46,7 @@ class CourseQueryService(
     private val courseWeekRepository: CourseWeekRepository,
     private val assignmentRepository: AssignmentRepository,
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
-    private val assignmentExampleRepository: AssignmentExampleRepository,
+    private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
     private val clock: Clock = Clock.systemUTC(),
 ) {
 
@@ -134,7 +135,7 @@ class CourseQueryService(
             }
             .filter { assignment -> isVisibleToUser(assignment) }
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
-            .flatMapSequential { assignment -> loadAssignmentSummary(assignment) }
+            .flatMapSequential { assignment -> loadAssignmentSummary(assignment, includeHidden = false) }
     }
 
     fun getAdminAssignments(
@@ -151,7 +152,7 @@ class CourseQueryService(
             }
             .filter { assignment -> status == null || effectiveAssignmentStatus(assignment) == status }
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
-            .flatMapSequential { assignment -> loadAssignmentSummary(assignment) }
+            .flatMapSequential { assignment -> loadAssignmentSummary(assignment, includeHidden = true) }
     }
 
     fun getAssignmentDetail(
@@ -169,7 +170,7 @@ class CourseQueryService(
                 assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
                     .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
                     .flatMap { assignment -> ensureVisibleToUser(assignment, parsedAssignmentId) }
-                    .flatMap { assignment -> loadAssignmentDetail(course.slug, assignment, parsedAssignmentId) }
+                    .flatMap { assignment -> loadAssignmentDetail(course.slug, assignment, parsedAssignmentId, includeHidden = false) }
             }
     }
 
@@ -184,7 +185,7 @@ class CourseQueryService(
                 val courseId = parseCourseId(requireNotNull(course.id))
                 assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
                     .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
-                    .flatMap { assignment -> loadAssignmentDetail(course.slug, assignment, parsedAssignmentId) }
+                    .flatMap { assignment -> loadAssignmentDetail(course.slug, assignment, parsedAssignmentId, includeHidden = true) }
             }
     }
 
@@ -278,31 +279,34 @@ class CourseQueryService(
         courseSlug: String,
         assignment: Assignment,
         assignmentId: AssignmentId,
+        includeHidden: Boolean,
     ): Mono<AssignmentDetailResponse> =
         assignmentRequirementRepository
             .findAllByAssignmentIdOrderBySortOrder(assignmentId.value)
             .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
             .collectList()
             .zipWith(
-                assignmentExampleRepository
+                assignmentTestCaseRepository
                     .findAllByAssignmentIdOrderBySeq(assignmentId.value)
-                    .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText) }
+                    .filter { includeHidden || it.visibility == AssignmentTestCaseVisibility.PUBLIC }
+                    .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
                     .collectList()
             )
             .map { tuple ->
                 toAssignmentDetailResponse(courseSlug, assignment, effectiveAssignment(assignment), tuple.t1, tuple.t2)
             }
 
-    private fun loadAssignmentSummary(assignment: Assignment): Mono<AssignmentSummaryResponse> {
+    private fun loadAssignmentSummary(assignment: Assignment, includeHidden: Boolean): Mono<AssignmentSummaryResponse> {
         val assignmentId = requireNotNull(assignment.id)
         return assignmentRequirementRepository
             .findAllByAssignmentIdOrderBySortOrder(assignmentId)
             .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
             .collectList()
             .zipWith(
-                assignmentExampleRepository
+                assignmentTestCaseRepository
                     .findAllByAssignmentIdOrderBySeq(assignmentId)
-                    .map { AssignmentExampleResponse(it.seq, it.inputText, it.outputText) }
+                    .filter { includeHidden || it.visibility == AssignmentTestCaseVisibility.PUBLIC }
+                    .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
                     .collectList()
             )
             .map { tuple ->
@@ -430,7 +434,7 @@ class CourseQueryService(
         assignment: Assignment,
         effectiveAssignment: Assignment,
         requirements: List<AssignmentRequirementResponse>,
-        examples: List<AssignmentExampleResponse>,
+        testCases: List<AssignmentTestCaseResponse>,
     ): AssignmentSummaryResponse = AssignmentSummaryResponse(
         id = requireNotNull(assignment.id),
         weekNo = assignment.weekNo,
@@ -438,7 +442,7 @@ class CourseQueryService(
         startAt = assignment.startAt,
         endAt = assignment.endAt,
         status = effectiveAssignment.status,
-        metadata = assignment.metadata.toResponse(requirements, examples),
+        metadata = assignment.metadata.toResponse(requirements, testCases),
     )
 
     private fun toAssignmentDetailResponse(
@@ -446,7 +450,7 @@ class CourseQueryService(
         assignment: Assignment,
         effectiveAssignment: Assignment,
         requirements: List<AssignmentRequirementResponse>,
-        examples: List<AssignmentExampleResponse>,
+        testCases: List<AssignmentTestCaseResponse>,
     ): AssignmentDetailResponse = AssignmentDetailResponse(
         id = requireNotNull(assignment.id),
         courseSlug = courseSlug,
@@ -456,6 +460,6 @@ class CourseQueryService(
         endAt = assignment.endAt,
         status = effectiveAssignment.status,
         publishedAt = effectiveAssignment.publishedAt,
-        metadata = assignment.metadata.toDetailResponse(requirements, examples),
+        metadata = assignment.metadata.toDetailResponse(requirements, testCases),
     )
 }

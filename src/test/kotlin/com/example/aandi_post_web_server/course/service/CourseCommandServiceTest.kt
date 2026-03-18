@@ -97,9 +97,10 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(assignmentIds)
         Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(assignmentIds)
         Mockito.verify(fixture.assignmentRepository).deleteAllById(assignmentIds)
-        fixture.assignmentReportTestCaseEventPublisher.events.map { it.uuid } shouldBe assignmentIds
+        fixture.assignmentReportTestCaseEventPublisher.events.map { it.assignmentId } shouldBe assignmentIds
         fixture.assignmentReportTestCaseEventPublisher.events.forEach {
-            it.eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_DELETED
+            it.eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
+            it.assignmentStatus shouldBe null
             it.testCases shouldBe emptyList()
         }
         Mockito.verify(fixture.courseWeekRepository).deleteAllByCourseId("course-1")
@@ -128,8 +129,9 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentRepository).deleteById(assignmentId)
-        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_DELETED
-        fixture.assignmentReportTestCaseEventPublisher.events.single().uuid shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentStatus shouldBe null
         fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldBe emptyList()
     }
@@ -357,7 +359,7 @@ class CourseCommandServiceTest : StringSpec({
                 title = "Hello World!",
                 difficulty = AssignmentDifficulty.LOW,
                 description = "문제 설명",
-                examples = listOf(
+                testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
                         inputText = "ADD 1\nCLOSE",
@@ -398,11 +400,12 @@ class CourseCommandServiceTest : StringSpec({
             .verifyComplete()
 
         fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_CREATED
-        java.util.UUID.fromString(fixture.assignmentReportTestCaseEventPublisher.events.single().uuid).toString() shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().uuid
-        fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().uuid
+        java.util.UUID.fromString(fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId).toString() shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentStatus shouldBe AssignmentStatus.PUBLISHED
+        fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().caseId shouldBe 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe listOf("ADD 1\nCLOSE")
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().seq shouldBe 1
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe "ADD 1\nCLOSE"
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().output shouldBe "3"
     }
 
@@ -416,7 +419,7 @@ class CourseCommandServiceTest : StringSpec({
                 title = "updated title",
                 difficulty = AssignmentDifficulty.LOW,
                 description = "updated description",
-                examples = listOf(
+                testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
                         inputText = "updated input",
@@ -468,11 +471,12 @@ class CourseCommandServiceTest : StringSpec({
             .verifyComplete()
 
         fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
-        fixture.assignmentReportTestCaseEventPublisher.events.single().uuid shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentId shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().assignmentStatus shouldBe AssignmentStatus.PUBLISHED
         fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().caseId shouldBe 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe listOf("updated input")
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().seq shouldBe 1
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe "updated input"
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().output shouldBe "updated output"
     }
 
@@ -550,7 +554,7 @@ private class CommandFixture {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentExampleRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
