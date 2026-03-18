@@ -217,7 +217,7 @@ class CourseV1Controller(
     ): Mono<ApiEnvelope<AssignmentDetailResponse>> =
         courseV1Service.getAdminAssignmentDetail(courseSlug, assignmentId).map { ApiEnvelope.success(it) }
 
-    @Operation(summary = "과제 생성", description = "코스 안에 새 과제를 만듭니다. 과제 ID는 UUID로 자동 생성되며, examples 전체 배열 snapshot 이 OJ problem sync 이벤트로 함께 발행됩니다.")
+    @Operation(summary = "과제 생성", description = "코스 안에 새 과제를 만듭니다. 과제 ID는 UUID로 자동 생성되며, 공개 테스트케이스 전체 배열 snapshot 이 OJ problem sync 이벤트로 함께 발행됩니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "생성 성공", content = [Content(schema = Schema(implementation = AssignmentDetailEnvelopeDoc::class))]),
@@ -236,7 +236,7 @@ class CourseV1Controller(
     ): Mono<ApiEnvelope<AssignmentDetailResponse>> =
         courseV1Service.createAssignment(courseSlug, request, authentication.name).map { ApiEnvelope.success(it) }
 
-    @Operation(summary = "과제 수정", description = "과제 정보를 수정합니다. requirements와 examples를 보내면 기존 값이 전체 교체되며, examples 변경 후 최종 전체 배열 snapshot 을 다시 OJ problem sync 이벤트로 발행합니다.")
+    @Operation(summary = "과제 수정", description = "과제 정보를 수정합니다. requirements와 testCases를 보내면 기존 값이 전체 교체되며, testCases 변경 후 공개 테스트케이스의 최종 전체 배열 snapshot 을 다시 OJ problem sync 이벤트로 발행합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "수정 성공", content = [Content(schema = Schema(implementation = AssignmentDetailEnvelopeDoc::class))]),
@@ -256,7 +256,7 @@ class CourseV1Controller(
     ): Mono<ApiEnvelope<AssignmentDetailResponse>> =
         courseV1Service.updateAssignment(courseSlug, assignmentId, request).map { ApiEnvelope.success(it) }
 
-    @Operation(summary = "과제 삭제", description = "과제와 연결된 요구사항, 학습 목표, 예시 데이터를 함께 삭제합니다. 삭제 시에는 해당 assignment UUID에 대해 testCases: [] problem sync 이벤트를 발행합니다.")
+    @Operation(summary = "과제 삭제", description = "과제와 연결된 요구사항, 학습 목표, 테스트케이스 데이터를 함께 삭제합니다. 삭제 시에는 해당 assignment UUID에 대해 testCases: [] problem sync 이벤트를 발행합니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "삭제 성공", content = [Content(schema = Schema(implementation = EmptyEnvelopeDoc::class))]),
