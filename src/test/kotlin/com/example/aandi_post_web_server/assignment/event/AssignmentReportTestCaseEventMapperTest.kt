@@ -13,7 +13,7 @@ import java.time.Instant
 class AssignmentReportTestCaseEventMapperTest : StringSpec({
     val mapper = AssignmentReportTestCaseEventMapper()
 
-    "create 이벤트는 assignment status 와 examples 전체 snapshot 을 함께 만든다" {
+    "create 이벤트는 OJ README 형식의 problem create payload 를 만든다" {
         val event = mapper.created(
             assignment = assignment(
                 id = "assignment-uuid",
@@ -25,18 +25,15 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
             ),
         )
 
-        event.eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_CREATED
-        event.assignmentId shouldBe "assignment-uuid"
-        event.assignmentStatus shouldBe AssignmentStatus.DRAFT
+        event.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_CREATED
         event.problemId shouldBe "assignment-uuid"
-        event.eventId.isNotBlank() shouldBe true
         event.testCases shouldHaveSize 2
-        event.testCases.first().seq shouldBe 1
-        event.testCases.first().input shouldBe "1 2"
+        event.testCases.first().caseId shouldBe 1
+        event.testCases.first().input shouldBe listOf("1 2")
         event.testCases.first().output shouldBe "3"
     }
 
-    "update 이벤트는 assignment status 와 examples 기준 최종 전체 배열 snapshot 을 만든다" {
+    "update 이벤트는 최종 공개 테스트케이스 전체 배열로 problem update payload 를 만든다" {
         val event = mapper.updated(
             assignment = assignment(
                 id = "assignment-uuid",
@@ -48,19 +45,15 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
             ),
         )
 
-        event.eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
-        event.assignmentId shouldBe "assignment-uuid"
-        event.assignmentStatus shouldBe AssignmentStatus.PUBLISHED
+        event.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
         event.problemId shouldBe "assignment-uuid"
         event.testCases shouldHaveSize 2
     }
 
-    "delete 이벤트는 빈 testCases 배열을 담은 update 이벤트를 만든다" {
+    "delete 이벤트는 빈 testCases 배열을 담은 problem update payload 를 만든다" {
         val event = mapper.deleted("assignment-uuid")
 
-        event.eventType shouldBe AssignmentReportTestCaseEventType.REPORT_TEST_CASE_UPDATED
-        event.assignmentId shouldBe "assignment-uuid"
-        event.assignmentStatus shouldBe null
+        event.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
         event.problemId shouldBe "assignment-uuid"
         event.testCases shouldBe emptyList()
     }

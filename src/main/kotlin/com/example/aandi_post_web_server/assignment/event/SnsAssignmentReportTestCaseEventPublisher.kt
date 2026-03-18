@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import reactor.core.publisher.Mono
 import software.amazon.awssdk.services.sns.SnsAsyncClient
 import software.amazon.awssdk.services.sns.model.PublishRequest
+import java.util.UUID
 
 class SnsAssignmentReportTestCaseEventPublisher(
     private val snsAsyncClient: SnsAsyncClient,
@@ -20,8 +21,8 @@ class SnsAssignmentReportTestCaseEventPublisher(
 
         if (topicArn.endsWith(".fifo")) {
             requestBuilder
-                .messageGroupId(event.assignmentId)
-                .messageDeduplicationId(event.eventId)
+                .messageGroupId(event.problemId)
+                .messageDeduplicationId(UUID.randomUUID().toString())
         }
 
         return Mono.fromFuture(snsAsyncClient.publish(requestBuilder.build())).then()
