@@ -1,6 +1,5 @@
 package com.example.aandi_post_web_server.assignment.entity
 
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseJudgeTarget
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.CompoundIndex
@@ -16,7 +15,6 @@ data class AssignmentTestCase(
     val seq: Int,
     val inputText: String,
     val outputText: String,
-    val judgeTarget: AssignmentTestCaseJudgeTarget = AssignmentTestCaseJudgeTarget.PUBLIC,
     val visibility: AssignmentTestCaseVisibility = AssignmentTestCaseVisibility.PUBLIC,
     val description: String? = null,
     val createdAt: Instant = Instant.now(),

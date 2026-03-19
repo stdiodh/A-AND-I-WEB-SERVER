@@ -416,7 +416,7 @@ class CourseCommandService(
             drafts.toEntities(assignmentId.value, Instant.now())
         )
             .sort(compareBy<AssignmentTestCase> { it.seq })
-            .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.judgeTarget, it.visibility) }
+            .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
             .collectList()
     }
 
@@ -561,7 +561,7 @@ class CourseCommandService(
     ): Mono<List<AssignmentTestCaseResponse>> {
         if (drafts == null) {
             return assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId.value)
-                .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.judgeTarget, it.visibility) }
+                .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
                 .collectList()
         }
         return assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId.value))
@@ -650,7 +650,7 @@ class CourseCommandService(
             )
             .zipWith(
                 assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId)
-                    .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.judgeTarget, it.visibility) }
+                    .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
                     .collectList()
             )
             .map { it.t1 to it.t2 }

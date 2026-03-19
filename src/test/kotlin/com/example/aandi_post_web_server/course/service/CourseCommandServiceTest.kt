@@ -8,7 +8,7 @@ import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentExample
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseJudgeTarget
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEvent
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventMapper
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventPublisher
@@ -345,7 +345,7 @@ class CourseCommandServiceTest : StringSpec({
             .findByCourseIdAndWeekNoAndOrderInWeek("course-1", 2, 1)
     }
 
-    "게시 상태로 생성된 과제는 PUBLIC 과 HIDDEN 케이스만 PROBLEM_CREATED 로 발행한다" {
+    "게시 상태로 생성된 과제는 EXCLUDED 를 제외한 케이스만 PROBLEM_CREATED 로 발행한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val startAt = Instant.now().minusSeconds(3600)
@@ -366,19 +366,19 @@ class CourseCommandServiceTest : StringSpec({
                         seq = 1,
                         inputText = "ADD 1\nCLOSE",
                         outputText = "3",
-                        judgeTarget = AssignmentTestCaseJudgeTarget.PUBLIC,
+                        visibility = AssignmentTestCaseVisibility.PUBLIC,
                     ),
                     CreateAssignmentExampleRequest(
                         seq = 2,
                         inputText = "2 3",
                         outputText = "5",
-                        judgeTarget = AssignmentTestCaseJudgeTarget.HIDDEN,
+                        visibility = AssignmentTestCaseVisibility.HIDDEN,
                     ),
                     CreateAssignmentExampleRequest(
                         seq = 3,
                         inputText = "9 9",
                         outputText = "18",
-                        judgeTarget = AssignmentTestCaseJudgeTarget.EXCLUDED,
+                        visibility = AssignmentTestCaseVisibility.EXCLUDED,
                     ),
                 ),
             ),
@@ -617,7 +617,7 @@ class CourseCommandServiceTest : StringSpec({
                         seq = 1,
                         inputText = "persisted input",
                         outputText = "persisted output",
-                        judgeTarget = AssignmentTestCaseJudgeTarget.PUBLIC,
+                        visibility = AssignmentTestCaseVisibility.PUBLIC,
                     )
                 )
             )

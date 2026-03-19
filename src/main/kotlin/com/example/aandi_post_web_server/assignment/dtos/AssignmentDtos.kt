@@ -4,7 +4,6 @@ import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseJudgeTarget
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.validation.Valid
@@ -155,8 +154,6 @@ data class CreateAssignmentTestCaseRequest(
     @field:NotBlank
     @field:Schema(description = "출력 예시", example = "+1")
     val outputText: String,
-    @field:Schema(description = "OJ 채점 대상 여부", example = "PUBLIC")
-    val judgeTarget: AssignmentTestCaseJudgeTarget = AssignmentTestCaseJudgeTarget.PUBLIC,
     @field:Schema(description = "공개 여부", example = "PUBLIC")
     val visibility: AssignmentTestCaseVisibility = AssignmentTestCaseVisibility.PUBLIC,
 )
@@ -191,7 +188,6 @@ data class CreateAssignmentTestCaseRequest(
                 "seq": 1,
                 "inputText": "ADD 1\\nCLOSE",
                 "outputText": "+1",
-                "judgeTarget": "PUBLIC",
                 "visibility": "PUBLIC"
               }
             ],
@@ -271,7 +267,6 @@ data class CreateAssignmentRequest(
                 "seq": 1,
                 "inputText": "ADD 1\\nCLOSE",
                 "outputText": "+1",
-                "judgeTarget": "PUBLIC",
                 "visibility": "PUBLIC"
               }
             ],
@@ -386,8 +381,6 @@ data class AssignmentTestCaseResponse(
     val inputText: String,
     @field:Schema(description = "출력 예시", example = "+1")
     val outputText: String,
-    @field:Schema(description = "OJ 채점 대상 여부", example = "PUBLIC")
-    val judgeTarget: AssignmentTestCaseJudgeTarget = AssignmentTestCaseJudgeTarget.PUBLIC,
     @field:Schema(description = "공개 여부", example = "PUBLIC")
     val visibility: AssignmentTestCaseVisibility = AssignmentTestCaseVisibility.PUBLIC,
 )
