@@ -5,6 +5,7 @@ import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseJudgeTarget
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -13,15 +14,16 @@ import java.time.Instant
 class AssignmentReportTestCaseEventMapperTest : StringSpec({
     val mapper = AssignmentReportTestCaseEventMapper()
 
-    "create 이벤트는 OJ README 형식의 problem create payload 를 만든다" {
+    "create 이벤트는 PUBLIC 과 HIDDEN judgeTarget 만 OJ payload 에 포함한다" {
         val event = mapper.created(
             assignment = assignment(
                 id = "assignment-uuid",
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 2, inputText = "3 4", outputText = "7"),
-                AssignmentExampleResponse(seq = 1, inputText = "1 2", outputText = "3"),
+                AssignmentExampleResponse(seq = 3, inputText = "9 9", outputText = "18", judgeTarget = AssignmentTestCaseJudgeTarget.EXCLUDED),
+                AssignmentExampleResponse(seq = 2, inputText = "3 4", outputText = "7", judgeTarget = AssignmentTestCaseJudgeTarget.HIDDEN),
+                AssignmentExampleResponse(seq = 1, inputText = "1 2", outputText = "3", judgeTarget = AssignmentTestCaseJudgeTarget.PUBLIC),
             ),
         )
 
@@ -31,23 +33,25 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
         event.testCases.first().caseId shouldBe 1
         event.testCases.first().input shouldBe listOf("1 2")
         event.testCases.first().output shouldBe "3"
+        event.testCases.last().caseId shouldBe 2
     }
 
-    "update 이벤트는 최종 공개 테스트케이스 전체 배열로 problem update payload 를 만든다" {
+    "update 이벤트는 input 배열 규약을 유지한 problem update payload 를 만든다" {
         val event = mapper.updated(
             assignment = assignment(
                 id = "assignment-uuid",
                 status = AssignmentStatus.PUBLISHED,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 1, inputText = "A", outputText = "B"),
-                AssignmentExampleResponse(seq = 2, inputText = "C", outputText = "D"),
+                AssignmentExampleResponse(seq = 1, inputText = "A", outputText = "B", judgeTarget = AssignmentTestCaseJudgeTarget.PUBLIC),
+                AssignmentExampleResponse(seq = 2, inputText = "C", outputText = "D", judgeTarget = AssignmentTestCaseJudgeTarget.HIDDEN),
             ),
         )
 
         event.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
         event.problemId shouldBe "assignment-uuid"
         event.testCases shouldHaveSize 2
+        event.testCases[1].input shouldBe listOf("C")
     }
 
     "delete 이벤트는 빈 testCases 배열을 담은 problem delete payload 를 만든다" {

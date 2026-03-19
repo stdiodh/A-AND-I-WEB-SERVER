@@ -1,6 +1,7 @@
 package com.example.aandi_post_web_server.assignment.dtos
 
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseJudgeTarget
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
@@ -53,6 +54,8 @@ data class AssignmentCreateComparisonTestCaseResponse(
     val inputText: String,
     @field:Schema(description = "출력 예시", example = "+1")
     val outputText: String,
+    @field:Schema(description = "OJ 채점 대상 여부", example = "PUBLIC")
+    val judgeTarget: AssignmentTestCaseJudgeTarget,
     @field:Schema(description = "공개 여부", example = "PUBLIC")
     val visibility: AssignmentTestCaseVisibility,
 )
@@ -85,6 +88,7 @@ fun AssignmentDetailResponse.toCreateComparisonItemResponse(): AssignmentCreateC
                     seq = it.seq,
                     inputText = it.inputText,
                     outputText = it.outputText,
+                    judgeTarget = it.judgeTarget,
                     visibility = it.visibility,
                 )
             },
@@ -113,6 +117,7 @@ private fun AssignmentMetadataPayload.toCreateComparisonMetadataResponse(): Assi
                 seq = it.seq,
                 inputText = it.inputText,
                 outputText = it.outputText,
+                judgeTarget = it.judgeTarget,
                 visibility = it.visibility,
             )
         },

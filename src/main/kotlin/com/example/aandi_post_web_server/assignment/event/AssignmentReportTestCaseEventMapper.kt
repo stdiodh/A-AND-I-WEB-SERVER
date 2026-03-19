@@ -2,7 +2,6 @@ package com.example.aandi_post_web_server.assignment.event
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.entity.Assignment
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import org.springframework.stereotype.Component
 
 @Component
@@ -16,7 +15,7 @@ class AssignmentReportTestCaseEventMapper {
             eventType = AssignmentReportTestCaseEventType.PROBLEM_CREATED,
             problemId = requireNotNull(assignment.id),
             testCases = testCases
-                .filter { it.visibility == AssignmentTestCaseVisibility.PUBLIC }
+                .filter { it.judgeTarget.shouldPublishToOj() }
                 .sortedBy { it.seq }
                 .map(::toTestCase),
         )
@@ -29,7 +28,7 @@ class AssignmentReportTestCaseEventMapper {
             eventType = AssignmentReportTestCaseEventType.PROBLEM_UPDATED,
             problemId = requireNotNull(assignment.id),
             testCases = testCases
-                .filter { it.visibility == AssignmentTestCaseVisibility.PUBLIC }
+                .filter { it.judgeTarget.shouldPublishToOj() }
                 .sortedBy { it.seq }
                 .map(::toTestCase),
         )

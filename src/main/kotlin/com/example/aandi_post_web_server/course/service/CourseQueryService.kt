@@ -289,7 +289,7 @@ class CourseQueryService(
                 assignmentTestCaseRepository
                     .findAllByAssignmentIdOrderBySeq(assignmentId.value)
                     .filter { includeHidden || it.visibility == AssignmentTestCaseVisibility.PUBLIC }
-                    .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
+                    .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.judgeTarget, it.visibility) }
                     .collectList()
             )
             .map { tuple ->
@@ -306,7 +306,7 @@ class CourseQueryService(
                 assignmentTestCaseRepository
                     .findAllByAssignmentIdOrderBySeq(assignmentId)
                     .filter { includeHidden || it.visibility == AssignmentTestCaseVisibility.PUBLIC }
-                    .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
+                    .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.judgeTarget, it.visibility) }
                     .collectList()
             )
             .map { tuple ->

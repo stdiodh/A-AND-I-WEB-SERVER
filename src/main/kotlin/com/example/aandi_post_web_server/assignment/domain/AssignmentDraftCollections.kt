@@ -5,6 +5,7 @@ import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequire
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseJudgeTarget
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
 import java.time.Instant
 
@@ -17,6 +18,7 @@ data class AssignmentTestCaseDraft(
     val seq: Int,
     val inputText: String,
     val outputText: String,
+    val judgeTarget: AssignmentTestCaseJudgeTarget,
     val visibility: AssignmentTestCaseVisibility,
 )
 
@@ -54,6 +56,7 @@ class AssignmentTestCaseDrafts private constructor(
                     seq = it.seq,
                     inputText = it.inputText,
                     outputText = it.outputText,
+                    judgeTarget = it.judgeTarget,
                     visibility = it.visibility,
                 )
             }
@@ -76,6 +79,7 @@ class AssignmentTestCaseDrafts private constructor(
                 seq = it.seq,
                 inputText = it.inputText,
                 outputText = it.outputText,
+                judgeTarget = it.judgeTarget,
                 visibility = it.visibility,
                 description = null,
                 createdAt = createdAt,

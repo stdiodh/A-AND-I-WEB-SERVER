@@ -3,6 +3,7 @@ package com.example.aandi_post_web_server.assignment.domain
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentExampleRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseJudgeTarget
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
@@ -50,6 +51,7 @@ class AssignmentDraftCollectionsTest : StringSpec({
 
         entities.size shouldBe 1
         entities.first().seq shouldBe 1
+        entities.first().judgeTarget shouldBe AssignmentTestCaseJudgeTarget.PUBLIC
         entities.first().description shouldBe null
         entities.first().createdAt shouldBe now
     }
