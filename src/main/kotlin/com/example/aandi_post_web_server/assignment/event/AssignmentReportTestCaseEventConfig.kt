@@ -19,7 +19,10 @@ class AssignmentReportTestCaseEventConfig {
         if (!properties.enabled) {
             return NoopAssignmentReportTestCaseEventPublisher()
         }
-        require(properties.topicArn.isNotBlank()) { "app.events.report-test-case.topic-arn must not be blank when enabled=true" }
+        require(properties.topicArn.isNotBlank()) {
+            "app.events.report-test-case.topic-arn must not be blank when enabled=true " +
+                "(APP_EVENTS_REPORT_TEST_CASE_SNS_TOPIC_ARN)"
+        }
         val snsAsyncClient = SnsAsyncClient.builder()
             .region(Region.of(properties.region))
             .build()

@@ -22,7 +22,7 @@ class SnsAssignmentReportTestCaseEventPublisherTest : StringSpec({
         val publisher = SnsAssignmentReportTestCaseEventPublisher(
             snsAsyncClient = snsAsyncClient,
             objectMapper = ObjectMapper().registerModule(JavaTimeModule()),
-            topicArn = "arn:aws:sns:ap-northeast-2:362622729632:report-events-topic.fifo",
+            topicArn = "arn:aws:sns:ap-northeast-2:362622729632:report-testcase-events-topic.fifo",
         )
 
         val event = AssignmentReportTestCaseEvent(
