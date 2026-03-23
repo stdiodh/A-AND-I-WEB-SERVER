@@ -1,5 +1,6 @@
 package com.example.aandi_post_web_server.course.domain
 
+import com.example.aandi_post_web_server.course.enum.CourseTrack
 import java.util.UUID
 
 @JvmInline
@@ -39,6 +40,9 @@ value class UserId private constructor(val value: String) {
 value class PublicCode private constructor(val value: String) {
     val legacyValue: String
         get() = value.removePrefix("#")
+
+    val track: CourseTrack?
+        get() = CourseTrack.entries.firstOrNull { it.name == value.removePrefix("#").take(2) }
 
     companion object {
         private val PATTERN = Regex("^#[A-Z]{2}\\d{3}$")

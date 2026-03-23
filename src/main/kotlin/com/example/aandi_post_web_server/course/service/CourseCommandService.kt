@@ -40,10 +40,12 @@ import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
 import com.example.aandi_post_web_server.course.entity.CourseWeek
 import com.example.aandi_post_web_server.course.enum.CourseStatus
+import com.example.aandi_post_web_server.course.enum.CourseTrack
 import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
 import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
+import com.example.aandi_post_web_server.common.security.UserRole
 import com.example.aandi_post_web_server.user.entity.ReportUser
 import com.example.aandi_post_web_server.user.repository.ReportUserRepository
 import org.slf4j.LoggerFactory
@@ -136,7 +138,10 @@ class CourseCommandService(
                             )
                         )
                     )
-                    .flatMap { reportUser -> enrollUser(courseId, course.slug, reportUser) }
+                    .flatMap { reportUser ->
+                        validateEnrollmentEligibility(course, publicCode, reportUser)
+                            .then(Mono.defer { enrollUser(courseId, course.slug, reportUser) })
+                    }
             }
     }
 
@@ -798,6 +803,33 @@ class CourseCommandService(
         banReason = enrollment.banReason,
         updatedAt = enrollment.updatedAt,
     )
+
+    private fun validateEnrollmentEligibility(
+        course: Course,
+        publicCode: PublicCode,
+        reportUser: ReportUser,
+    ): Mono<Void> {
+        if (isPrivilegedUser(reportUser)) {
+            return Mono.empty()
+        }
+        if (course.fieldTag == CourseTrack.NO) {
+            return Mono.empty()
+        }
+        if (publicCode.track == course.fieldTag) {
+            return Mono.empty()
+        }
+        return Mono.error(
+            ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "${course.fieldTag.name} 코스에는 ${course.fieldTag.name} 트랙 사용자만 등록할 수 있습니다.",
+            )
+        )
+    }
+
+    private fun isPrivilegedUser(reportUser: ReportUser): Boolean {
+        val role = UserRole.fromClaim(reportUser.role)
+        return role == UserRole.ADMIN || role == UserRole.ORGANIZER
+    }
 
     private fun enrollUser(
         courseId: CourseId,
