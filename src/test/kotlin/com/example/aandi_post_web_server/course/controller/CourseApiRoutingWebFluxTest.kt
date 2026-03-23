@@ -2,18 +2,21 @@
 
 package com.example.aandi_post_web_server.course.controller
 
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentCodeTemplateResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailMetadataResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
-import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemClassificationResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuideResponse
+import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.security.SecurityConfig
@@ -111,8 +114,8 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .expectBody()
                 .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
                 .jsonPath("$.data.metadata.problemDetail.classification.algorithmStep").isEqualTo("STEP0")
-                .jsonPath("$.data.metadata.codeTemplates").doesNotExist()
-                .jsonPath("$.data.metadata.submissionGuide").doesNotExist()
+                .jsonPath("$.data.metadata.submissionGuide.title").isEqualTo("문제 풀이 템플릿")
+                .jsonPath("$.data.metadata.codeTemplates[0].language").isEqualTo("KOTLIN")
         }
 
         "과제 ID로 코스 조회 API는 USER 토큰으로 호출하면 성공한다" {
@@ -391,8 +394,8 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .expectBody()
                 .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
                 .jsonPath("$.data.metadata.problemDetail.outputDescription").isEqualTo("Hello World!를 출력한다.")
-                .jsonPath("$.data.metadata.codeTemplates").doesNotExist()
-                .jsonPath("$.data.metadata.submissionGuide").doesNotExist()
+                .jsonPath("$.data.metadata.submissionGuide.commentSections[0]").isEqualTo("문제")
+                .jsonPath("$.data.metadata.codeTemplates[0].functionTemplate").isEqualTo("fun solution(): String { ... }")
         }
 
         "admin 과제 수정 API는 ADMIN이 아니면 403을 반환한다" {
@@ -488,6 +491,19 @@ private fun sampleAssignmentDetailResponse(): AssignmentDetailResponse {
                     algorithmStep = AssignmentProblemStep.STEP0,
                     difficultyStep = 1,
                 ),
+            ),
+            submissionGuide = AssignmentSubmissionGuideResponse(
+                title = "문제 풀이 템플릿",
+                description = "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.",
+                commentSections = listOf("문제", "해석", "풀이"),
+            ),
+            codeTemplates = listOf(
+                AssignmentCodeTemplateResponse(
+                    language = AssignmentTemplateLanguage.KOTLIN,
+                    commentTemplate = "/* ... */",
+                    functionTemplate = "fun solution(): String { ... }",
+                    runnableTemplate = "fun solution(): String { ... }",
+                )
             ),
             attributes = emptyMap(),
         ),

@@ -71,6 +71,8 @@ fun AssignmentMetadata.toDetailResponse(
     },
     testCases = testCases,
     problemDetail = problemDetail?.toResponse(),
+    submissionGuide = submissionGuide?.toResponse(),
+    codeTemplates = codeTemplates.map { it.toResponse() },
     attributes = attributes,
 )
 
