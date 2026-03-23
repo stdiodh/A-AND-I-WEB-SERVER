@@ -14,6 +14,7 @@ import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
+import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.security.SecurityConfig
 import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
@@ -44,7 +45,7 @@ import java.time.Instant
 import java.time.LocalDate
 
 @WebFluxTest(controllers = [CourseV1Controller::class, CourseQueryV1Controller::class])
-@Import(SecurityConfig::class, ErrorResponseFactory::class)
+@Import(WebConfig::class, SecurityConfig::class, ErrorResponseFactory::class)
 class CourseApiRoutingWebFluxTest : StringSpec() {
 
     override fun extensions() = listOf(SpringExtension)
