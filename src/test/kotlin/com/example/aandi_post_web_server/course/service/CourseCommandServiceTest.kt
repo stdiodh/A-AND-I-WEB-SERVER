@@ -139,6 +139,7 @@ class CourseCommandServiceTest : StringSpec({
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
         val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+        var persistedAssignment: Assignment = target
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
@@ -170,8 +171,10 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
             .thenAnswer { invocation ->
                 val assignment = invocation.arguments[0] as Assignment
+                persistedAssignment = assignment
                 Mono.just(assignment)
             }
+        Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenAnswer { Mono.just(persistedAssignment) }
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
         Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
@@ -451,6 +454,7 @@ class CourseCommandServiceTest : StringSpec({
     "주차가 없으면 과제 생성 시 주차를 자동 생성한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        var persistedAssignment: Assignment? = null
         val request = CreateAssignmentRequest(
             weekNo = 2,
             orderInWeek = 1,
@@ -485,8 +489,13 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
             .thenAnswer { invocation ->
                 val assignment = invocation.arguments[0] as Assignment
+                persistedAssignment = assignment
                 Mono.just(assignment)
             }
+        Mockito.`when`(fixture.assignmentRepository.findById(ArgumentMatchers.anyString()))
+            .thenAnswer { Mono.just(requireNotNull(persistedAssignment)) }
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
+            .thenReturn(Flux.empty())
 
         StepVerifier.create(
             fixture.service.createAssignment(
@@ -595,7 +604,7 @@ class CourseCommandServiceTest : StringSpec({
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.last().caseId shouldBe 2
     }
 
-    "draft 로 생성된 과제는 OJ 이벤트를 발행하지 않는다" {
+    "draft 로 생성된 과제도 PROBLEM_CREATED 를 발행한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val startAt = Instant.now().plusSeconds(3600)
@@ -659,7 +668,81 @@ class CourseCommandServiceTest : StringSpec({
             .expectNextCount(1)
             .verifyComplete()
 
-        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_CREATED
+        java.util.UUID.fromString(fixture.assignmentReportTestCaseEventPublisher.events.single().problemId).toString() shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().problemId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().caseId shouldBe 1
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe listOf("1 2")
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().output shouldBe "3"
+    }
+
+    "생성 이벤트는 OJ v1.2.8 consumer 에 맞춰 빈 testCases 배열도 발행한다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val startAt = Instant.now().plusSeconds(3600)
+        val endAt = Instant.now().plusSeconds(7200)
+        var persistedAssignment: Assignment? = null
+        var persistedTestCases: List<AssignmentExample> = emptyList()
+        val request = CreateAssignmentRequest(
+            weekNo = 1,
+            orderInWeek = 5,
+            startAt = startAt,
+            endAt = endAt,
+            metadata = AssignmentMetadataPayload(
+                title = "Excluded only",
+                difficulty = AssignmentDifficulty.LOW,
+                description = "문제 설명",
+                testCases = listOf(
+                    CreateAssignmentExampleRequest(
+                        seq = 1,
+                        inputText = "1 2",
+                        outputText = "3",
+                        visibility = AssignmentTestCaseVisibility.EXCLUDED,
+                    )
+                ),
+            ),
+        )
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenAnswer { invocation -> Mono.just((invocation.arguments[0] as CourseWeek).copy(id = "week-1")) }
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                persistedAssignment = assignment
+                Mono.just(assignment)
+            }
+        Mockito.`when`(fixture.assignmentRepository.findById(ArgumentMatchers.anyString()))
+            .thenAnswer { Mono.just(requireNotNull(persistedAssignment)) }
+        Mockito.doAnswer { invocation ->
+            @Suppress("UNCHECKED_CAST")
+            val saved = invocation.arguments[0] as List<AssignmentExample>
+            persistedTestCases = saved
+            Flux.fromIterable(saved)
+        }.`when`(fixture.assignmentExampleRepository)
+            .saveAll(ArgumentMatchers.anyList<AssignmentExample>())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
+            .thenAnswer { Flux.fromIterable(persistedTestCases) }
+
+        StepVerifier.create(fixture.service.createAssignment("back-basic", request, "admin"))
+            .expectNextCount(1)
+            .verifyComplete()
+
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_CREATED
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldBe emptyList()
     }
 
     "게시된 과제 수정은 일부 케이스 삭제가 있어도 최종 전체 배열로 PROBLEM_UPDATED 를 발행한다" {
@@ -801,11 +884,12 @@ class CourseCommandServiceTest : StringSpec({
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
     }
 
-    "draft 과제 수정은 OJ test case 이벤트를 재발행하지 않는다" {
+    "draft 과제 수정도 OJ test case 이벤트를 PROBLEM_UPDATED 로 재발행한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
         val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+        var persistedAssignment: Assignment = target
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
@@ -821,10 +905,15 @@ class CourseCommandServiceTest : StringSpec({
             fixture.courseWeekRepository.findByCourseIdAndWeekNo(
                 ArgumentMatchers.anyString(),
                 ArgumentMatchers.anyInt(),
-            )
+        )
         ).thenReturn(Mono.just(CourseWeek(id = "week-1", courseId = "course-1", weekNo = 1, title = "1주차")))
         Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
-            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as Assignment) }
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                persistedAssignment = assignment
+                Mono.just(assignment)
+            }
+        Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenAnswer { Mono.just(persistedAssignment) }
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
         Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
@@ -853,7 +942,95 @@ class CourseCommandServiceTest : StringSpec({
             }
             .verifyComplete()
 
-        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
+        fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
+    }
+
+    "수정 이벤트는 OJ v1.2.8 consumer 에 맞춰 빈 testCases 배열도 발행한다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+        var persistedAssignment: Assignment = target
+        var persistedTestCases: List<AssignmentExample> = listOf(
+            AssignmentExample(
+                id = "ex-1",
+                assignmentId = assignmentId,
+                seq = 1,
+                inputText = "old input",
+                outputText = "old output",
+            )
+        )
+        val updateRequest = UpdateAssignmentRequest(
+            metadata = AssignmentMetadataPayload(
+                title = "updated title",
+                difficulty = AssignmentDifficulty.LOW,
+                description = "updated description",
+                testCases = listOf(
+                    CreateAssignmentExampleRequest(
+                        seq = 1,
+                        inputText = "new input",
+                        outputText = "new output",
+                        visibility = AssignmentTestCaseVisibility.EXCLUDED,
+                    )
+                ),
+            )
+        )
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.just(CourseWeek(id = "week-1", courseId = "course-1", weekNo = 1, title = "1주차")))
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                persistedAssignment = assignment
+                Mono.just(assignment)
+            }
+        Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenAnswer { Mono.just(persistedAssignment) }
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(Mono.just(0))
+        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(Mono.just(1))
+        Mockito.doAnswer { invocation ->
+            @Suppress("UNCHECKED_CAST")
+            val saved = invocation.arguments[0] as List<AssignmentExample>
+            persistedTestCases = saved
+            Flux.fromIterable(saved)
+        }.`when`(fixture.assignmentExampleRepository)
+            .saveAll(ArgumentMatchers.anyList<AssignmentExample>())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+            .thenAnswer { Flux.fromIterable(persistedTestCases) }
+
+        StepVerifier.create(
+            fixture.service.updateAssignment(
+                courseSlug = "back-basic",
+                assignmentId = assignmentId,
+                request = updateRequest,
+            )
+        )
+            .assertNext { updated ->
+                updated.metadata.examples shouldHaveSize 1
+                updated.metadata.examples.first().visibility shouldBe AssignmentTestCaseVisibility.EXCLUDED
+            }
+            .verifyComplete()
+
+        fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_UPDATED
+        fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldBe emptyList()
     }
 
 })
