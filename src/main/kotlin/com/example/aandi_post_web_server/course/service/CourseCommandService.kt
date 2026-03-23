@@ -1,12 +1,15 @@
 package com.example.aandi_post_web_server.course.service
 
+import com.example.aandi_post_web_server.assignment.domain.AssignmentTestCaseValidator
 import com.example.aandi_post_web_server.assignment.domain.AssignmentTestCaseDrafts
 import com.example.aandi_post_web_server.assignment.domain.toDetailResponse
 import com.example.aandi_post_web_server.assignment.domain.toEntity
 import com.example.aandi_post_web_server.assignment.domain.toResponse
 import com.example.aandi_post_web_server.assignment.domain.AssignmentRequirementDrafts
+import com.example.aandi_post_web_server.assignment.jackson.AssignmentMetadataPayloadTestCasePresenceTracker
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentRequirementResponse
+import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentTestCaseRequest
@@ -69,6 +72,8 @@ class CourseCommandService(
     private val assignmentReportTestCaseEventMapper: AssignmentReportTestCaseEventMapper,
     private val assignmentReportTestCaseEventPublisher: AssignmentReportTestCaseEventPublisher,
     private val reportUserRepository: ReportUserRepository,
+    private val assignmentTestCaseValidator: AssignmentTestCaseValidator,
+    private val assignmentMetadataPayloadTestCasePresenceTracker: AssignmentMetadataPayloadTestCasePresenceTracker,
 ) {
     private val log = LoggerFactory.getLogger(CourseCommandService::class.java)
 
@@ -292,11 +297,16 @@ class CourseCommandService(
         val slug = parseCourseSlug(courseSlug)
         val parsedAssignmentId = parseAssignmentId(assignmentId)
         val parsedWeekNo = request.weekNo?.let { parseWeekNo(it) }
+        val replaceTestCases = request.metadata?.let(::shouldReplaceTestCases) ?: false
 
-        return resolveUpdateRequest(request)
+        return resolveUpdateRequest(request, replaceTestCases)
             .flatMap { resolvedRequest ->
                 val requirementDrafts = resolvedRequest.metadata?.let { parseRequirementDrafts(it.requirements) }
-                val testCaseDrafts = resolvedRequest.metadata?.let { parseTestCaseDrafts(it.testCases) }
+                val testCaseDrafts = if (replaceTestCases) {
+                    resolvedRequest.metadata?.let { parseTestCaseDrafts(it.testCases) }
+                } else {
+                    null
+                }
 
                 findCourseBySlug(slug)
                     .flatMap { course ->
@@ -714,21 +724,29 @@ class CourseCommandService(
         return Mono.just(validateResolvedCreateRequest(request))
     }
 
-    private fun resolveUpdateRequest(request: UpdateAssignmentRequest): Mono<UpdateAssignmentRequest> {
-        return Mono.just(validateResolvedUpdateRequest(request))
+    private fun resolveUpdateRequest(
+        request: UpdateAssignmentRequest,
+        replaceTestCases: Boolean,
+    ): Mono<UpdateAssignmentRequest> {
+        return Mono.just(validateResolvedUpdateRequest(request, replaceTestCases))
     }
 
     private fun validateResolvedCreateRequest(request: CreateAssignmentRequest): CreateAssignmentRequest {
+        assignmentMetadataPayloadTestCasePresenceTracker.consumeTestCasesProvided(request.metadata)
         if (request.metadata.title.isNullOrBlank()) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "과제 제목이 필요합니다.")
         }
         if (request.metadata.description.isNullOrBlank()) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "과제 설명이 필요합니다.")
         }
+        validateTestCases(request.metadata.testCases)
         return request
     }
 
-    private fun validateResolvedUpdateRequest(request: UpdateAssignmentRequest): UpdateAssignmentRequest {
+    private fun validateResolvedUpdateRequest(
+        request: UpdateAssignmentRequest,
+        replaceTestCases: Boolean,
+    ): UpdateAssignmentRequest {
         val metadata = request.metadata ?: return request
         if (metadata.title != null && metadata.title.isBlank()) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "과제 제목이 비어 있을 수 없습니다.")
@@ -736,7 +754,21 @@ class CourseCommandService(
         if (metadata.description != null && metadata.description.isBlank()) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "과제 설명이 비어 있을 수 없습니다.")
         }
+        if (replaceTestCases) {
+            validateTestCases(metadata.testCases)
+        }
         return request
+    }
+
+    private fun validateTestCases(requests: List<CreateAssignmentTestCaseRequest>) {
+        parseOrBadRequest {
+            assignmentTestCaseValidator.validate(requests)
+        }
+    }
+
+    private fun shouldReplaceTestCases(metadata: AssignmentMetadataPayload): Boolean {
+        val tracked = assignmentMetadataPayloadTestCasePresenceTracker.consumeTestCasesProvided(metadata)
+        return tracked ?: metadata.testCases.isNotEmpty()
     }
 
     private fun <T> parseOrBadRequest(block: () -> T): T {

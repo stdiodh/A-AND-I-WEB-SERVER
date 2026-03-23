@@ -349,6 +349,10 @@ data class AssignmentDetailMetadataResponse(
     val testCases: List<AssignmentTestCaseResponse> = emptyList(),
     @field:Schema(description = "문제 상세 정보")
     val problemDetail: AssignmentProblemDetailResponse? = null,
+    @field:Schema(description = "제출 가이드")
+    val submissionGuide: AssignmentSubmissionGuideResponse? = null,
+    @field:Schema(description = "언어별 코드 템플릿")
+    val codeTemplates: List<AssignmentCodeTemplateResponse> = emptyList(),
     @field:Schema(description = "확장 메타데이터")
     val attributes: Map<String, Any?>,
 ) {

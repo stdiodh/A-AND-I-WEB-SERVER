@@ -1,11 +1,13 @@
 package com.example.aandi_post_web_server.course.service
 
+import com.example.aandi_post_web_server.assignment.domain.AssignmentTestCaseValidator
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEvent
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventMapper
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventPublisher
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.jackson.AssignmentMetadataPayloadTestCasePresenceTracker
 import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.repository.AssignmentRequirementRepository
@@ -122,6 +124,8 @@ private class Fixture {
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
     val assignmentReportTestCaseEventPublisher = NoopAssignmentReportTestCaseEventPublisherForTest()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
+    val assignmentTestCaseValidator = AssignmentTestCaseValidator()
+    val assignmentMetadataPayloadTestCasePresenceTracker = AssignmentMetadataPayloadTestCasePresenceTracker()
 
     private val courseCommandService = CourseCommandService(
         courseRepository = courseRepository,
@@ -134,6 +138,8 @@ private class Fixture {
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         reportUserRepository = reportUserRepository,
+        assignmentTestCaseValidator = assignmentTestCaseValidator,
+        assignmentMetadataPayloadTestCasePresenceTracker = assignmentMetadataPayloadTestCasePresenceTracker,
     )
 
     private val courseQueryService = CourseQueryService(
