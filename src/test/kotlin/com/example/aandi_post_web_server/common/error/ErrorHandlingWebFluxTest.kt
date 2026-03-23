@@ -2,6 +2,7 @@
 
 package com.example.aandi_post_web_server.common.error
 
+import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.security.SecurityConfig
 import com.example.aandi_post_web_server.course.controller.CourseQueryV1Controller
 import com.example.aandi_post_web_server.course.controller.CourseV1Controller
@@ -19,6 +20,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 
 @WebFluxTest(controllers = [CourseV1Controller::class, CourseQueryV1Controller::class])
 @Import(
+    WebConfig::class,
     SecurityConfig::class,
     RequestIdWebFilter::class,
     ErrorResponseFactory::class,

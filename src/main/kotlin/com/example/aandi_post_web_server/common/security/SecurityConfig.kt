@@ -23,6 +23,7 @@ import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.security.web.server.SecurityWebFilterChain
+import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets
@@ -37,6 +38,7 @@ class SecurityConfig {
     @Bean
     fun securityWebFilterChain(
         http: ServerHttpSecurity,
+        corsConfigurationSource: CorsConfigurationSource,
         jwtDecoder: ReactiveJwtDecoder,
         errorResponseFactory: ErrorResponseFactory,
         objectMapper: ObjectMapper,
@@ -45,6 +47,7 @@ class SecurityConfig {
             .csrf { it.disable() }
             .httpBasic { it.disable() }
             .formLogin { it.disable() }
+            .cors { it.configurationSource(corsConfigurationSource) }
             .authorizeExchange {
                 it.pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.pathMatchers(
