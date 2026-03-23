@@ -5,6 +5,8 @@ import com.example.aandi_post_web_server.assignment.entity.AssignmentSubmissionG
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
 
 object AssignmentTemplateDefaults {
+    private const val PYTHON_DOCSTRING = "\"\"\""
+
     fun submissionGuide(): AssignmentSubmissionGuide = AssignmentSubmissionGuide()
 
     fun codeTemplates(): List<AssignmentCodeTemplate> = listOf(
@@ -91,6 +93,45 @@ object AssignmentTemplateDefaults {
                   print(solution());
                 }
                 """.trimIndent(),
+        ),
+        AssignmentCodeTemplate(
+            language = AssignmentTemplateLanguage.PYTHON,
+            commentTemplate =
+                listOf(
+                    PYTHON_DOCSTRING,
+                    "[문제]",
+                    "> 이해한 방식으로 문제를 다시 정의해요",
+                    "[해석]",
+                    "> 문제의 요구사항을 분석한 내용을 작성해요",
+                    "[풀이]",
+                    "> 적용할 풀이를 순서대로 작성해요",
+                    PYTHON_DOCSTRING,
+                ).joinToString("\n"),
+            functionTemplate =
+                """
+                def solution():
+                    answer = ""
+                    return answer
+                """.trimIndent(),
+            runnableTemplate =
+                listOf(
+                    PYTHON_DOCSTRING,
+                    "[문제]",
+                    "> 이해한 방식으로 문제를 다시 정의해요",
+                    "[해석]",
+                    "> 문제의 요구사항을 분석한 내용을 작성해요",
+                    "[풀이]",
+                    "> 적용할 풀이를 순서대로 작성해요",
+                    PYTHON_DOCSTRING,
+                    "def solution():",
+                    "    # 사용자가 작성할 코드 영역",
+                    "    answer = \"Hello World!\"",
+                    "    return answer",
+                    "",
+                    "if __name__ == \"__main__\":",
+                    "    # 실행 테스트용 영역",
+                    "    print(solution())",
+                ).joinToString("\n"),
         ),
     )
 }
