@@ -12,6 +12,7 @@ import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequire
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentTestCaseRequest
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEvent
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventMapper
 import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventPublisher
 import com.example.aandi_post_web_server.assignment.entity.Assignment
@@ -45,6 +46,7 @@ import com.example.aandi_post_web_server.course.repository.CourseRepository
 import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
 import com.example.aandi_post_web_server.user.entity.ReportUser
 import com.example.aandi_post_web_server.user.repository.ReportUserRepository
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -66,6 +68,7 @@ class CourseCommandService(
     private val assignmentReportTestCaseEventPublisher: AssignmentReportTestCaseEventPublisher,
     private val reportUserRepository: ReportUserRepository,
 ) {
+    private val log = LoggerFactory.getLogger(CourseCommandService::class.java)
 
     fun createCourse(request: CreateCourseRequest): Mono<CourseResponse> {
         val slug = parseCourseSlug(request.slug)
@@ -264,7 +267,7 @@ class CourseCommandService(
                                                                 requirements = tuple.t1,
                                                                 testCases = tuple.t2,
                                                             )
-                                                            publishCreatedTestCases(assignment, tuple.t2)
+                                                            publishProblemSyncOnCreate(assignment)
                                                                 .thenReturn(response)
                                                         }
                                                 }
@@ -533,7 +536,7 @@ class CourseCommandService(
                     .zipWith(loadOrReplaceTestCases(parsedAssignmentId, testCaseDrafts))
                     .flatMap { tuple ->
                         val response = toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
-                        publishUpdatedTestCasesIfTestCasesChanged(saved, testCaseDrafts, tuple.t2)
+                        publishProblemSyncOnUpdate(assignment, saved)
                             .thenReturn(response)
                     }
             }
@@ -598,31 +601,78 @@ class CourseCommandService(
         ).then(publishDeletedTestCases(assignmentId))
     }
 
-    private fun publishCreatedTestCases(
-        assignment: Assignment,
-        testCases: List<AssignmentTestCaseResponse>,
-    ): Mono<Void> =
-        assignmentReportTestCaseEventPublisher.publish(
-            assignmentReportTestCaseEventMapper.created(assignment, testCases)
-        )
-
-    private fun publishUpdatedTestCases(
-        assignment: Assignment,
-        testCases: List<AssignmentTestCaseResponse>,
-    ): Mono<Void> =
-        assignmentReportTestCaseEventPublisher.publish(
-            assignmentReportTestCaseEventMapper.updated(assignment, testCases)
-        )
-
-    private fun publishUpdatedTestCasesIfTestCasesChanged(
-        assignment: Assignment,
-        testCaseDrafts: AssignmentTestCaseDrafts?,
-        testCases: List<AssignmentTestCaseResponse>,
-    ): Mono<Void> {
-        if (testCaseDrafts == null) {
+    private fun publishProblemSyncOnCreate(assignment: Assignment): Mono<Void> {
+        val now = Instant.now()
+        val assignmentId = requireNotNull(assignment.id)
+        if (!isPublished(assignment, now)) {
+            log.info("Skipping assignment problem sync publish because assignment is not published. assignmentId={}", assignmentId)
             return Mono.empty()
         }
-        return publishUpdatedTestCases(assignment, testCases)
+        return loadAssignmentProblemSyncSnapshot(assignmentId)
+            .flatMap { (snapshotAssignment, testCases) ->
+                publishProblemSyncEvent(assignmentReportTestCaseEventMapper.created(snapshotAssignment, testCases))
+            }
+    }
+
+    private fun publishProblemSyncOnUpdate(
+        previousAssignment: Assignment,
+        currentAssignment: Assignment,
+    ): Mono<Void> {
+        val now = Instant.now()
+        val assignmentId = requireNotNull(currentAssignment.id)
+        val wasPublished = isPublished(previousAssignment, now)
+        val isPublished = isPublished(currentAssignment, now)
+
+        if (!isPublished) {
+            log.info("Skipping assignment problem sync publish because assignment is not published after update. assignmentId={}", assignmentId)
+            return Mono.empty()
+        }
+
+        return loadAssignmentProblemSyncSnapshot(assignmentId)
+            .flatMap { (assignment, testCases) ->
+                val event = if (wasPublished) {
+                    assignmentReportTestCaseEventMapper.updated(assignment, testCases)
+                } else {
+                    assignmentReportTestCaseEventMapper.created(assignment, testCases)
+                }
+                publishProblemSyncEvent(event)
+            }
+    }
+
+    private fun loadAssignmentProblemSyncSnapshot(
+        assignmentId: String,
+    ): Mono<Pair<Assignment, List<AssignmentTestCaseResponse>>> =
+        assignmentRepository.findById(assignmentId)
+            .switchIfEmpty(
+                Mono.error(
+                    IllegalStateException("problem sync 대상 assignment snapshot을 찾을 수 없습니다: $assignmentId")
+                )
+            )
+            .zipWith(
+                assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId)
+                    .map { AssignmentTestCaseResponse(it.seq, it.inputText, it.outputText, it.visibility) }
+                    .collectList()
+            )
+            .map { it.t1 to it.t2 }
+
+    private fun publishProblemSyncEvent(event: AssignmentReportTestCaseEvent): Mono<Void> {
+        if (event.testCases.isEmpty()) {
+            log.warn(
+                "Skipping assignment problem sync publish because no judgeable test cases are available. eventType={}, problemId={}",
+                event.eventType,
+                event.problemId,
+            )
+            return Mono.empty()
+        }
+
+        log.info(
+            "Publishing assignment problem sync event. eventType={}, problemId={}, testCaseCount={}, caseIds={}",
+            event.eventType,
+            event.problemId,
+            event.testCases.size,
+            event.testCases.map { it.caseId },
+        )
+        return assignmentReportTestCaseEventPublisher.publish(event)
     }
 
     private fun publishDeletedTestCases(assignmentId: String): Mono<Void> =
@@ -636,6 +686,9 @@ class CourseCommandService(
         }
         return AssignmentStatus.DRAFT
     }
+
+    private fun isPublished(assignment: Assignment, now: Instant = Instant.now()): Boolean =
+        effectiveAssignmentStatus(assignment.startAt, now) == AssignmentStatus.PUBLISHED
 
     private fun effectivePublishedAt(
         startAt: Instant,

@@ -38,5 +38,11 @@ app:
   events:
     report-test-case:
       enabled: ${APP_EVENTS_REPORT_TEST_CASE_ENABLED:false}
-      topic-arn: ${APP_EVENTS_REPORT_TEST_CASE_TOPIC_ARN:}
+      topic-arn: ${APP_EVENTS_REPORT_TEST_CASE_SNS_TOPIC_ARN:}
       region: ${APP_EVENTS_REPORT_TEST_CASE_REGION:ap-northeast-2}
+    user-sync:
+      enabled: ${APP_EVENTS_USER_SYNC_ENABLED:false}
+      queue-url: ${APP_EVENTS_USER_SYNC_QUEUE_URL:}
+      region: ${APP_EVENTS_USER_SYNC_REGION:ap-northeast-2}
+      wait-time-seconds: ${APP_EVENTS_USER_SYNC_WAIT_TIME_SECONDS:20}
+      max-number-of-messages: ${APP_EVENTS_USER_SYNC_MAX_NUMBER_OF_MESSAGES:10}

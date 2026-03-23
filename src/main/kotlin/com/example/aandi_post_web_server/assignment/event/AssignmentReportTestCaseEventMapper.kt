@@ -16,7 +16,7 @@ class AssignmentReportTestCaseEventMapper {
             eventType = AssignmentReportTestCaseEventType.PROBLEM_CREATED,
             problemId = requireNotNull(assignment.id),
             testCases = testCases
-                .filter { it.visibility == AssignmentTestCaseVisibility.PUBLIC }
+                .filter { it.visibility != AssignmentTestCaseVisibility.EXCLUDED }
                 .sortedBy { it.seq }
                 .map(::toTestCase),
         )
@@ -29,14 +29,14 @@ class AssignmentReportTestCaseEventMapper {
             eventType = AssignmentReportTestCaseEventType.PROBLEM_UPDATED,
             problemId = requireNotNull(assignment.id),
             testCases = testCases
-                .filter { it.visibility == AssignmentTestCaseVisibility.PUBLIC }
+                .filter { it.visibility != AssignmentTestCaseVisibility.EXCLUDED }
                 .sortedBy { it.seq }
                 .map(::toTestCase),
         )
 
     fun deleted(assignmentId: String): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
-            eventType = AssignmentReportTestCaseEventType.PROBLEM_UPDATED,
+            eventType = AssignmentReportTestCaseEventType.PROBLEM_DELETED,
             problemId = assignmentId,
             testCases = emptyList(),
         )
