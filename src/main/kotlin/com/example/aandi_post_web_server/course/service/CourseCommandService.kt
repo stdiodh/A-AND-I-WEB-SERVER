@@ -541,7 +541,7 @@ class CourseCommandService(
                     .zipWith(loadOrReplaceTestCases(parsedAssignmentId, testCaseDrafts))
                     .flatMap { tuple ->
                         val response = toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
-                        publishProblemSyncOnUpdate(assignment, saved)
+                        publishProblemSyncOnUpdate(saved)
                             .thenReturn(response)
                     }
             }
@@ -607,12 +607,7 @@ class CourseCommandService(
     }
 
     private fun publishProblemSyncOnCreate(assignment: Assignment): Mono<Void> {
-        val now = Instant.now()
         val assignmentId = requireNotNull(assignment.id)
-        if (!isPublished(assignment, now)) {
-            log.info("Skipping assignment problem sync publish because assignment is not published. assignmentId={}", assignmentId)
-            return Mono.empty()
-        }
         return loadAssignmentProblemSyncSnapshot(assignmentId)
             .flatMap { (snapshotAssignment, testCases) ->
                 publishProblemSyncEvent(assignmentReportTestCaseEventMapper.created(snapshotAssignment, testCases))
@@ -620,27 +615,12 @@ class CourseCommandService(
     }
 
     private fun publishProblemSyncOnUpdate(
-        previousAssignment: Assignment,
         currentAssignment: Assignment,
     ): Mono<Void> {
-        val now = Instant.now()
         val assignmentId = requireNotNull(currentAssignment.id)
-        val wasPublished = isPublished(previousAssignment, now)
-        val isPublished = isPublished(currentAssignment, now)
-
-        if (!isPublished) {
-            log.info("Skipping assignment problem sync publish because assignment is not published after update. assignmentId={}", assignmentId)
-            return Mono.empty()
-        }
-
         return loadAssignmentProblemSyncSnapshot(assignmentId)
             .flatMap { (assignment, testCases) ->
-                val event = if (wasPublished) {
-                    assignmentReportTestCaseEventMapper.updated(assignment, testCases)
-                } else {
-                    assignmentReportTestCaseEventMapper.created(assignment, testCases)
-                }
-                publishProblemSyncEvent(event)
+                publishProblemSyncEvent(assignmentReportTestCaseEventMapper.updated(assignment, testCases))
             }
     }
 
@@ -661,15 +641,6 @@ class CourseCommandService(
             .map { it.t1 to it.t2 }
 
     private fun publishProblemSyncEvent(event: AssignmentReportTestCaseEvent): Mono<Void> {
-        if (event.testCases.isEmpty()) {
-            log.warn(
-                "Skipping assignment problem sync publish because no judgeable test cases are available. eventType={}, problemId={}",
-                event.eventType,
-                event.problemId,
-            )
-            return Mono.empty()
-        }
-
         log.info(
             "Publishing assignment problem sync event. eventType={}, problemId={}, testCaseCount={}, caseIds={}",
             event.eventType,

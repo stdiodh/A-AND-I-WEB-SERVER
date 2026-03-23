@@ -54,6 +54,22 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
         event.testCases[1].input shouldBe listOf("C")
     }
 
+    "create 이벤트는 모든 케이스가 EXCLUDED 면 빈 testCases 배열을 유지한다" {
+        val event = mapper.created(
+            assignment = assignment(
+                id = "assignment-uuid",
+                status = AssignmentStatus.DRAFT,
+            ),
+            testCases = listOf(
+                AssignmentExampleResponse(seq = 1, inputText = "1 2", outputText = "3", visibility = AssignmentTestCaseVisibility.EXCLUDED),
+            ),
+        )
+
+        event.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_CREATED
+        event.problemId shouldBe "assignment-uuid"
+        event.testCases shouldBe emptyList()
+    }
+
     "delete 이벤트는 빈 testCases 배열을 담은 problem delete payload 를 만든다" {
         val event = mapper.deleted("assignment-uuid")
 
