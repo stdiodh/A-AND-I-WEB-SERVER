@@ -16,6 +16,14 @@ class AssignmentTemplateDefaultsTest : StringSpec({
         )
         templates.last().functionTemplate shouldBe
             """
+            ${"\"\"\""}
+            [문제]
+            > 이해한 방식으로 문제를 다시 정의해요
+            [해석]
+            > 문제의 요구사항을 분석한 내용을 작성해요
+            [풀이]
+            > 적용할 풀이를 순서대로 작성해요
+            ${"\"\"\""}
             def solution():
                 answer = ""
                 return answer

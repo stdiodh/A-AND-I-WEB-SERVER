@@ -43,14 +43,8 @@ data class AssignmentCreateComparisonMetadataResponse(
     val learningGoals: List<AssignmentLearningGoalResponse> = emptyList(),
     @field:Schema(description = "테스트 케이스")
     val testCases: List<AssignmentCreateComparisonTestCaseResponse> = emptyList(),
-    @field:Schema(description = "문제 상세 정보")
-    val problemDetail: AssignmentProblemDetailResponse? = null,
-    @field:Schema(description = "제출 가이드")
-    val submissionGuide: AssignmentSubmissionGuideResponse? = null,
     @field:Schema(description = "언어별 코드 템플릿")
     val codeTemplates: List<AssignmentCodeTemplateResponse> = emptyList(),
-    @field:Schema(description = "확장 메타데이터")
-    val attributes: Map<String, Any?> = emptyMap(),
 )
 
 @Schema(description = "과제 생성 비교용 테스트 케이스 응답")
@@ -96,10 +90,7 @@ fun AssignmentDetailResponse.toCreateComparisonItemResponse(): AssignmentCreateC
                     visibility = it.visibility,
                 )
             },
-            problemDetail = metadata.problemDetail,
-            submissionGuide = metadata.submissionGuide,
             codeTemplates = metadata.codeTemplates,
-            attributes = metadata.attributes,
         ),
     )
 
@@ -128,36 +119,11 @@ private fun AssignmentMetadataPayload.toCreateComparisonMetadataResponse(): Assi
                 visibility = it.visibility,
             )
         },
-        problemDetail = problemDetail?.toResponse(),
-        submissionGuide = submissionGuide?.toResponse(),
         codeTemplates = codeTemplates.map { it.toResponse() },
-        attributes = attributes,
-    )
-
-private fun AssignmentProblemDetailPayload.toResponse(): AssignmentProblemDetailResponse =
-    AssignmentProblemDetailResponse(
-        inputDescription = inputDescription,
-        outputDescription = outputDescription,
-        classification = classification?.toResponse(),
-    )
-
-private fun AssignmentProblemClassificationPayload.toResponse(): AssignmentProblemClassificationResponse =
-    AssignmentProblemClassificationResponse(
-        algorithmStep = algorithmStep,
-        difficultyStep = difficultyStep,
-    )
-
-private fun AssignmentSubmissionGuidePayload.toResponse(): AssignmentSubmissionGuideResponse =
-    AssignmentSubmissionGuideResponse(
-        title = title,
-        description = description,
-        commentSections = commentSections,
     )
 
 private fun AssignmentCodeTemplatePayload.toResponse(): AssignmentCodeTemplateResponse =
     AssignmentCodeTemplateResponse(
         language = language,
-        commentTemplate = commentTemplate,
         functionTemplate = functionTemplate,
-        runnableTemplate = runnableTemplate,
     )
