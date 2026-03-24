@@ -15,7 +15,7 @@ data class AssignmentRequirementDraft(
 
 data class AssignmentTestCaseDraft(
     val seq: Int,
-    val inputText: String,
+    val inputValues: List<String>,
     val outputText: String,
     val visibility: AssignmentTestCaseVisibility,
 )
@@ -52,7 +52,7 @@ class AssignmentTestCaseDrafts private constructor(
             val drafts = requests.map {
                 AssignmentTestCaseDraft(
                     seq = it.seq,
-                    inputText = it.inputText,
+                    inputValues = it.inputValues,
                     outputText = it.outputText,
                     visibility = it.visibility,
                 )
@@ -74,7 +74,7 @@ class AssignmentTestCaseDrafts private constructor(
             AssignmentTestCase(
                 assignmentId = assignmentId,
                 seq = it.seq,
-                inputText = it.inputText,
+                inputValues = it.inputValues,
                 outputText = it.outputText,
                 visibility = it.visibility,
                 description = null,

@@ -13,7 +13,7 @@ data class AssignmentTestCase(
     val id: String? = null,
     val assignmentId: String,
     val seq: Int,
-    val inputText: String,
+    val inputValues: List<String>,
     val outputText: String,
     val visibility: AssignmentTestCaseVisibility = AssignmentTestCaseVisibility.PUBLIC,
     val description: String? = null,

@@ -295,7 +295,7 @@ class CourseQueryServiceTest : StringSpec({
                     AssignmentExample(
                         assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
                         seq = 1,
-                        inputText = "ADD 1",
+                        inputValues = listOf("ADD 1"),
                         outputText = "1",
                     )
                 )

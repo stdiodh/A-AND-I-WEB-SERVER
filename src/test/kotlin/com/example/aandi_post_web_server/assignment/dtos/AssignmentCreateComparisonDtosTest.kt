@@ -25,7 +25,7 @@ class AssignmentCreateComparisonDtosTest : StringSpec({
                 testCases = listOf(
                     CreateAssignmentTestCaseRequest(
                         seq = 1,
-                        inputText = "입력",
+                        inputValues = listOf("입력"),
                         outputText = "출력",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     )
@@ -80,7 +80,7 @@ class AssignmentCreateComparisonDtosTest : StringSpec({
                 testCases = listOf(
                     AssignmentTestCaseResponse(
                         seq = 1,
-                        inputText = "입력",
+                        inputValues = listOf("입력"),
                         outputText = "출력",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     )

@@ -148,9 +148,8 @@ data class CreateAssignmentTestCaseRequest(
     @field:Min(1)
     @field:Schema(description = "테스트 케이스 순번", example = "1")
     val seq: Int,
-    @field:NotBlank
-    @field:Schema(description = "입력 예시", example = "ADD 1\\nCLOSE")
-    val inputText: String,
+    @field:Schema(description = "입력 인자 목록", example = """["ADD 1", "CLOSE"]""")
+    val inputValues: List<String>,
     @field:NotBlank
     @field:Schema(description = "출력 예시", example = "+1")
     val outputText: String,
@@ -186,7 +185,7 @@ data class CreateAssignmentTestCaseRequest(
             "testCases": [
               {
                 "seq": 1,
-                "inputText": "ADD 1\\nCLOSE",
+                "inputValues": ["ADD 1", "CLOSE"],
                 "outputText": "+1",
                 "visibility": "PUBLIC"
               }
@@ -265,7 +264,7 @@ data class CreateAssignmentRequest(
             "testCases": [
               {
                 "seq": 1,
-                "inputText": "ADD 1\\nCLOSE",
+                "inputValues": ["ADD 1", "CLOSE"],
                 "outputText": "+1",
                 "visibility": "PUBLIC"
               }
@@ -381,8 +380,8 @@ data class AssignmentLearningGoalResponse(
 data class AssignmentTestCaseResponse(
     @field:Schema(description = "테스트 케이스 순번", example = "1")
     val seq: Int,
-    @field:Schema(description = "입력 예시", example = "ADD 1\\nCLOSE")
-    val inputText: String,
+    @field:Schema(description = "입력 인자 목록", example = """["ADD 1", "CLOSE"]""")
+    val inputValues: List<String>,
     @field:Schema(description = "출력 예시", example = "+1")
     val outputText: String,
     @field:Schema(description = "공개 여부", example = "PUBLIC")

@@ -16,14 +16,14 @@ class AssignmentTestCaseValidator {
         testCases.forEachIndexed { index, testCase ->
             require(testCase.seq > 0) { "testCases[$index].seq must be greater than 0" }
             require(seenSeq.add(testCase.seq)) { "duplicated seq value: ${testCase.seq}" }
-            require(!containsUnsupportedControlCharacters(testCase.inputText)) {
-                "testCases[$index].inputText contains unsupported control characters"
+            require(!containsUnsupportedControlCharacters(testCase.inputValues)) {
+                "testCases[$index].inputValues contains unsupported control characters"
             }
             require(!containsUnsupportedControlCharacters(testCase.outputText)) {
                 "testCases[$index].outputText contains unsupported control characters"
             }
-            require(!isNoInputDescription(testCase.inputText)) {
-                "testCases[$index].inputText must use empty string for no-input case"
+            require(!isNoInputDescription(testCase.inputValues)) {
+                "testCases[$index].inputValues must use empty array for no-input case"
             }
 
             if (testCase.visibility != AssignmentTestCaseVisibility.EXCLUDED) {
@@ -34,14 +34,30 @@ class AssignmentTestCaseValidator {
         require(hasGradableCase) { "testCases must contain at least one gradable case" }
     }
 
+    private fun containsUnsupportedControlCharacters(values: List<String>): Boolean =
+        values.any { value ->
+            value.any { ch ->
+                val code = ch.code
+                (code in 0x00..0x08) || code == 0x0B || code == 0x0C || (code in 0x0E..0x1F) || code == 0x7F
+            }
+        }
+
     private fun containsUnsupportedControlCharacters(value: String): Boolean =
         value.any { ch ->
             val code = ch.code
             (code in 0x00..0x08) || code == 0x0B || code == 0x0C || (code in 0x0E..0x1F) || code == 0x7F
         }
 
-    private fun isNoInputDescription(value: String): Boolean =
-        forbiddenNoInputPatterns.any { it.matches(value) }
+    private fun isNoInputDescription(values: List<String>): Boolean {
+        if (values.isEmpty()) {
+            return false
+        }
+        if (values.size != 1) {
+            return false
+        }
+        val value = values.single()
+        return forbiddenNoInputPatterns.any { it.matches(value) }
+    }
 
     private companion object {
         val forbiddenNoInputPatterns = listOf(

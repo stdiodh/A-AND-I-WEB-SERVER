@@ -121,7 +121,8 @@ private class AssignmentMetadataPayloadDeserializer(
             }
 
             validateRequiredField(testCaseNode, index, "seq", parser)
-            validateRequiredField(testCaseNode, index, "inputText", parser)
+            validateRequiredField(testCaseNode, index, "inputValues", parser)
+            validateArrayField(testCaseNode, index, "inputValues", parser)
             validateRequiredField(testCaseNode, index, "outputText", parser)
             validateRequiredField(testCaseNode, index, "visibility", parser)
         }
@@ -136,6 +137,18 @@ private class AssignmentMetadataPayloadDeserializer(
         val fieldNode = testCaseNode.get(fieldName)
         if (fieldNode == null || fieldNode.isNull) {
             throw JsonMappingException.from(parser, "Missing required value: testCases[$index].$fieldName")
+        }
+    }
+
+    private fun validateArrayField(
+        testCaseNode: JsonNode,
+        index: Int,
+        fieldName: String,
+        parser: JsonParser,
+    ) {
+        val fieldNode = testCaseNode.get(fieldName) ?: return
+        if (!fieldNode.isArray) {
+            throw JsonMappingException.from(parser, "testCases[$index].$fieldName must be an array")
         }
     }
 }

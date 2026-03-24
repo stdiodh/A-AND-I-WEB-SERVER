@@ -8,8 +8,6 @@ import org.springframework.stereotype.Component
 @Component
 class AssignmentReportTestCaseEventMapper {
 
-    private val lineBreakPattern = Regex("\\r\\n|\\n|\\r")
-
     fun created(
         assignment: Assignment,
         testCases: List<AssignmentTestCaseResponse>,
@@ -46,14 +44,7 @@ class AssignmentReportTestCaseEventMapper {
     private fun toTestCase(testCase: AssignmentTestCaseResponse): AssignmentReportTestCase =
         AssignmentReportTestCase(
             caseId = testCase.seq,
-            input = toInputArgs(testCase.inputText),
+            input = testCase.inputValues,
             output = testCase.outputText,
         )
-
-    private fun toInputArgs(inputText: String): List<String> {
-        if (inputText.isEmpty()) {
-            return emptyList()
-        }
-        return inputText.split(lineBreakPattern)
-    }
 }

@@ -21,9 +21,9 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 3, inputText = "9 9", outputText = "18", visibility = AssignmentTestCaseVisibility.EXCLUDED),
-                AssignmentExampleResponse(seq = 2, inputText = "3\n4", outputText = "7", visibility = AssignmentTestCaseVisibility.HIDDEN),
-                AssignmentExampleResponse(seq = 1, inputText = "1\n2", outputText = "3", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                AssignmentExampleResponse(seq = 3, inputValues = listOf("9", "9"), outputText = "18", visibility = AssignmentTestCaseVisibility.EXCLUDED),
+                AssignmentExampleResponse(seq = 2, inputValues = listOf("3", "4"), outputText = "7", visibility = AssignmentTestCaseVisibility.HIDDEN),
+                AssignmentExampleResponse(seq = 1, inputValues = listOf("1", "2"), outputText = "3", visibility = AssignmentTestCaseVisibility.PUBLIC),
             ),
         )
 
@@ -44,8 +44,8 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.PUBLISHED,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 1, inputText = "A", outputText = "B", visibility = AssignmentTestCaseVisibility.PUBLIC),
-                AssignmentExampleResponse(seq = 2, inputText = "C", outputText = "D", visibility = AssignmentTestCaseVisibility.HIDDEN),
+                AssignmentExampleResponse(seq = 1, inputValues = listOf("A"), outputText = "B", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                AssignmentExampleResponse(seq = 2, inputValues = listOf("C"), outputText = "D", visibility = AssignmentTestCaseVisibility.HIDDEN),
             ),
         )
 
@@ -62,7 +62,7 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 1, inputText = "", outputText = "EMPTY", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                AssignmentExampleResponse(seq = 1, inputValues = emptyList(), outputText = "EMPTY", visibility = AssignmentTestCaseVisibility.PUBLIC),
             ),
         )
 
@@ -78,7 +78,7 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
             testCases = listOf(
                 AssignmentExampleResponse(
                     seq = 1,
-                    inputText = "hello world\n42  99",
+                    inputValues = listOf("hello world", "42  99"),
                     outputText = "ok",
                     visibility = AssignmentTestCaseVisibility.PUBLIC,
                 ),
@@ -95,7 +95,7 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 1, inputText = "1 2", outputText = "3", visibility = AssignmentTestCaseVisibility.EXCLUDED),
+                AssignmentExampleResponse(seq = 1, inputValues = listOf("1 2"), outputText = "3", visibility = AssignmentTestCaseVisibility.EXCLUDED),
             ),
         )
 
