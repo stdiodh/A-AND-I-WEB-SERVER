@@ -22,8 +22,8 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
             ),
             testCases = listOf(
                 AssignmentExampleResponse(seq = 3, inputText = "9 9", outputText = "18", visibility = AssignmentTestCaseVisibility.EXCLUDED),
-                AssignmentExampleResponse(seq = 2, inputText = "3 4", outputText = "7", visibility = AssignmentTestCaseVisibility.HIDDEN),
-                AssignmentExampleResponse(seq = 1, inputText = "1 2", outputText = "3", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                AssignmentExampleResponse(seq = 2, inputText = "3\n4", outputText = "7", visibility = AssignmentTestCaseVisibility.HIDDEN),
+                AssignmentExampleResponse(seq = 1, inputText = "1\n2", outputText = "3", visibility = AssignmentTestCaseVisibility.PUBLIC),
             ),
         )
 
@@ -31,9 +31,10 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
         event.problemId shouldBe "assignment-uuid"
         event.testCases shouldHaveSize 2
         event.testCases.first().caseId shouldBe 1
-        event.testCases.first().input shouldBe listOf("1 2")
+        event.testCases.first().input shouldBe listOf("1", "2")
         event.testCases.first().output shouldBe "3"
         event.testCases.last().caseId shouldBe 2
+        event.testCases.last().input shouldBe listOf("3", "4")
     }
 
     "update 이벤트는 input 배열 규약을 유지한 problem update payload 를 만든다" {
@@ -52,6 +53,39 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
         event.problemId shouldBe "assignment-uuid"
         event.testCases shouldHaveSize 2
         event.testCases[1].input shouldBe listOf("C")
+    }
+
+    "빈 입력은 빈 args 배열로 변환한다" {
+        val event = mapper.created(
+            assignment = assignment(
+                id = "assignment-uuid",
+                status = AssignmentStatus.DRAFT,
+            ),
+            testCases = listOf(
+                AssignmentExampleResponse(seq = 1, inputText = "", outputText = "EMPTY", visibility = AssignmentTestCaseVisibility.PUBLIC),
+            ),
+        )
+
+        event.testCases.single().input shouldBe emptyList()
+    }
+
+    "한 줄 공백은 유지하고 줄바꿈만 args 경계로 사용한다" {
+        val event = mapper.updated(
+            assignment = assignment(
+                id = "assignment-uuid",
+                status = AssignmentStatus.PUBLISHED,
+            ),
+            testCases = listOf(
+                AssignmentExampleResponse(
+                    seq = 1,
+                    inputText = "hello world\n42  99",
+                    outputText = "ok",
+                    visibility = AssignmentTestCaseVisibility.PUBLIC,
+                ),
+            ),
+        )
+
+        event.testCases.single().input shouldBe listOf("hello world", "42  99")
     }
 
     "create 이벤트는 모든 케이스가 EXCLUDED 면 빈 testCases 배열을 유지한다" {

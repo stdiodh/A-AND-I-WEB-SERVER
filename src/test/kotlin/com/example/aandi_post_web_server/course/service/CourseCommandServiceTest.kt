@@ -616,7 +616,7 @@ class CourseCommandServiceTest : StringSpec({
         java.util.UUID.fromString(fixture.assignmentReportTestCaseEventPublisher.events.single().problemId).toString() shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().problemId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 2
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().caseId shouldBe 1
-        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe listOf("ADD 1\nCLOSE")
+        fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().input shouldBe listOf("ADD 1", "CLOSE")
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.first().output shouldBe "3"
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.last().caseId shouldBe 2
     }
