@@ -3,12 +3,8 @@ package com.example.aandi_post_web_server.course.service
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentCodeTemplate
 import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
-import com.example.aandi_post_web_server.assignment.entity.AssignmentProblemClassification
-import com.example.aandi_post_web_server.assignment.entity.AssignmentProblemDetail
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
-import com.example.aandi_post_web_server.assignment.entity.AssignmentSubmissionGuide
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
-import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
 import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
@@ -114,7 +110,7 @@ class CourseQueryServiceTest : StringSpec({
             .assertNext { detail ->
                 detail.id shouldBe assignmentId
                 detail.status shouldBe AssignmentStatus.DRAFT
-                detail.metadata.problemDetail?.classification?.algorithmStep shouldBe AssignmentProblemStep.STEP0
+                detail.metadata.codeTemplates.first().language shouldBe AssignmentTemplateLanguage.KOTLIN
             }
             .verifyComplete()
     }
@@ -353,27 +349,14 @@ private fun queryAssignment(
             difficulty = AssignmentDifficulty.MID,
             description = "content",
             timeLimitMinutes = 60,
-            problemDetail = AssignmentProblemDetail(
-                inputDescription = "입력이 없다.",
-                outputDescription = "Hello World!를 출력한다.",
-                classification = AssignmentProblemClassification(
-                    algorithmStep = AssignmentProblemStep.STEP0,
-                    difficultyStep = 1,
-                ),
-            ),
-            submissionGuide = AssignmentSubmissionGuide(),
             codeTemplates = listOf(
                 AssignmentCodeTemplate(
                     language = AssignmentTemplateLanguage.KOTLIN,
-                    commentTemplate = "/* ... */",
-                    functionTemplate = "fun solution(): String { ... }",
-                    runnableTemplate = "fun solution(): String { ... }",
+                    functionTemplate = "/* ... */\nfun solution(): String { ... }",
                 ),
                 AssignmentCodeTemplate(
                     language = AssignmentTemplateLanguage.DART,
-                    commentTemplate = "/* ... */",
-                    functionTemplate = "String solution() { ... }",
-                    runnableTemplate = "String solution() { ... }",
+                    functionTemplate = "/* ... */\nString solution() { ... }",
                 ),
             ),
         ),

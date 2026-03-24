@@ -2,8 +2,6 @@ package com.example.aandi_post_web_server.assignment.jackson
 
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentCodeTemplatePayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetailPayload
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuidePayload
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentLearningGoalRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentTestCaseRequest
@@ -86,15 +84,9 @@ private class AssignmentMetadataPayloadDeserializer(
                 root.get("testCases"),
                 object : TypeReference<List<CreateAssignmentTestCaseRequest>>() {},
             ),
-            problemDetail = codec.readNullable(root.get("problemDetail"), AssignmentProblemDetailPayload::class.java),
-            submissionGuide = codec.readNullable(root.get("submissionGuide"), AssignmentSubmissionGuidePayload::class.java),
             codeTemplates = codec.readList(
                 root.get("codeTemplates"),
                 object : TypeReference<List<AssignmentCodeTemplatePayload>>() {},
-            ),
-            attributes = codec.readMap(
-                root.get("attributes"),
-                object : TypeReference<Map<String, Any?>>() {},
             ),
         )
         presenceTracker.markTestCasesProvided(payload, root.has("testCases"))
@@ -170,13 +162,6 @@ private fun <T> ObjectMapper.readRequired(node: JsonNode?, clazz: Class<T>, fiel
 private fun <T> ObjectMapper.readList(node: JsonNode?, typeReference: TypeReference<List<T>>): List<T> {
     if (node == null || node.isNull) {
         return emptyList()
-    }
-    return convertValue(node, typeReference)
-}
-
-private fun <K, V> ObjectMapper.readMap(node: JsonNode?, typeReference: TypeReference<Map<K, V>>): Map<K, V> {
-    if (node == null || node.isNull) {
-        return emptyMap()
     }
     return convertValue(node, typeReference)
 }

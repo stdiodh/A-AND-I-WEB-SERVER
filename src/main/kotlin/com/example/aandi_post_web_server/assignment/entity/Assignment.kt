@@ -1,7 +1,6 @@
 package com.example.aandi_post_web_server.assignment.entity
 
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
-import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
 import org.springframework.data.annotation.Id
@@ -9,28 +8,9 @@ import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
 
-data class AssignmentProblemClassification(
-    val algorithmStep: AssignmentProblemStep,
-    val difficultyStep: Int,
-)
-
-data class AssignmentProblemDetail(
-    val inputDescription: String? = null,
-    val outputDescription: String? = null,
-    val classification: AssignmentProblemClassification? = null,
-)
-
-data class AssignmentSubmissionGuide(
-    val title: String = "문제 풀이 템플릿",
-    val description: String = "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.",
-    val commentSections: List<String> = listOf("문제", "해석", "풀이"),
-)
-
 data class AssignmentCodeTemplate(
     val language: AssignmentTemplateLanguage,
-    val commentTemplate: String,
     val functionTemplate: String,
-    val runnableTemplate: String,
 )
 
 data class AssignmentMetadata(
@@ -39,10 +19,7 @@ data class AssignmentMetadata(
     val description: String,
     val timeLimitMinutes: Int,
     val learningGoals: List<String> = emptyList(),
-    val problemDetail: AssignmentProblemDetail? = null,
-    val submissionGuide: AssignmentSubmissionGuide? = null,
     val codeTemplates: List<AssignmentCodeTemplate> = emptyList(),
-    val attributes: Map<String, Any?> = emptyMap(),
 )
 
 @Document(collection = "assignments")

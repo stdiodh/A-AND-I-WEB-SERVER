@@ -6,15 +6,11 @@ import com.example.aandi_post_web_server.assignment.dtos.AssignmentCodeTemplateR
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailMetadataResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemClassificationResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentProblemDetailResponse
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.dtos.AssignmentMetadataResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentSubmissionGuideResponse
 import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
-import com.example.aandi_post_web_server.assignment.enum.AssignmentProblemStep
 import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
 import com.example.aandi_post_web_server.common.config.WebConfig
@@ -113,8 +109,6 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .expectStatus().isOk
                 .expectBody()
                 .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
-                .jsonPath("$.data.metadata.problemDetail.classification.algorithmStep").isEqualTo("STEP0")
-                .jsonPath("$.data.metadata.submissionGuide.title").isEqualTo("문제 풀이 템플릿")
                 .jsonPath("$.data.metadata.codeTemplates[0].language").isEqualTo("KOTLIN")
         }
 
@@ -363,7 +357,6 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                             title = "터미널 계산기",
                             difficulty = AssignmentDifficulty.MID,
                             description = "문제",
-                            attributes = emptyMap(),
                         ),
                     )
                 )
@@ -393,8 +386,6 @@ class CourseApiRoutingWebFluxTest : StringSpec() {
                 .expectStatus().isOk
                 .expectBody()
                 .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
-                .jsonPath("$.data.metadata.problemDetail.outputDescription").isEqualTo("Hello World!를 출력한다.")
-                .jsonPath("$.data.metadata.submissionGuide.commentSections[0]").isEqualTo("문제")
                 .jsonPath("$.data.metadata.codeTemplates[0].functionTemplate").isEqualTo("fun solution(): String { ... }")
         }
 
@@ -484,28 +475,12 @@ private fun sampleAssignmentDetailResponse(): AssignmentDetailResponse {
             title = "터미널 계산기",
             difficulty = AssignmentDifficulty.MID,
             description = "# 문제 설명",
-            problemDetail = AssignmentProblemDetailResponse(
-                inputDescription = "입력이 없다.",
-                outputDescription = "Hello World!를 출력한다.",
-                classification = AssignmentProblemClassificationResponse(
-                    algorithmStep = AssignmentProblemStep.STEP0,
-                    difficultyStep = 1,
-                ),
-            ),
-            submissionGuide = AssignmentSubmissionGuideResponse(
-                title = "문제 풀이 템플릿",
-                description = "제출 코드 상단에는 문제-해석-풀이 주석을 작성해야 합니다.",
-                commentSections = listOf("문제", "해석", "풀이"),
-            ),
             codeTemplates = listOf(
                 AssignmentCodeTemplateResponse(
                     language = AssignmentTemplateLanguage.KOTLIN,
-                    commentTemplate = "/* ... */",
                     functionTemplate = "fun solution(): String { ... }",
-                    runnableTemplate = "fun solution(): String { ... }",
                 )
             ),
-            attributes = emptyMap(),
         ),
     )
 }
