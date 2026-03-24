@@ -14,13 +14,13 @@ class AssignmentTestCaseValidatorTest : StringSpec({
             listOf(
                 CreateAssignmentTestCaseRequest(
                     seq = 1,
-                    inputText = "",
+                    inputValues = emptyList(),
                     outputText = "line1\nline2\tend",
                     visibility = AssignmentTestCaseVisibility.PUBLIC,
                 ),
                 CreateAssignmentTestCaseRequest(
                     seq = 2,
-                    inputText = "hidden\r\ncase",
+                    inputValues = listOf("hidden\r\ncase"),
                     outputText = "ok",
                     visibility = AssignmentTestCaseVisibility.HIDDEN,
                 ),
@@ -32,8 +32,8 @@ class AssignmentTestCaseValidatorTest : StringSpec({
         val error = shouldThrow<IllegalArgumentException> {
             validator.validate(
                 listOf(
-                    CreateAssignmentTestCaseRequest(1, "a", "b", AssignmentTestCaseVisibility.PUBLIC),
-                    CreateAssignmentTestCaseRequest(1, "c", "d", AssignmentTestCaseVisibility.HIDDEN),
+                    CreateAssignmentTestCaseRequest(1, listOf("a"), "b", AssignmentTestCaseVisibility.PUBLIC),
+                    CreateAssignmentTestCaseRequest(1, listOf("c"), "d", AssignmentTestCaseVisibility.HIDDEN),
                 )
             )
         }
@@ -45,7 +45,7 @@ class AssignmentTestCaseValidatorTest : StringSpec({
         val error = shouldThrow<IllegalArgumentException> {
             validator.validate(
                 listOf(
-                    CreateAssignmentTestCaseRequest(1, "a", "b", AssignmentTestCaseVisibility.EXCLUDED),
+                    CreateAssignmentTestCaseRequest(1, listOf("a"), "b", AssignmentTestCaseVisibility.EXCLUDED),
                 )
             )
         }
@@ -59,7 +59,7 @@ class AssignmentTestCaseValidatorTest : StringSpec({
                 listOf(
                     CreateAssignmentTestCaseRequest(
                         seq = 1,
-                        inputText = "입력이 존재하지 않습니다.",
+                        inputValues = listOf("입력이 존재하지 않습니다."),
                         outputText = "result",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     ),
@@ -67,7 +67,7 @@ class AssignmentTestCaseValidatorTest : StringSpec({
             )
         }
 
-        error.message shouldBe "testCases[0].inputText must use empty string for no-input case"
+        error.message shouldBe "testCases[0].inputValues must use empty array for no-input case"
     }
 
     "비정상 제어문자는 금지한다" {
@@ -76,7 +76,7 @@ class AssignmentTestCaseValidatorTest : StringSpec({
                 listOf(
                     CreateAssignmentTestCaseRequest(
                         seq = 1,
-                        inputText = "bad\u0000input",
+                        inputValues = listOf("bad\u0000input"),
                         outputText = "result",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     ),
@@ -84,7 +84,7 @@ class AssignmentTestCaseValidatorTest : StringSpec({
             )
         }
 
-        error.message shouldBe "testCases[0].inputText contains unsupported control characters"
+        error.message shouldBe "testCases[0].inputValues contains unsupported control characters"
     }
 
     "빈 배열은 허용하지 않는다" {

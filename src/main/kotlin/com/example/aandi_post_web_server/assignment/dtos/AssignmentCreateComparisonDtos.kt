@@ -57,8 +57,8 @@ data class AssignmentCreateComparisonMetadataResponse(
 data class AssignmentCreateComparisonTestCaseResponse(
     @field:Schema(description = "테스트 케이스 순번", example = "1")
     val seq: Int,
-    @field:Schema(description = "입력 예시", example = "ADD 1\\nCLOSE")
-    val inputText: String,
+    @field:Schema(description = "입력 인자 목록", example = """["ADD 1", "CLOSE"]""")
+    val inputValues: List<String>,
     @field:Schema(description = "출력 예시", example = "+1")
     val outputText: String,
     @field:Schema(description = "공개 여부", example = "PUBLIC")
@@ -91,7 +91,7 @@ fun AssignmentDetailResponse.toCreateComparisonItemResponse(): AssignmentCreateC
             testCases = metadata.testCases.map {
                 AssignmentCreateComparisonTestCaseResponse(
                     seq = it.seq,
-                    inputText = it.inputText,
+                    inputValues = it.inputValues,
                     outputText = it.outputText,
                     visibility = it.visibility,
                 )
@@ -123,7 +123,7 @@ private fun AssignmentMetadataPayload.toCreateComparisonMetadataResponse(): Assi
         testCases = testCases.map {
             AssignmentCreateComparisonTestCaseResponse(
                 seq = it.seq,
-                inputText = it.inputText,
+                inputValues = it.inputValues,
                 outputText = it.outputText,
                 visibility = it.visibility,
             )

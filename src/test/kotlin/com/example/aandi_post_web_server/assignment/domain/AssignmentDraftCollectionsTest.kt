@@ -32,8 +32,8 @@ class AssignmentDraftCollectionsTest : StringSpec({
         shouldThrow<IllegalArgumentException> {
             AssignmentExampleDrafts.fromRequests(
                 listOf(
-                    CreateAssignmentExampleRequest(seq = 1, inputText = "1", outputText = "1"),
-                    CreateAssignmentExampleRequest(seq = 1, inputText = "2", outputText = "2"),
+                    CreateAssignmentExampleRequest(seq = 1, inputValues = listOf("1"), outputText = "1"),
+                    CreateAssignmentExampleRequest(seq = 1, inputValues = listOf("2"), outputText = "2"),
                 )
             )
         }
@@ -42,7 +42,7 @@ class AssignmentDraftCollectionsTest : StringSpec({
     "AssignmentExampleDrafts는 요청을 엔티티로 변환한다" {
         val drafts = AssignmentExampleDrafts.fromRequests(
             listOf(
-                CreateAssignmentExampleRequest(seq = 1, inputText = "ADD 1", outputText = "+1"),
+                CreateAssignmentExampleRequest(seq = 1, inputValues = listOf("ADD 1"), outputText = "+1"),
             )
         )
         val now = Instant.parse("2026-03-01T00:00:00Z")

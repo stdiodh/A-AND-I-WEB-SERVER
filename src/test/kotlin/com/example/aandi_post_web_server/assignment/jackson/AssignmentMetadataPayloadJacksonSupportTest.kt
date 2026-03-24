@@ -23,7 +23,7 @@ class AssignmentMetadataPayloadJacksonSupportTest : StringSpec({
                     "testCases": [
                       {
                         "seq": 1,
-                        "inputText": "in",
+                        "inputValues": ["in"],
                         "outputText": "out"
                       }
                     ]

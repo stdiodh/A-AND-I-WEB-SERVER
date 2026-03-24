@@ -470,7 +470,7 @@ class CourseCommandServiceTest : StringSpec({
                 testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
-                        inputText = "",
+                        inputValues = emptyList(),
                         outputText = "0",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     )
@@ -552,19 +552,19 @@ class CourseCommandServiceTest : StringSpec({
                 testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
-                        inputText = "ADD 1\nCLOSE",
+                        inputValues = listOf("ADD 1", "CLOSE"),
                         outputText = "3",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     ),
                     CreateAssignmentExampleRequest(
                         seq = 2,
-                        inputText = "2 3",
+                        inputValues = listOf("2 3"),
                         outputText = "5",
                         visibility = AssignmentTestCaseVisibility.HIDDEN,
                     ),
                     CreateAssignmentExampleRequest(
                         seq = 3,
-                        inputText = "9 9",
+                        inputValues = listOf("9 9"),
                         outputText = "18",
                         visibility = AssignmentTestCaseVisibility.EXCLUDED,
                     ),
@@ -640,7 +640,7 @@ class CourseCommandServiceTest : StringSpec({
                 testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
-                        inputText = "1 2",
+                        inputValues = listOf("1 2"),
                         outputText = "3",
                     )
                 ),
@@ -709,7 +709,7 @@ class CourseCommandServiceTest : StringSpec({
                 testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
-                        inputText = "1 2",
+                        inputValues = listOf("1 2"),
                         outputText = "3",
                         visibility = AssignmentTestCaseVisibility.EXCLUDED,
                     )
@@ -742,7 +742,7 @@ class CourseCommandServiceTest : StringSpec({
                 testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
-                        inputText = "updated input",
+                        inputValues = listOf("updated input"),
                         outputText = "updated output",
                     )
                 ),
@@ -795,7 +795,7 @@ class CourseCommandServiceTest : StringSpec({
         )
             .assertNext { updated ->
                 updated.metadata.examples shouldHaveSize 1
-                updated.metadata.examples.first().inputText shouldBe "updated input"
+                updated.metadata.examples.first().inputValues shouldBe listOf("updated input")
             }
             .verifyComplete()
 
@@ -842,7 +842,7 @@ class CourseCommandServiceTest : StringSpec({
                         id = "ex-1",
                         assignmentId = assignmentId,
                         seq = 1,
-                        inputText = "persisted input",
+                        inputValues = listOf("persisted input"),
                         outputText = "persisted output",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     )
@@ -901,7 +901,7 @@ class CourseCommandServiceTest : StringSpec({
                         id = "ex-1",
                         assignmentId = assignmentId,
                         seq = 1,
-                        inputText = "persisted input",
+                        inputValues = listOf("persisted input"),
                         outputText = "persisted output",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     )
@@ -923,7 +923,7 @@ class CourseCommandServiceTest : StringSpec({
         )
             .assertNext { updated ->
                 updated.metadata.examples shouldHaveSize 1
-                updated.metadata.examples.first().inputText shouldBe "persisted input"
+                updated.metadata.examples.first().inputValues shouldBe listOf("persisted input")
             }
             .verifyComplete()
 
@@ -971,7 +971,7 @@ class CourseCommandServiceTest : StringSpec({
                         id = "ex-1",
                         assignmentId = assignmentId,
                         seq = 1,
-                        inputText = "persisted input",
+                        inputValues = listOf("persisted input"),
                         outputText = "persisted output",
                     )
                 )
@@ -1006,7 +1006,7 @@ class CourseCommandServiceTest : StringSpec({
                 testCases = listOf(
                     CreateAssignmentExampleRequest(
                         seq = 1,
-                        inputText = "new input",
+                        inputValues = listOf("new input"),
                         outputText = "new output",
                         visibility = AssignmentTestCaseVisibility.EXCLUDED,
                     )
