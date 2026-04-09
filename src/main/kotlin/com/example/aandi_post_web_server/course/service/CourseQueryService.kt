@@ -418,6 +418,9 @@ class CourseQueryService(
         effectiveAssignmentStatus(assignment) == AssignmentStatus.PUBLISHED
 
     private fun effectiveAssignmentStatus(assignment: Assignment, now: Instant = Instant.now(clock)): AssignmentStatus {
+        if (assignment.status != AssignmentStatus.PUBLISHED) {
+            return assignment.status
+        }
         if (now >= assignment.startAt) {
             return AssignmentStatus.PUBLISHED
         }
@@ -427,7 +430,11 @@ class CourseQueryService(
     private fun effectiveAssignment(assignment: Assignment, now: Instant = Instant.now(clock)): Assignment =
         assignment.copy(
             status = effectiveAssignmentStatus(assignment, now),
-            publishedAt = if (now >= assignment.startAt) assignment.publishedAt ?: assignment.startAt else null,
+            publishedAt = if (effectiveAssignmentStatus(assignment, now) == AssignmentStatus.PUBLISHED) {
+                assignment.publishedAt ?: assignment.startAt
+            } else {
+                null
+            },
         )
 
     private fun toAssignmentSummaryResponse(
