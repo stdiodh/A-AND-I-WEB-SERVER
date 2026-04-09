@@ -46,3 +46,6 @@ app:
       region: ${APP_EVENTS_USER_SYNC_REGION:ap-northeast-2}
       wait-time-seconds: ${APP_EVENTS_USER_SYNC_WAIT_TIME_SECONDS:20}
       max-number-of-messages: ${APP_EVENTS_USER_SYNC_MAX_NUMBER_OF_MESSAGES:10}
+  report:
+    v2:
+      salt-secret: ${APP_REPORT_V2_SALT_SECRET:}

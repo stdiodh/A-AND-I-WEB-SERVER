@@ -1,6 +1,11 @@
 package com.example.aandi_post_web_server.common.error
 
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
+import com.example.aandi_post_web_server.report.v2.api.ReportApiEnvelope
+import com.example.aandi_post_web_server.report.v2.api.ReportApiResponseFactory
+import com.example.aandi_post_web_server.report.v2.error.ReportErrorCode
+import com.example.aandi_post_web_server.report.v2.error.ReportExceptionMapper
+import com.example.aandi_post_web_server.report.v2.security.ReportPathMatcher
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler
@@ -26,6 +31,10 @@ class GlobalWebExceptionHandler(
             return Mono.error(ex)
         }
 
+        if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
+            return handleReportRequest(exchange, ex)
+        }
+
         val result = errorResponseFactory.fromThrowable(exchange, ex)
         val response = exchange.response
         response.statusCode = HttpStatusCode.valueOf(result.status.value())
@@ -37,12 +46,38 @@ class GlobalWebExceptionHandler(
         return response.writeWith(Mono.just(response.bufferFactory().wrap(payload)))
     }
 
+    private fun handleReportRequest(exchange: ServerWebExchange, ex: Throwable): Mono<Void> {
+        val mapped = ReportExceptionMapper.fromThrowable(ex)
+        val response = exchange.response
+        response.statusCode = HttpStatusCode.valueOf(mapped.status.value())
+        response.headers.contentType = MediaType.APPLICATION_JSON
+        response.headers.set(RequestIdSupport.HEADER_NAME, RequestIdSupport.resolveRequestId(exchange))
+
+        val payload = serializeReportBody(
+            ReportApiResponseFactory.failure(mapped.errorCode, mapped.message)
+        )
+        logReportByStatus(exchange, mapped, ex)
+        return response.writeWith(Mono.just(response.bufferFactory().wrap(payload)))
+    }
+
     private fun serializeBody(body: ApiEnvelope<Nothing?>): ByteArray {
         return runCatching { objectMapper.writeValueAsBytes(body) }
             .getOrElse {
                 """
                 {"success":false,"data":null,"error":{"code":"INTERNAL_ERROR","message":"서버 내부 오류가 발생했습니다."},"timestamp":"${body.timestamp}"}
                 """.trimIndent().toByteArray()
+            }
+    }
+
+    private fun serializeReportBody(body: ReportApiEnvelope<Nothing?>): ByteArray {
+        return runCatching { objectMapper.writeValueAsBytes(body) }
+            .getOrElse {
+                objectMapper.writeValueAsBytes(
+                    ReportApiResponseFactory.failure(
+                        ReportErrorCode.REPORT_INTERNAL_ERROR,
+                        ReportErrorCode.REPORT_INTERNAL_ERROR.messageTemplate,
+                    )
+                )
             }
     }
 
@@ -70,6 +105,37 @@ class GlobalWebExceptionHandler(
             exchange.request.path.pathWithinApplication().value(),
             result.status.value(),
             errorCode,
+            ex.javaClass.simpleName,
+        )
+    }
+
+    private fun logReportByStatus(
+        exchange: ServerWebExchange,
+        result: ReportExceptionMapper.ReportErrorResult,
+        ex: Throwable,
+    ) {
+        val requestId = RequestIdSupport.resolveRequestId(exchange)
+        if (result.status.value() >= 500) {
+            log.error(
+                "[requestId={}] {} {} -> {} {} ({})",
+                requestId,
+                exchange.request.method,
+                exchange.request.path.pathWithinApplication().value(),
+                result.status.value(),
+                result.errorCode.code,
+                ex.javaClass.simpleName,
+                ex,
+            )
+            return
+        }
+
+        log.warn(
+            "[requestId={}] {} {} -> {} {} ({})",
+            requestId,
+            exchange.request.method,
+            exchange.request.path.pathWithinApplication().value(),
+            result.status.value(),
+            result.errorCode.code,
             ex.javaClass.simpleName,
         )
     }
