@@ -61,6 +61,7 @@ class SecurityConfig {
                 it.pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.pathMatchers(
                     "/v3/api-docs/**",
+                    "/swagger/report/**",
                     "/swagger-ui.html",
                     "/swagger-ui/**",
                     "/swagger-ui/index.html",
