@@ -37,7 +37,7 @@ internal object ReportSwaggerSupport {
                 .title("A&I Report API v2")
                 .description(
                     "A&I 통신 규약을 따르는 report v2 문서입니다. " +
-                        "공통 응답 구조는 success, data, error, timestamp 이며, " +
+                        "공통 응답 구조는 success(Boolean), data, error, timestamp 이며, " +
                         "error 는 code, message, value, alert 를 포함합니다. " +
                         "인증 헤더는 규약 기준의 Authenticate 헤더를 우선 문서화합니다."
                 )
@@ -211,7 +211,7 @@ internal object ReportSwaggerSupport {
 
     private fun v2ErrorEnvelope(code: Int, message: String, value: String, alert: String): Map<String, Any?> {
         return linkedMapOf(
-            "success" to "FAIL",
+            "success" to false,
             "data" to null,
             "error" to linkedMapOf(
                 "code" to code,

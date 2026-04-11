@@ -85,7 +85,7 @@ class ReportV2ContractTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$.success").isEqualTo("SUCCESS")
+                .jsonPath("$.success").isEqualTo(true)
                 .jsonPath("$.data[0].assignmentId").isEqualTo(assignmentId)
                 .jsonPath("$.error").isEmpty
                 .jsonPath("$.timestamp").exists()
@@ -102,7 +102,7 @@ class ReportV2ContractTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$.success").isEqualTo("SUCCESS")
+                .jsonPath("$.success").isEqualTo(true)
                 .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
                 .jsonPath("$.data.metadata.codeTemplates[0].language").isEqualTo("KOTLIN")
                 .jsonPath("$.error").isEmpty
@@ -119,7 +119,7 @@ class ReportV2ContractTest : StringSpec() {
                 .exchange()
                 .expectStatus().isOk
                 .expectBody()
-                .jsonPath("$.success").isEqualTo("SUCCESS")
+                .jsonPath("$.success").isEqualTo(true)
                 .jsonPath("$.error").isEmpty
         }
 
@@ -133,7 +133,7 @@ class ReportV2ContractTest : StringSpec() {
                 .exchange()
                 .expectStatus().isBadRequest
                 .expectBody()
-                .jsonPath("$.success").isEqualTo("FAIL")
+                .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.error.code").isEqualTo(40301)
                 .jsonPath("$.error.value").isEqualTo("VALIDATE_ERROR")
                 .jsonPath("$.error.alert").isEqualTo("입력값 형식이 올바르지 않습니다.")
@@ -149,7 +149,7 @@ class ReportV2ContractTest : StringSpec() {
                 .exchange()
                 .expectStatus().isBadRequest
                 .expectBody()
-                .jsonPath("$.success").isEqualTo("FAIL")
+                .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.error.code").isEqualTo(40301)
                 .jsonPath("$.error.value").isEqualTo("VALIDATE_ERROR")
                 .jsonPath("$.error.alert").isEqualTo("입력값 형식이 올바르지 않습니다.")
@@ -164,7 +164,7 @@ class ReportV2ContractTest : StringSpec() {
                 .exchange()
                 .expectStatus().isBadRequest
                 .expectBody()
-                .jsonPath("$.success").isEqualTo("FAIL")
+                .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.error.code").isEqualTo(40301)
                 .jsonPath("$.error.value").isEqualTo("VALIDATE_ERROR")
         }
@@ -175,7 +175,7 @@ class ReportV2ContractTest : StringSpec() {
                 .exchange()
                 .expectStatus().isUnauthorized
                 .expectBody()
-                .jsonPath("$.success").isEqualTo("FAIL")
+                .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.data").isEmpty
                 .jsonPath("$.error.code").isEqualTo(21101)
                 .jsonPath("$.error.value").isEqualTo("UNAUTHORIZED")
@@ -195,7 +195,7 @@ class ReportV2ContractTest : StringSpec() {
                 .exchange()
                 .expectStatus().isNotFound
                 .expectBody()
-                .jsonPath("$.success").isEqualTo("FAIL")
+                .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.error.code").isEqualTo(96501)
                 .jsonPath("$.error.value").isEqualTo("RESOURCE_NOT_FOUND")
         }
@@ -207,7 +207,7 @@ class ReportV2ContractTest : StringSpec() {
                 .exchange()
                 .expectStatus().isBadRequest
                 .expectBody()
-                .jsonPath("$.success").isEqualTo("FAIL")
+                .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.error.code").isEqualTo(40301)
                 .jsonPath("$.error.value").isEqualTo("VALIDATE_ERROR")
         }

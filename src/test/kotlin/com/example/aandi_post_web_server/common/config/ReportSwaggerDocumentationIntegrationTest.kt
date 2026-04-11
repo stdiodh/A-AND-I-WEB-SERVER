@@ -45,6 +45,12 @@ class ReportSwaggerDocumentationIntegrationTest : StringSpec() {
                     body.shouldContain("\"/v2/report")
                     body.shouldNotContain("\"/v1/courses")
                     body.shouldNotContain("\"/v1/report")
+                    body.shouldContain("\"description\":\"요청 성공 여부(Boolean)\"")
+                    body.shouldContain("\"type\":\"boolean\"")
+                    body.shouldContain("\"success\":true")
+                    body.shouldContain("\"success\":false")
+                    body.shouldNotContain("\"success\":\"SUCCESS\"")
+                    body.shouldNotContain("\"success\":\"FAIL\"")
                 }
         }
 

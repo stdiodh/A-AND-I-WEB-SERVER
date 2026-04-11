@@ -9,8 +9,8 @@ import java.time.format.DateTimeFormatter
 @Schema(description = "report v2 공통 API 응답")
 @JsonInclude(JsonInclude.Include.ALWAYS)
 data class ReportApiEnvelope<T>(
-    @field:Schema(description = "요청 성공 여부 문자열", example = "SUCCESS")
-    val success: String,
+    @field:Schema(description = "요청 성공 여부(Boolean)", example = "true")
+    val success: Boolean,
     @field:Schema(description = "성공 시 반환되는 데이터입니다. 실패하면 null입니다.", nullable = true)
     val data: T?,
     @field:Schema(description = "실패 정보입니다. 성공하면 null입니다.", nullable = true)
@@ -20,8 +20,8 @@ data class ReportApiEnvelope<T>(
 ) {
     companion object {
         private val seoulZone: ZoneId = ZoneId.of("Asia/Seoul")
-        const val SUCCESS: String = "SUCCESS"
-        const val FAIL: String = "FAIL"
+        const val SUCCESS: Boolean = true
+        const val FAIL: Boolean = false
 
         internal fun now(): String = OffsetDateTime.now(seoulZone).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
     }
