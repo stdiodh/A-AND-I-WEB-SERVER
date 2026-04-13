@@ -10,7 +10,7 @@ class ReportSwaggerV1Config {
     fun reportV1GroupedOpenApi(): GroupedOpenApi {
         return GroupedOpenApi.builder()
             .group("report-v1")
-            .pathsToMatch("/v1/report/**", "/v1/courses/**")
+            .pathsToMatch("/v1/**")
             .addOpenApiCustomizer(ReportSwaggerSupport.reportV1InfoCustomizer())
             .addOperationCustomizer(ReportSwaggerSupport.reportV1OperationCustomizer())
             .build()

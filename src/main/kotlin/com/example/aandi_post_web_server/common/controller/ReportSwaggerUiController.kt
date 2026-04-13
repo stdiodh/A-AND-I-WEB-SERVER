@@ -20,4 +20,10 @@ class ReportSwaggerUiController {
         ResponseEntity.status(HttpStatus.FOUND)
             .location(URI.create("/swagger-ui/index.html?urls.primaryName=report-service-v2"))
             .build()
+
+    @GetMapping("/v3/api-docs/assignment-v2")
+    fun assignmentV2ApiDocs(): ResponseEntity<Void> =
+        ResponseEntity.status(HttpStatus.FOUND)
+            .location(URI.create("/v3/api-docs/report-v2"))
+            .build()
 }

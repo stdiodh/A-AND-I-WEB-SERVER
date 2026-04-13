@@ -66,9 +66,10 @@ class SecurityConfig {
                     "/swagger-ui/**",
                     "/swagger-ui/index.html",
                 ).permitAll()
-                it.pathMatchers("/v2/admin/report/**").hasRole("ADMIN")
+                it.pathMatchers("/v2/admin/report/**", "/v2/admin/courses/**").hasRole("ADMIN")
                 it.pathMatchers("/v1/admin/**").hasRole("ADMIN")
-                it.pathMatchers("/v1/report/**", "/v1/courses/**", "/v2/report/**", "/v2/assignments/**").hasAnyRole("USER", "ORGANIZER", "ADMIN")
+                it.pathMatchers("/v1/report/**", "/v1/courses/**", "/v2/report/**", "/v2/courses/**", "/v2/assignments/**")
+                    .hasAnyRole("USER", "ORGANIZER", "ADMIN")
                 it.anyExchange().denyAll()
             }
             .exceptionHandling { exceptions ->

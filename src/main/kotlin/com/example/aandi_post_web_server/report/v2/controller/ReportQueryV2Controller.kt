@@ -26,14 +26,17 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
-@Tag(name = "Report v2 조회 API", description = "신규 통신 규약을 따르는 report v2 조회 API")
+@Tag(name = "리포트 v2 API", description = "동일한 코스/과제 조회 기능을 report v2 헤더 규약과 `ReportApiEnvelope` 로 제공하는 API입니다.")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/v2/report")
 class ReportQueryV2Controller(
     private val reportFacadeService: ReportFacadeService,
 ) {
-    @Operation(summary = "report 과제 목록 조회", description = "기존 assignment 조회 기능을 report v2 계약으로 노출합니다.")
+    @Operation(
+        summary = "코스 과제 목록 조회",
+        description = "`GET /v2/courses/{courseSlug}/assignments` 와 동일한 조회 기능을 report v2 계약으로 제공합니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ReportV2AssignmentSummaryListEnvelopeDoc::class))]),
@@ -58,7 +61,10 @@ class ReportQueryV2Controller(
             .map(ReportResponseMapper::assignmentSummaryList)
             .map(ReportApiResponseFactory::success)
 
-    @Operation(summary = "report 주차별 과제 목록 조회", description = "특정 주차의 과제 목록을 report v2 계약으로 노출합니다.")
+    @Operation(
+        summary = "주차별 과제 목록 조회",
+        description = "`GET /v2/courses/{courseSlug}/weeks/{weekNo}/assignments` 와 동일한 조회 기능을 report v2 계약으로 제공합니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ReportV2AssignmentSummaryListEnvelopeDoc::class))]),
@@ -83,7 +89,10 @@ class ReportQueryV2Controller(
             .map(ReportResponseMapper::assignmentSummaryList)
             .map(ReportApiResponseFactory::success)
 
-    @Operation(summary = "report 과제 상세 조회", description = "특정 과제 상세를 report v2 계약으로 노출합니다.")
+    @Operation(
+        summary = "과제 상세 조회",
+        description = "`GET /v2/courses/{courseSlug}/assignments/{assignmentId}` 와 동일한 조회 기능을 report v2 계약으로 제공합니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = ReportV2AssignmentDetailEnvelopeDoc::class))]),

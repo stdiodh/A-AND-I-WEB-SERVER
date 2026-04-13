@@ -20,7 +20,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
-@Tag(name = "과제 제출 여부 v2 API", description = "현재 사용자의 과제 제출 여부 projection 조회 API")
+@Tag(
+    name = "과제 제출 여부 v2 API",
+    description = "현재 로그인한 사용자의 과제 제출 여부를 조회하는 사용자 API입니다. 관리자 조회 API가 아니며, 채점 완료 제출 이력 projection 을 읽는 API입니다.",
+)
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/v2/assignments")
@@ -30,7 +33,14 @@ class AssignmentSubmissionStatusV2Controller(
 
     @Operation(
         summary = "내 과제 제출 여부 조회",
-        description = "현재 로그인한 사용자의 publicCode 기준으로 채점 완료 제출 여부 projection 을 조회합니다.",
+        description =
+            """
+            현재 로그인한 사용자가 이 과제를 이미 제출 완료했는지 확인합니다.
+            이 API는 OJ의 `JUDGE_COMPLETED` 이벤트를 기준으로 적재된 projection 을 조회하며, 제출 횟수를 계산하는 API가 아닙니다.
+            projection 이 있으면 `submitted=true`, projection 이 없으면 `submitted=false` 를 반환합니다.
+            `submitted=true` 는 현재 사용자 기준으로 채점 완료된 제출 이력이 최소 1건 이상 존재한다는 의미입니다.
+            관리자용 코스 관리 API가 아니라 현재 사용자 본인의 상태를 확인하는 API이므로 `/v2/assignments/{assignmentId}/submission-status/me` 경로를 유지합니다.
+            """,
     )
     @ApiResponses(
         value = [
