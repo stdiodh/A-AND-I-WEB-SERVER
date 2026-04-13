@@ -1,19 +1,17 @@
-package com.example.aandi_post_web_server.user.config
+package com.example.aandi_post_web_server.assignment.submission.event
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Primary
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 
 @Configuration
-@EnableConfigurationProperties(UserSyncEventProperties::class)
-class UserSyncEventConfig {
+@EnableConfigurationProperties(JudgeSubmissionEventProperties::class)
+class JudgeSubmissionEventConfig {
 
-    @Bean
-    @Primary
-    fun sqsAsyncClient(properties: UserSyncEventProperties): SqsAsyncClient =
+    @Bean("judgeSubmissionSqsAsyncClient")
+    fun judgeSubmissionSqsAsyncClient(properties: JudgeSubmissionEventProperties): SqsAsyncClient =
         SqsAsyncClient.builder()
             .region(Region.of(properties.region))
             .build()

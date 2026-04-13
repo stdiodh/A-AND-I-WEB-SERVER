@@ -68,7 +68,7 @@ class SecurityConfig {
                 ).permitAll()
                 it.pathMatchers("/v2/admin/report/**").hasRole("ADMIN")
                 it.pathMatchers("/v1/admin/**").hasRole("ADMIN")
-                it.pathMatchers("/v1/report/**", "/v1/courses/**", "/v2/report/**").hasAnyRole("USER", "ORGANIZER", "ADMIN")
+                it.pathMatchers("/v1/report/**", "/v1/courses/**", "/v2/report/**", "/v2/assignments/**").hasAnyRole("USER", "ORGANIZER", "ADMIN")
                 it.anyExchange().denyAll()
             }
             .exceptionHandling { exceptions ->

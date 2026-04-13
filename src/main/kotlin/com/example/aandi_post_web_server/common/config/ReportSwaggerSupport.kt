@@ -45,6 +45,19 @@ internal object ReportSwaggerSupport {
                 .license(License().name("Proprietary"))
         }
 
+    fun assignmentV2InfoCustomizer(): OpenApiCustomizer =
+        OpenApiCustomizer { openApi ->
+            openApi.info = Info()
+                .title("A&I Assignment API v2")
+                .description(
+                    "Assignment v2 전용 문서입니다. " +
+                        "기존 공통 envelope(success/data/error/timestamp)와 Bearer JWT 인증을 사용하며, " +
+                        "현재는 과제 제출 여부 projection 조회 API를 포함합니다."
+                )
+                .version("v2")
+                .license(License().name("Proprietary"))
+        }
+
     fun reportV1OperationCustomizer(): OperationCustomizer =
         OperationCustomizer { operation: io.swagger.v3.oas.models.Operation, _: HandlerMethod ->
             operation.security(listOf(SecurityRequirement().addList("bearerAuth")))
