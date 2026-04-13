@@ -151,7 +151,7 @@ data class AssignmentDetailEnvelopeDoc(
 )
 
 @Schema(
-    description = "과제 제출 여부 성공 응답",
+    description = "현재 사용자의 과제 제출 여부 성공 응답. projection 이 없으면 submitted=false 와 null 상세 필드를 반환합니다.",
     example = """{"success":true,"data":{"assignmentId":"7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001","submitted":true,"firstCompletedAt":"2026-04-13T08:20:11Z","lastCompletedAt":"2026-04-13T08:20:11Z","latestScore":80,"passedCases":8,"totalCases":10},"error":null,"timestamp":"2026-04-13T17:20:11+09:00"}""",
 )
 data class AssignmentSubmissionStatusEnvelopeDoc(

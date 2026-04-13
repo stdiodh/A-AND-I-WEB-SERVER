@@ -20,8 +20,6 @@ springdoc:
         url: /v3/api-docs/report-v1
       - name: report-service-v2
         url: /v3/api-docs/report-v2
-      - name: assignment-service-v2
-        url: /v3/api-docs/assignment-v2
 
 swagger:
   server:
