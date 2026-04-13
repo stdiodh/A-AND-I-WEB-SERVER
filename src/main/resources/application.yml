@@ -15,6 +15,13 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui/index.html
+    urls:
+      - name: report-service-v1
+        url: /v3/api-docs/report-v1
+      - name: report-service-v2
+        url: /v3/api-docs/report-v2
+      - name: assignment-service-v2
+        url: /v3/api-docs/assignment-v2
 
 swagger:
   server:
@@ -46,3 +53,14 @@ app:
       region: ${APP_EVENTS_USER_SYNC_REGION:ap-northeast-2}
       wait-time-seconds: ${APP_EVENTS_USER_SYNC_WAIT_TIME_SECONDS:20}
       max-number-of-messages: ${APP_EVENTS_USER_SYNC_MAX_NUMBER_OF_MESSAGES:10}
+    judge-submission:
+      enabled: ${APP_EVENTS_JUDGE_SUBMISSION_ENABLED:false}
+      queue-url: ${APP_EVENTS_JUDGE_SUBMISSION_QUEUE_URL:}
+      region: ${APP_EVENTS_JUDGE_SUBMISSION_REGION:ap-northeast-2}
+      wait-time-seconds: ${APP_EVENTS_JUDGE_SUBMISSION_WAIT_TIME_SECONDS:20}
+      max-number-of-messages: ${APP_EVENTS_JUDGE_SUBMISSION_MAX_NUMBER_OF_MESSAGES:10}
+      visibility-timeout-seconds: ${APP_EVENTS_JUDGE_SUBMISSION_VISIBILITY_TIMEOUT_SECONDS:60}
+      poll-delay: ${APP_EVENTS_JUDGE_SUBMISSION_POLL_DELAY:PT1S}
+  report:
+    v2:
+      salt-secret: ${APP_REPORT_V2_SALT_SECRET:}

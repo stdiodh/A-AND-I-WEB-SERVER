@@ -3,6 +3,13 @@ package com.example.aandi_post_web_server.common.security
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.error.RequestIdSupport
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
+import com.example.aandi_post_web_server.report.v2.api.ReportApiResponseFactory
+import com.example.aandi_post_web_server.report.v2.error.ReportErrorCode
+import com.example.aandi_post_web_server.report.v2.error.ReportExceptionMapper
+import com.example.aandi_post_web_server.report.v2.security.AuthenticateHeaderBridgeFilter
+import com.example.aandi_post_web_server.report.v2.security.ReportHeaderValidationFilter
+import com.example.aandi_post_web_server.report.v2.security.ReportPathMatcher
+import com.example.aandi_post_web_server.report.v2.security.ReportV2SecurityProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -22,6 +29,7 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder
 import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.server.ServerWebExchange
@@ -32,7 +40,7 @@ import javax.crypto.spec.SecretKeySpec
 
 @Configuration
 @EnableWebFluxSecurity
-@EnableConfigurationProperties(JwtPolicyProperties::class)
+@EnableConfigurationProperties(JwtPolicyProperties::class, ReportV2SecurityProperties::class)
 class SecurityConfig {
 
     @Bean
@@ -42,6 +50,7 @@ class SecurityConfig {
         jwtDecoder: ReactiveJwtDecoder,
         errorResponseFactory: ErrorResponseFactory,
         objectMapper: ObjectMapper,
+        reportV2SecurityProperties: ReportV2SecurityProperties,
     ): SecurityWebFilterChain =
         http
             .csrf { it.disable() }
@@ -52,24 +61,41 @@ class SecurityConfig {
                 it.pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.pathMatchers(
                     "/v3/api-docs/**",
+                    "/swagger/report/**",
                     "/swagger-ui.html",
                     "/swagger-ui/**",
                     "/swagger-ui/index.html",
                 ).permitAll()
+                it.pathMatchers("/v2/admin/report/**").hasRole("ADMIN")
                 it.pathMatchers("/v1/admin/**").hasRole("ADMIN")
-                it.pathMatchers("/v1/report/**", "/v1/courses/**").hasAnyRole("USER", "ORGANIZER", "ADMIN")
+                it.pathMatchers("/v1/report/**", "/v1/courses/**", "/v2/report/**", "/v2/assignments/**").hasAnyRole("USER", "ORGANIZER", "ADMIN")
                 it.anyExchange().denyAll()
             }
             .exceptionHandling { exceptions ->
                 exceptions.authenticationEntryPoint { exchange, authException ->
-                    val result = errorResponseFactory.unauthorized(exchange, authException.message)
-                    writeErrorResponse(exchange, objectMapper, result)
+                    if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
+                        val result = ReportExceptionMapper.fromThrowable(authException)
+                        writeReportErrorResponse(exchange, objectMapper, result)
+                    } else {
+                        val result = errorResponseFactory.unauthorized(exchange, authException.message)
+                        writeErrorResponse(exchange, objectMapper, result)
+                    }
                 }
                 exceptions.accessDeniedHandler { exchange, accessDeniedException ->
-                    val result = errorResponseFactory.forbidden(exchange, accessDeniedException.message)
-                    writeErrorResponse(exchange, objectMapper, result)
+                    if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
+                        val result = ReportExceptionMapper.fromThrowable(accessDeniedException)
+                        writeReportErrorResponse(exchange, objectMapper, result)
+                    } else {
+                        val result = errorResponseFactory.forbidden(exchange, accessDeniedException.message)
+                        writeErrorResponse(exchange, objectMapper, result)
+                    }
                 }
             }
+            .addFilterBefore(AuthenticateHeaderBridgeFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
+            .addFilterAfter(
+                ReportHeaderValidationFilter(reportV2SecurityProperties.saltSecret),
+                SecurityWebFiltersOrder.AUTHENTICATION,
+            )
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->
                     jwt.jwtDecoder(jwtDecoder)
@@ -119,6 +145,25 @@ class SecurityConfig {
         response.headers.set(RequestIdSupport.HEADER_NAME, RequestIdSupport.resolveRequestId(exchange))
         val payload = runCatching { objectMapper.writeValueAsBytes(result.body) }
             .getOrElse { objectMapper.writeValueAsBytes(ApiEnvelope.failure("INTERNAL_ERROR", "서버 내부 오류가 발생했습니다.")) }
+        return response.writeWith(Mono.just(response.bufferFactory().wrap(payload)))
+    }
+
+    private fun writeReportErrorResponse(
+        exchange: ServerWebExchange,
+        objectMapper: ObjectMapper,
+        result: ReportExceptionMapper.ReportErrorResult,
+    ): Mono<Void> {
+        val response = exchange.response
+        response.statusCode = result.status
+        response.headers.contentType = MediaType.APPLICATION_JSON
+        response.headers.set(RequestIdSupport.HEADER_NAME, RequestIdSupport.resolveRequestId(exchange))
+        val payload = runCatching {
+            objectMapper.writeValueAsBytes(ReportApiResponseFactory.failure(result.errorCode, result.message))
+        }.getOrElse {
+            objectMapper.writeValueAsBytes(
+                ReportApiResponseFactory.failure(ReportErrorCode.REPORT_INTERNAL_ERROR, ReportErrorCode.REPORT_INTERNAL_ERROR.messageTemplate)
+            )
+        }
         return response.writeWith(Mono.just(response.bufferFactory().wrap(payload)))
     }
 }

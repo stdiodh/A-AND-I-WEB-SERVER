@@ -1,6 +1,10 @@
 package com.example.aandi_post_web_server.common.error
 
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
+import com.example.aandi_post_web_server.report.v2.api.ReportApiEnvelope
+import com.example.aandi_post_web_server.report.v2.api.ReportApiResponseFactory
+import com.example.aandi_post_web_server.report.v2.error.ReportExceptionMapper
+import com.example.aandi_post_web_server.report.v2.security.ReportPathMatcher
 import org.slf4j.LoggerFactory
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
@@ -26,7 +30,12 @@ class GlobalApiExceptionHandler(
     fun handleWebExchangeBindException(
         ex: WebExchangeBindException,
         exchange: ServerWebExchange,
-    ): ResponseEntity<ApiEnvelope<Nothing?>> {
+    ): ResponseEntity<*> {
+        if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
+            val reportResult = ReportExceptionMapper.fromThrowable(ex)
+            logReportByStatus(exchange, reportResult, ex)
+            return toReportResponseEntity(reportResult)
+        }
         val result = errorResponseFactory.fromValidation(exchange, ex)
         logWarn(exchange, result, ex)
         return toResponseEntity(result)
@@ -36,7 +45,12 @@ class GlobalApiExceptionHandler(
     fun handleServerWebInputException(
         ex: ServerWebInputException,
         exchange: ServerWebExchange,
-    ): ResponseEntity<ApiEnvelope<Nothing?>> {
+    ): ResponseEntity<*> {
+        if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
+            val reportResult = ReportExceptionMapper.fromThrowable(ex)
+            logReportByStatus(exchange, reportResult, ex)
+            return toReportResponseEntity(reportResult)
+        }
         val result = errorResponseFactory.fromServerWebInput(exchange, ex)
         logWarn(exchange, result, ex)
         return toResponseEntity(result)
@@ -46,7 +60,12 @@ class GlobalApiExceptionHandler(
     fun handleResponseStatusException(
         ex: ResponseStatusException,
         exchange: ServerWebExchange,
-    ): ResponseEntity<ApiEnvelope<Nothing?>> {
+    ): ResponseEntity<*> {
+        if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
+            val reportResult = ReportExceptionMapper.fromThrowable(ex)
+            logReportByStatus(exchange, reportResult, ex)
+            return toReportResponseEntity(reportResult)
+        }
         val result = errorResponseFactory.fromResponseStatus(exchange, ex)
         logByStatus(exchange, result, ex)
         return toResponseEntity(result)
@@ -56,7 +75,12 @@ class GlobalApiExceptionHandler(
     fun handleAuthenticationException(
         ex: AuthenticationException,
         exchange: ServerWebExchange,
-    ): ResponseEntity<ApiEnvelope<Nothing?>> {
+    ): ResponseEntity<*> {
+        if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
+            val reportResult = ReportExceptionMapper.fromThrowable(ex)
+            logReportByStatus(exchange, reportResult, ex)
+            return toReportResponseEntity(reportResult)
+        }
         val result = errorResponseFactory.unauthorized(exchange, ex.message)
         logWarn(exchange, result, ex)
         return toResponseEntity(result)
@@ -66,7 +90,12 @@ class GlobalApiExceptionHandler(
     fun handleAccessDeniedException(
         ex: AccessDeniedException,
         exchange: ServerWebExchange,
-    ): ResponseEntity<ApiEnvelope<Nothing?>> {
+    ): ResponseEntity<*> {
+        if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
+            val reportResult = ReportExceptionMapper.fromThrowable(ex)
+            logReportByStatus(exchange, reportResult, ex)
+            return toReportResponseEntity(reportResult)
+        }
         val result = errorResponseFactory.forbidden(exchange, ex.message)
         logWarn(exchange, result, ex)
         return toResponseEntity(result)
@@ -76,7 +105,12 @@ class GlobalApiExceptionHandler(
     fun handleThrowable(
         ex: Throwable,
         exchange: ServerWebExchange,
-    ): ResponseEntity<ApiEnvelope<Nothing?>> {
+    ): ResponseEntity<*> {
+        if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
+            val reportResult = ReportExceptionMapper.fromThrowable(ex)
+            logReportByStatus(exchange, reportResult, ex)
+            return toReportResponseEntity(reportResult)
+        }
         val result = errorResponseFactory.fromThrowable(exchange, ex)
         logByStatus(exchange, result, ex)
         return toResponseEntity(result)
@@ -84,6 +118,11 @@ class GlobalApiExceptionHandler(
 
     private fun toResponseEntity(result: ApiErrorResult): ResponseEntity<ApiEnvelope<Nothing?>> {
         return ResponseEntity.status(result.status).body(result.body)
+    }
+
+    private fun toReportResponseEntity(result: ReportExceptionMapper.ReportErrorResult): ResponseEntity<ReportApiEnvelope<Nothing?>> {
+        return ResponseEntity.status(result.status)
+            .body(ReportApiResponseFactory.failure(result.errorCode, result.message))
     }
 
     private fun logWarn(exchange: ServerWebExchange, result: ApiErrorResult, ex: Throwable) {
@@ -118,5 +157,36 @@ class GlobalApiExceptionHandler(
         }
 
         logWarn(exchange, result, ex)
+    }
+
+    private fun logReportByStatus(
+        exchange: ServerWebExchange,
+        result: ReportExceptionMapper.ReportErrorResult,
+        ex: Throwable,
+    ) {
+        val requestId = RequestIdSupport.resolveRequestId(exchange)
+        if (result.status.value() >= 500) {
+            log.error(
+                "[requestId={}] {} {} -> {} {} ({})",
+                requestId,
+                exchange.request.method,
+                exchange.request.path.pathWithinApplication().value(),
+                result.status.value(),
+                result.errorCode.code,
+                ex.javaClass.simpleName,
+                ex,
+            )
+            return
+        }
+
+        log.warn(
+            "[requestId={}] {} {} -> {} {} ({})",
+            requestId,
+            exchange.request.method,
+            exchange.request.path.pathWithinApplication().value(),
+            result.status.value(),
+            result.errorCode.code,
+            ex.javaClass.simpleName,
+        )
     }
 }
