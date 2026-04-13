@@ -46,6 +46,7 @@ class ReportSwaggerDocumentationIntegrationTest : StringSpec() {
                     body.shouldNotContain("\"/v1/courses")
                     body.shouldNotContain("\"/v1/report")
                     body.shouldContain("\"description\":\"요청 성공 여부(Boolean)\"")
+                    body.shouldContain("ISO-8601 또는 epoch milliseconds")
                     body.shouldContain("\"type\":\"boolean\"")
                     body.shouldContain("\"success\":true")
                     body.shouldContain("\"success\":false")

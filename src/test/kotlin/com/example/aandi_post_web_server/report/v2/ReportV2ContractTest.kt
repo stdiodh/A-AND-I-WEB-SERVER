@@ -65,6 +65,7 @@ class ReportV2ContractTest : StringSpec() {
     private lateinit var courseV1Service: CourseV1Service
 
     private val timestampHeader = "2026-04-09T10:00:00+09:00"
+    private val epochTimestampHeader = "1775696400000"
     private val saltSecret = "report-v2-test-salt-secret"
     private val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
     private val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
@@ -114,6 +115,21 @@ class ReportV2ContractTest : StringSpec() {
             ).thenReturn(Flux.just(sampleAssignmentSummaryResponse()))
 
             authorizedRequest(includeSalt = false)
+                .get()
+                .uri("/v2/report/back-basic/assignments")
+                .exchange()
+                .expectStatus().isOk
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(true)
+                .jsonPath("$.error").isEmpty
+        }
+
+        "timestamp 헤더는 epoch milliseconds 문자열도 허용한다" {
+            Mockito.`when`(
+                courseV1Service.getAssignments("back-basic", null, null, userId)
+            ).thenReturn(Flux.just(sampleAssignmentSummaryResponse()))
+
+            authorizedRequest(timestamp = epochTimestampHeader)
                 .get()
                 .uri("/v2/report/back-basic/assignments")
                 .exchange()
@@ -213,13 +229,13 @@ class ReportV2ContractTest : StringSpec() {
         }
     }
 
-    private fun authorizedRequest(includeSalt: Boolean = true): WebTestClient {
+    private fun authorizedRequest(includeSalt: Boolean = true, timestamp: String = timestampHeader): WebTestClient {
         val builder = webTestClient.mutate()
             .defaultHeader("Authenticate", "Bearer ${createAccessToken()}")
             .defaultHeader("deviceOS", "IOS")
-            .defaultHeader("timestamp", timestampHeader)
+            .defaultHeader("timestamp", timestamp)
         if (includeSalt) {
-            builder.defaultHeader("salt", createSalt(timestampHeader))
+            builder.defaultHeader("salt", createSalt(timestamp))
         }
         return builder.build()
     }

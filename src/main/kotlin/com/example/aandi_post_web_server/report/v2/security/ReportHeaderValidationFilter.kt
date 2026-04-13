@@ -45,7 +45,7 @@ class ReportHeaderValidationFilter(
             return Mono.error(
                 ReportValidationException(
                     errorCode = ReportErrorCode.HEADER_INVALID,
-                    message = "timestamp 헤더는 ISO-8601 형식이어야 합니다.",
+                    message = "timestamp 헤더는 epoch milliseconds 또는 ISO-8601 형식이어야 합니다.",
                 )
             )
         }
@@ -83,7 +83,13 @@ class ReportHeaderValidationFilter(
         rawValue?.trim()?.takeIf { it.isNotBlank() }
 
     private fun isValidTimestamp(value: String): Boolean =
-        runCatching { Instant.parse(value) }.isSuccess || runCatching { OffsetDateTime.parse(value) }.isSuccess
+        parseTimestamp(value) != null
+
+    private fun parseTimestamp(value: String): Instant? =
+        value.toLongOrNull()
+            ?.let { runCatching { Instant.ofEpochMilli(it) }.getOrNull() }
+            ?: runCatching { Instant.parse(value) }.getOrNull()
+            ?: runCatching { OffsetDateTime.parse(value).toInstant() }.getOrNull()
 
     private fun isValidSalt(timestamp: String, salt: String): Boolean {
         val secret = saltSecret.takeIf { it.isNotBlank() } ?: return true

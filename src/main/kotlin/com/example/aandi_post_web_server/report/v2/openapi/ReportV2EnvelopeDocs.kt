@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema
           "data": null,
           "error": {
             "code": 40301,
-            "message": "metadata.title: must not be blank",
+            "message": "timestamp header must be epoch milliseconds or ISO-8601.",
             "value": "VALIDATE_ERROR",
             "alert": "입력값 형식이 올바르지 않습니다."
           },
@@ -29,7 +29,7 @@ data class ReportV2ErrorEnvelopeDoc(
     val data: Any? = null,
     val error: ReportApiError = ReportApiError(
         code = 40301,
-        message = "metadata.title: must not be blank",
+        message = "timestamp header must be epoch milliseconds or ISO-8601.",
         value = "VALIDATE_ERROR",
         alert = "요청 값을 확인해주세요.",
     ),

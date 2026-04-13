@@ -79,7 +79,7 @@ internal object ReportSwaggerSupport {
             upsertHeaderParameter(
                 operation = operation,
                 name = "timestamp",
-                description = "클라이언트가 요청을 생성한 시각(ISO-8601)",
+                description = "클라이언트가 요청을 생성한 시각. ISO-8601 또는 epoch milliseconds 문자열을 허용합니다.",
                 required = true,
                 example = "2026-03-25T21:23:36.958558466+09:00",
             )
@@ -176,7 +176,7 @@ internal object ReportSwaggerSupport {
     private fun v2ErrorExamples(statusCode: String): Map<String, Map<String, Any?>> {
         return when (statusCode) {
             "400" -> linkedMapOf(
-                "VALIDATE_ERROR" to v2ErrorEnvelope(40301, "weekNo field is invalid", "VALIDATE_ERROR", "입력값 형식이 올바르지 않습니다."),
+                "VALIDATE_ERROR" to v2ErrorEnvelope(40301, "timestamp header must be epoch milliseconds or ISO-8601.", "VALIDATE_ERROR", "입력값 형식이 올바르지 않습니다."),
             )
             "401" -> linkedMapOf(
                 "UNAUTHORIZED" to v2ErrorEnvelope(21101, "access token is invalid", "UNAUTHORIZED", "로그인이 필요합니다."),
