@@ -15,4 +15,14 @@ class ReportSwaggerV1Config {
             .addOperationCustomizer(ReportSwaggerSupport.reportV1OperationCustomizer())
             .build()
     }
+
+    @Bean
+    fun reportV1GatewayAliasGroupedOpenApi(): GroupedOpenApi {
+        return GroupedOpenApi.builder()
+            .group("v1")
+            .pathsToMatch("/v1/**")
+            .addOpenApiCustomizer(ReportSwaggerSupport.reportV1InfoCustomizer())
+            .addOperationCustomizer(ReportSwaggerSupport.reportV1OperationCustomizer())
+            .build()
+    }
 }

@@ -81,6 +81,37 @@ class ReportSwaggerDocumentationIntegrationTest : StringSpec() {
                 }
         }
 
+        "gateway 호환용 v1 alias api docs endpoint는 report-v1과 동일한 문서를 제공한다" {
+            client().get()
+                .uri("/v3/api-docs/v1")
+                .exchange()
+                .expectStatus().isOk
+                .expectBody(String::class.java)
+                .consumeWith { result ->
+                    val body = result.responseBody ?: ""
+                    body.shouldContain("\"title\":\"A&I v1 API 문서\"")
+                    body.shouldContain("\"/v1/courses\"")
+                    body.shouldContain("\"/v1/admin/courses\"")
+                    body.shouldNotContain("\"/v2/courses")
+                }
+        }
+
+        "gateway 호환용 v2 alias api docs endpoint는 report-v2와 동일한 문서를 제공한다" {
+            client().get()
+                .uri("/v3/api-docs/v2")
+                .exchange()
+                .expectStatus().isOk
+                .expectBody(String::class.java)
+                .consumeWith { result ->
+                    val body = result.responseBody ?: ""
+                    body.shouldContain("\"title\":\"A&I v2 클라이언트 계약 문서\"")
+                    body.shouldContain("\"/v2/courses\"")
+                    body.shouldContain("\"/v2/admin/courses\"")
+                    body.shouldContain("\"/v2/assignments/{assignmentId}/course\"")
+                    body.shouldNotContain("\"/v1/courses")
+                }
+        }
+
         "report-v2 문서는 현재 등록된 모든 v2 컨트롤러 경로를 포함한다" {
             val swaggerBody = client().get()
                 .uri("/v3/api-docs/report-v2")
