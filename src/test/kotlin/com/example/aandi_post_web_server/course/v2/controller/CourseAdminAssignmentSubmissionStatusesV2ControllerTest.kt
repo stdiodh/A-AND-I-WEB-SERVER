@@ -46,6 +46,8 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
 
     private val courseSlug = "back-basic"
     private val assignmentId = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001"
+    private val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
+    private val adminId = "1fd3abf7-5ea4-403f-bcf8-8b3f9d8df502"
 
     init {
         beforeTest {
@@ -60,15 +62,13 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
         }
 
         "관리자 제출 현황 API는 ADMIN 권한이 아니면 403을 반환한다" {
-            webTestClient.mutateWith(
-                mockJwt().authorities(SimpleGrantedAuthority("ROLE_USER")),
-            ).get()
+            userClient().get()
                 .uri("/v2/admin/courses/$courseSlug/assignments/$assignmentId/submission-statuses")
                 .exchange()
                 .expectStatus().isForbidden
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error.code").isEqualTo("FORBIDDEN")
+                .jsonPath("$.error.code").isEqualTo(21201)
         }
 
         "관리자 제출 현황 API는 제출자와 미제출자를 함께 반환한다" {
@@ -106,15 +106,41 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
                 .expectStatus().isNotFound
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error.code").isEqualTo("NOT_FOUND")
+                .jsonPath("$.error.code").isEqualTo(96501)
         }
     }
 
+    private fun userClient(): WebTestClient =
+        webTestClient
+            .mutateWith(
+                mockJwt()
+                    .jwt { jwt ->
+                        jwt.subject(userId)
+                        jwt.claim("role", "USER")
+                        jwt.claim("token_type", "ACCESS")
+                    }
+                    .authorities(SimpleGrantedAuthority("ROLE_USER"))
+            )
+            .mutate()
+            .defaultHeader("deviceOS", "IOS")
+            .defaultHeader("timestamp", "2026-04-13T18:00:00+09:00")
+            .build()
+
     private fun adminClient(): WebTestClient =
-        webTestClient.mutateWith(
-            mockJwt().jwt { jwt -> jwt.subject("admin-1") }
-                .authorities(SimpleGrantedAuthority("ROLE_ADMIN")),
-        )
+        webTestClient
+            .mutateWith(
+                mockJwt()
+                    .jwt { jwt ->
+                        jwt.subject(adminId)
+                        jwt.claim("role", "ADMIN")
+                        jwt.claim("token_type", "ACCESS")
+                    }
+                    .authorities(SimpleGrantedAuthority("ROLE_ADMIN"))
+            )
+            .mutate()
+            .defaultHeader("deviceOS", "IOS")
+            .defaultHeader("timestamp", "2026-04-13T18:00:00+09:00")
+            .build()
 
     private fun sampleResponse(): AdminAssignmentSubmissionStatusesResponse =
         AdminAssignmentSubmissionStatusesResponse(

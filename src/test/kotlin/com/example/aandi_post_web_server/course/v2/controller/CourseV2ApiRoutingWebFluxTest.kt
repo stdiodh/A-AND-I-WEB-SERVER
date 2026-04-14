@@ -42,6 +42,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
 import java.time.LocalDate
+import com.example.aandi_post_web_server.support.TestJwtFactory
 
 @WebFluxTest(
     controllers = [
@@ -87,7 +88,7 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
         "v2 코스 조회 API는 USER 토큰으로 호출하면 성공한다" {
             Mockito.`when`(courseV1Service.getCourses(userId)).thenReturn(Flux.just(sampleCourseResponse()))
 
-            userClient().get()
+            v2UserClient().get()
                 .uri("/v2/courses")
                 .exchange()
                 .expectStatus().isOk
@@ -101,7 +102,7 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
             Mockito.`when`(courseV1Service.getCourse("back-basic", userId))
                 .thenReturn(Mono.just(sampleCourseResponse()))
 
-            userClient().get()
+            v1UserClient().get()
                 .uri("/v1/courses/back-basic")
                 .exchange()
                 .expectStatus().isOk
@@ -110,7 +111,7 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
                 .jsonPath("$.data.slug").isEqualTo("back-basic")
                 .jsonPath("$.data.status").isEqualTo("PUBLISHED")
 
-            userClient().get()
+            v2UserClient().get()
                 .uri("/v2/courses/back-basic")
                 .exchange()
                 .expectStatus().isOk
@@ -124,7 +125,7 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
             Mockito.`when`(courseV1Service.getAssignmentCourse(assignmentId, userId))
                 .thenReturn(Mono.just(sampleCourseResponse()))
 
-            userClient().get()
+            v2UserClient().get()
                 .uri("/v2/assignments/$assignmentId/course")
                 .exchange()
                 .expectStatus().isOk
@@ -136,20 +137,20 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
             Mockito.`when`(courseV1Service.getCourse("back-basic", userId))
                 .thenReturn(Mono.error(ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다.")))
 
-            userClient().get()
+            v2UserClient().get()
                 .uri("/v2/courses/back-basic")
                 .exchange()
                 .expectStatus().isNotFound
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error.code").isEqualTo("NOT_FOUND")
+                .jsonPath("$.error.code").isEqualTo(96501)
                 .jsonPath("$.timestamp").exists()
         }
 
         "v2 admin 전체 코스 조회 API는 ADMIN 토큰으로 호출하면 성공한다" {
             Mockito.`when`(courseV1Service.getAdminCourses()).thenReturn(Flux.just(sampleCourseResponse()))
 
-            adminClient().get()
+            v2AdminClient().get()
                 .uri("/v2/admin/courses")
                 .exchange()
                 .expectStatus().isOk
@@ -159,13 +160,13 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
         }
 
         "v2 admin 전체 코스 조회 API는 ADMIN이 아니면 403을 반환한다" {
-            userClient().get()
+            v2UserClient().get()
                 .uri("/v2/admin/courses")
                 .exchange()
                 .expectStatus().isForbidden
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error.code").isEqualTo("FORBIDDEN")
+                .jsonPath("$.error.code").isEqualTo(21201)
         }
 
         "v2 admin API는 토큰이 없으면 401을 반환한다" {
@@ -207,7 +208,7 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
             Mockito.`when`(courseV1Service.createAssignment("back-basic", request, adminId))
                 .thenReturn(Mono.just(sampleAssignmentDetailResponse()))
 
-            adminClient().post()
+            v2AdminClient().post()
                 .uri("/v2/admin/courses/back-basic/assignments")
                 .bodyValue(request)
                 .exchange()
@@ -217,19 +218,67 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
                 .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
                 .jsonPath("$.data.courseSlug").isEqualTo("back-basic")
         }
+
+        "v2 코스 조회 API는 공통 헤더가 누락되면 40301을 반환한다" {
+            webTestClient.mutate()
+                .defaultHeader("Authorization", "Bearer ${TestJwtFactory.createAccessToken(userId, "USER")}")
+                .defaultHeader("timestamp", "2026-04-13T18:00:00+09:00")
+                .build()
+                .get()
+                .uri("/v2/courses")
+                .exchange()
+                .expectStatus().isBadRequest
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.error.code").isEqualTo(40301)
+        }
     }
 
-    private fun userClient(): WebTestClient =
-        webTestClient.mutateWith(
-            mockJwt().jwt { jwt -> jwt.subject(userId) }
-                .authorities(SimpleGrantedAuthority("ROLE_USER")),
-        )
+    private fun v1UserClient(): WebTestClient =
+        webTestClient
+            .mutateWith(
+                mockJwt()
+                    .jwt { jwt ->
+                        jwt.subject(userId)
+                        jwt.claim("role", "USER")
+                        jwt.claim("token_type", "ACCESS")
+                    }
+                    .authorities(SimpleGrantedAuthority("ROLE_USER"))
+            )
+            .mutate()
+            .build()
 
-    private fun adminClient(): WebTestClient =
-        webTestClient.mutateWith(
-            mockJwt().jwt { jwt -> jwt.subject(adminId) }
-                .authorities(SimpleGrantedAuthority("ROLE_ADMIN")),
-        )
+    private fun v2UserClient(): WebTestClient =
+        webTestClient
+            .mutateWith(
+                mockJwt()
+                    .jwt { jwt ->
+                        jwt.subject(userId)
+                        jwt.claim("role", "USER")
+                        jwt.claim("token_type", "ACCESS")
+                    }
+                    .authorities(SimpleGrantedAuthority("ROLE_USER"))
+            )
+            .mutate()
+            .defaultHeader("deviceOS", "IOS")
+            .defaultHeader("timestamp", "2026-04-13T18:00:00+09:00")
+            .build()
+
+    private fun v2AdminClient(): WebTestClient =
+        webTestClient
+            .mutateWith(
+                mockJwt()
+                    .jwt { jwt ->
+                        jwt.subject(adminId)
+                        jwt.claim("role", "ADMIN")
+                        jwt.claim("token_type", "ACCESS")
+                    }
+                    .authorities(SimpleGrantedAuthority("ROLE_ADMIN"))
+            )
+            .mutate()
+            .defaultHeader("deviceOS", "IOS")
+            .defaultHeader("timestamp", "2026-04-13T18:00:00+09:00")
+            .build()
 
     private fun sampleCourseResponse(): CourseResponse =
         CourseResponse(

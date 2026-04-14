@@ -21,9 +21,10 @@ class ReportUserSyncService(
     private val log = LoggerFactory.getLogger(ReportUserSyncService::class.java)
 
     fun sync(event: AuthUserEvent): Mono<ReportUserSyncOutcome> =
-        when (event.eventType) {
-            AuthUserEventType.UserProfileUpdated -> upsertUser(event)
-            AuthUserEventType.UserDeleted -> deleteUser(event)
+        if (event.eventType == AuthUserEventType.UserProfileUpdated) {
+            upsertUser(event)
+        } else {
+            deleteUser(event)
         }
 
     private fun upsertUser(event: AuthUserEvent): Mono<ReportUserSyncOutcome> {

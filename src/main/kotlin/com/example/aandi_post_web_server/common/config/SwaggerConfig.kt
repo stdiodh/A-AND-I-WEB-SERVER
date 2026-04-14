@@ -29,7 +29,7 @@ class SwaggerConfig(
                             .description("Authorization 헤더에 `Bearer {accessToken}` 형식으로 전달합니다."),
                     )
                     .addSecuritySchemes(
-                        "reportV2Authenticate",
+                        "v2Authenticate",
                         SecurityScheme()
                             .type(SecurityScheme.Type.APIKEY)
                             .`in`(SecurityScheme.In.HEADER)

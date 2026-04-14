@@ -1,8 +1,9 @@
 package com.example.aandi_post_web_server.course.v2.controller
 
-import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
-import com.example.aandi_post_web_server.common.openapi.CourseEnvelopeDoc
-import com.example.aandi_post_web_server.common.openapi.ErrorEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.V2CourseEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.V2ErrorEnvelopeDoc
+import com.example.aandi_post_web_server.common.v2.api.V2ApiEnvelope
+import com.example.aandi_post_web_server.common.v2.api.V2ApiResponseFactory
 import com.example.aandi_post_web_server.course.dtos.CourseResponse
 import com.example.aandi_post_web_server.course.service.CourseV1Service
 import io.swagger.v3.oas.annotations.Operation
@@ -22,9 +23,9 @@ import reactor.core.publisher.Mono
 
 @Tag(
     name = "코스 조회 v2 API",
-    description = "v1 코스 조회 공개 기능을 v2 경로로 확장한 API입니다. `Authorization: Bearer {JWT}` 인증과 공통 `ApiEnvelope(success/data/error/timestamp)` 응답을 사용합니다.",
+    description = "v1 코스 조회 공개 기능을 v2 경로로 확장한 API입니다. A&I v2 공통 헤더(`deviceOS`, `Authenticate`, `timestamp`, `salt`)와 공통 응답 계약을 사용합니다.",
 )
-@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "v2Authenticate")
 @RestController
 @RequestMapping("/v2/assignments")
 class AssignmentCourseV2Controller(
@@ -37,8 +38,8 @@ class AssignmentCourseV2Controller(
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = CourseEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "과제 또는 코스를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "200", description = "조회 성공", content = [Content(schema = Schema(implementation = V2CourseEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "과제 또는 코스를 찾을 수 없거나 접근할 수 없음", content = [Content(schema = Schema(implementation = V2ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{assignmentId}/course")
@@ -46,6 +47,6 @@ class AssignmentCourseV2Controller(
         @Parameter(description = "과제 UUID", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
         @PathVariable assignmentId: String,
         authentication: Authentication,
-    ): Mono<ApiEnvelope<CourseResponse>> =
-        courseV1Service.getAssignmentCourse(assignmentId, authentication.name).map { ApiEnvelope.success(it) }
+    ): Mono<V2ApiEnvelope<CourseResponse>> =
+        courseV1Service.getAssignmentCourse(assignmentId, authentication.name).map(V2ApiResponseFactory::success)
 }
