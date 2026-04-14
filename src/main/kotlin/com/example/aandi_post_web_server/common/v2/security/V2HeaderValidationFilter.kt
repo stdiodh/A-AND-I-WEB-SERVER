@@ -1,8 +1,9 @@
-package com.example.aandi_post_web_server.report.v2.security
+package com.example.aandi_post_web_server.common.v2.security
 
-import com.example.aandi_post_web_server.report.v2.api.ReportHeaderContext
-import com.example.aandi_post_web_server.report.v2.error.ReportErrorCode
-import com.example.aandi_post_web_server.report.v2.error.ReportValidationException
+import com.example.aandi_post_web_server.common.v2.api.V2HeaderContext
+import com.example.aandi_post_web_server.common.v2.error.V2ErrorCode
+import com.example.aandi_post_web_server.common.v2.error.V2ValidationException
+import org.springframework.http.HttpHeaders
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilter
 import org.springframework.web.server.WebFilterChain
@@ -11,31 +12,32 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.time.OffsetDateTime
 
-class ReportHeaderValidationFilter(
+class V2HeaderValidationFilter(
     private val saltSecret: String,
 ) : WebFilter {
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
         val path = exchange.request.path.pathWithinApplication().value()
-        if (!ReportPathMatcher.isReportV2Path(path)) {
+        if (!V2PathMatcher.isV2Path(path)) {
             return chain.filter(exchange)
         }
 
         val headers = exchange.request.headers
-        val authenticateHeader = headers.getFirst(ReportHeaderNames.AUTHENTICATE)?.trim().orEmpty()
-        val authorizationHeader = headers.getFirst("Authorization")?.trim().orEmpty()
-        if (authenticateHeader.isBlank() && authorizationHeader.isBlank()) {
+        val authenticateHeader = headers.getFirst(V2HeaderNames.AUTHENTICATE)?.trim().orEmpty()
+        val authorizationHeader = headers.getFirst(HttpHeaders.AUTHORIZATION)?.trim().orEmpty()
+        val tokenHeader = authenticateHeader.ifBlank { authorizationHeader }
+
+        if (tokenHeader.isBlank()) {
             return chain.filter(exchange)
         }
 
-        val deviceOS = requiredHeader(headers.getFirst(ReportHeaderNames.DEVICE_OS), ReportHeaderNames.DEVICE_OS)
-        val authenticate = requiredHeader(headers.getFirst(ReportHeaderNames.AUTHENTICATE), ReportHeaderNames.AUTHENTICATE)
-        val timestamp = requiredHeader(headers.getFirst(ReportHeaderNames.TIMESTAMP), ReportHeaderNames.TIMESTAMP)
-        val salt = optionalHeader(headers.getFirst(ReportHeaderNames.SALT))
+        val deviceOS = requiredHeader(headers.getFirst(V2HeaderNames.DEVICE_OS), V2HeaderNames.DEVICE_OS)
+        val timestamp = requiredHeader(headers.getFirst(V2HeaderNames.TIMESTAMP), V2HeaderNames.TIMESTAMP)
+        val salt = optionalHeader(headers.getFirst(V2HeaderNames.SALT))
 
-        if (!authenticate.startsWith("Bearer ") || authenticate.removePrefix("Bearer ").isBlank()) {
+        if (!tokenHeader.startsWith("Bearer ") || tokenHeader.removePrefix("Bearer ").isBlank()) {
             return Mono.error(
-                ReportValidationException(
-                    errorCode = ReportErrorCode.HEADER_INVALID,
+                V2ValidationException(
+                    errorCode = V2ErrorCode.HEADER_INVALID,
                     message = "Authenticate 헤더는 'Bearer {accessToken}' 형식이어야 합니다.",
                 )
             )
@@ -43,8 +45,8 @@ class ReportHeaderValidationFilter(
 
         if (!isValidTimestamp(timestamp)) {
             return Mono.error(
-                ReportValidationException(
-                    errorCode = ReportErrorCode.HEADER_INVALID,
+                V2ValidationException(
+                    errorCode = V2ErrorCode.HEADER_INVALID,
                     message = "timestamp 헤더는 epoch milliseconds 또는 ISO-8601 형식이어야 합니다.",
                 )
             )
@@ -52,16 +54,16 @@ class ReportHeaderValidationFilter(
 
         if (salt != null && !isValidSalt(timestamp, salt)) {
             return Mono.error(
-                ReportValidationException(
-                    errorCode = ReportErrorCode.HEADER_INVALID,
+                V2ValidationException(
+                    errorCode = V2ErrorCode.HEADER_INVALID,
                     message = "salt 헤더가 올바르지 않습니다.",
                 )
             )
         }
 
-        exchange.attributes[ReportHeaderContext.ATTRIBUTE_NAME] = ReportHeaderContext(
+        exchange.attributes[V2HeaderContext.ATTRIBUTE_NAME] = V2HeaderContext(
             deviceOS = deviceOS,
-            authenticate = authenticate,
+            authenticate = tokenHeader,
             timestamp = timestamp,
             salt = salt,
         )
@@ -71,8 +73,8 @@ class ReportHeaderValidationFilter(
     private fun requiredHeader(rawValue: String?, headerName: String): String {
         val value = rawValue?.trim().orEmpty()
         if (value.isBlank()) {
-            throw ReportValidationException(
-                errorCode = ReportErrorCode.HEADER_INVALID,
+            throw V2ValidationException(
+                errorCode = V2ErrorCode.HEADER_INVALID,
                 message = "$headerName 헤더가 필요합니다.",
             )
         }

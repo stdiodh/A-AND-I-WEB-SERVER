@@ -2,9 +2,10 @@ package com.example.aandi_post_web_server.course.v2.controller
 
 import com.example.aandi_post_web_server.assignment.v2.dto.AdminAssignmentSubmissionStatusesResponse
 import com.example.aandi_post_web_server.assignment.v2.service.AdminAssignmentSubmissionStatusesV2Service
-import com.example.aandi_post_web_server.common.openapi.AdminAssignmentSubmissionStatusesEnvelopeDoc
-import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
-import com.example.aandi_post_web_server.common.openapi.ErrorEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.V2AdminAssignmentSubmissionStatusesEnvelopeDoc
+import com.example.aandi_post_web_server.common.openapi.V2ErrorEnvelopeDoc
+import com.example.aandi_post_web_server.common.v2.api.V2ApiEnvelope
+import com.example.aandi_post_web_server.common.v2.api.V2ApiResponseFactory
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -21,9 +22,9 @@ import reactor.core.publisher.Mono
 
 @Tag(
     name = "코스 관리자 v2 API",
-    description = "관리자 전용 코스/수강/과제 관리 API입니다. Bearer 인증과 공통 `ApiEnvelope` 응답을 사용합니다.",
+    description = "관리자 전용 코스/수강/과제 관리 API입니다. A&I v2 공통 헤더(`deviceOS`, `Authenticate`, `timestamp`, `salt`)와 공통 응답 계약을 사용하며 ADMIN 권한이 필요합니다.",
 )
-@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "v2Authenticate")
 @RestController
 @RequestMapping("/v2/admin/courses")
 class CourseAdminAssignmentSubmissionStatusesV2Controller(
@@ -37,16 +38,16 @@ class CourseAdminAssignmentSubmissionStatusesV2Controller(
             특정 코스의 수강생 전체를 기준으로 과제 제출 현황을 조회합니다.
             이 API는 OJ `JUDGE_COMPLETED` 이벤트 기반 projection 을 읽고, 코스 수강생 목록과 left join 해서 제출 여부를 계산합니다.
             projection 이 없으면 미제출(`submitted=false`)로 간주합니다.
-            제출 횟수를 모두 나열하는 API가 아니며, 현재는 최신 완료 제출 기준 요약 정보만 제공합니다.
-            Bearer 인증과 ADMIN 권한이 필요합니다.
+            제출 횟수를 모두 나열하는 API가 아니며, 현재는 최신 완료 제출 기준 요약 정보(`score`, `passedCases`, `totalCases`, `completedAt`)만 제공합니다.
+            A&I v2 공통 헤더와 ADMIN 권한이 필요합니다.
             """,
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "제출자와 미제출자가 함께 포함된 목록 조회 성공", content = [Content(schema = Schema(implementation = AdminAssignmentSubmissionStatusesEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "401", description = "토큰 없음 또는 인증 실패", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "403", description = "ADMIN 권한 없음", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
-            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없거나, 과제를 찾을 수 없거나, 다른 코스 소속 assignment 임", content = [Content(schema = Schema(implementation = ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "200", description = "제출자와 미제출자가 함께 포함된 목록 조회 성공", content = [Content(schema = Schema(implementation = V2AdminAssignmentSubmissionStatusesEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "401", description = "토큰 없음 또는 인증 실패", content = [Content(schema = Schema(implementation = V2ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 없음", content = [Content(schema = Schema(implementation = V2ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "코스를 찾을 수 없거나, 과제를 찾을 수 없거나, 다른 코스 소속 assignment 임", content = [Content(schema = Schema(implementation = V2ErrorEnvelopeDoc::class))]),
         ],
     )
     @GetMapping("/{courseSlug}/assignments/{assignmentId}/submission-statuses")
@@ -55,7 +56,7 @@ class CourseAdminAssignmentSubmissionStatusesV2Controller(
         @PathVariable courseSlug: String,
         @Parameter(description = "과제 UUID", example = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001")
         @PathVariable assignmentId: String,
-    ): Mono<ApiEnvelope<AdminAssignmentSubmissionStatusesResponse>> =
+    ): Mono<V2ApiEnvelope<AdminAssignmentSubmissionStatusesResponse>> =
         adminAssignmentSubmissionStatusesV2Service.getSubmissionStatuses(courseSlug, assignmentId)
-            .map { ApiEnvelope.success(it) }
+            .map(V2ApiResponseFactory::success)
 }

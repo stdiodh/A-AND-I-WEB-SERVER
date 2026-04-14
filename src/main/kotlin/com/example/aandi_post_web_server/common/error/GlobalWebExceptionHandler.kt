@@ -1,11 +1,11 @@
 package com.example.aandi_post_web_server.common.error
 
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
-import com.example.aandi_post_web_server.report.v2.api.ReportApiEnvelope
-import com.example.aandi_post_web_server.report.v2.api.ReportApiResponseFactory
-import com.example.aandi_post_web_server.report.v2.error.ReportErrorCode
-import com.example.aandi_post_web_server.report.v2.error.ReportExceptionMapper
-import com.example.aandi_post_web_server.report.v2.security.ReportPathMatcher
+import com.example.aandi_post_web_server.common.v2.api.V2ApiEnvelope
+import com.example.aandi_post_web_server.common.v2.api.V2ApiResponseFactory
+import com.example.aandi_post_web_server.common.v2.error.V2ErrorCode
+import com.example.aandi_post_web_server.common.v2.error.V2ExceptionMapper
+import com.example.aandi_post_web_server.common.v2.security.V2PathMatcher
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler
@@ -31,8 +31,8 @@ class GlobalWebExceptionHandler(
             return Mono.error(ex)
         }
 
-        if (ReportPathMatcher.isReportV2Path(exchange.request.path.pathWithinApplication().value())) {
-            return handleReportRequest(exchange, ex)
+        if (V2PathMatcher.isV2Path(exchange.request.path.pathWithinApplication().value())) {
+            return handleV2Request(exchange, ex)
         }
 
         val result = errorResponseFactory.fromThrowable(exchange, ex)
@@ -46,17 +46,17 @@ class GlobalWebExceptionHandler(
         return response.writeWith(Mono.just(response.bufferFactory().wrap(payload)))
     }
 
-    private fun handleReportRequest(exchange: ServerWebExchange, ex: Throwable): Mono<Void> {
-        val mapped = ReportExceptionMapper.fromThrowable(ex)
+    private fun handleV2Request(exchange: ServerWebExchange, ex: Throwable): Mono<Void> {
+        val mapped = V2ExceptionMapper.fromThrowable(ex)
         val response = exchange.response
         response.statusCode = HttpStatusCode.valueOf(mapped.status.value())
         response.headers.contentType = MediaType.APPLICATION_JSON
         response.headers.set(RequestIdSupport.HEADER_NAME, RequestIdSupport.resolveRequestId(exchange))
 
-        val payload = serializeReportBody(
-            ReportApiResponseFactory.failure(mapped.errorCode, mapped.message)
+        val payload = serializeV2Body(
+            V2ApiResponseFactory.failure(mapped.errorCode, mapped.message)
         )
-        logReportByStatus(exchange, mapped, ex)
+        logV2ByStatus(exchange, mapped, ex)
         return response.writeWith(Mono.just(response.bufferFactory().wrap(payload)))
     }
 
@@ -69,13 +69,13 @@ class GlobalWebExceptionHandler(
             }
     }
 
-    private fun serializeReportBody(body: ReportApiEnvelope<Nothing?>): ByteArray {
+    private fun serializeV2Body(body: V2ApiEnvelope<Nothing?>): ByteArray {
         return runCatching { objectMapper.writeValueAsBytes(body) }
             .getOrElse {
                 objectMapper.writeValueAsBytes(
-                    ReportApiResponseFactory.failure(
-                        ReportErrorCode.REPORT_INTERNAL_ERROR,
-                        ReportErrorCode.REPORT_INTERNAL_ERROR.messageTemplate,
+                    V2ApiResponseFactory.failure(
+                        V2ErrorCode.INTERNAL_ERROR,
+                        V2ErrorCode.INTERNAL_ERROR.messageTemplate,
                     )
                 )
             }
@@ -109,9 +109,9 @@ class GlobalWebExceptionHandler(
         )
     }
 
-    private fun logReportByStatus(
+    private fun logV2ByStatus(
         exchange: ServerWebExchange,
-        result: ReportExceptionMapper.ReportErrorResult,
+        result: V2ExceptionMapper.V2ErrorResult,
         ex: Throwable,
     ) {
         val requestId = RequestIdSupport.resolveRequestId(exchange)
