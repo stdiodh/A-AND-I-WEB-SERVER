@@ -40,6 +40,15 @@ app:
     exposed-headers: ${APP_CORS_EXPOSED_HEADERS:}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:false}
     max-age-seconds: ${APP_CORS_MAX_AGE_SECONDS:3600}
+  logging:
+    v2:
+      env: ${APP_ENV:local}
+      max-body-bytes: ${APP_V2_LOG_MAX_BODY_BYTES:16384}
+      service:
+        name: ${APP_V2_LOG_SERVICE_NAME:${spring.application.name}}
+        domain-code: ${APP_V2_LOG_DOMAIN_CODE:0}
+        version: ${APP_V2_LOG_SERVICE_VERSION:${APP_VERSION:0.0.1-SNAPSHOT}}
+        instance-id: ${APP_V2_LOG_INSTANCE_ID:${HOSTNAME:local-instance}}
   events:
     report-test-case:
       enabled: ${APP_EVENTS_REPORT_TEST_CASE_ENABLED:false}
