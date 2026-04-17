@@ -56,6 +56,108 @@
 - `submission-config` 조회 API는 현재 WEB-SERVER 에 제공되지 않습니다.
 - 배포 시 과제 이벤트는 `APP_EVENTS_REPORT_TEST_CASE_SNS_TOPIC_ARN` 으로 지정한 SNS 토픽으로 발행되며, SQS 연결은 해당 토픽 구독으로 처리합니다.
 
+### 📨 Judge Completion 이벤트 소비
+- 최신 구현은 `OJ -> SNS FIFO topic -> SQS queue -> report server consumer` 경로를 기준으로 동작합니다.
+- 런타임 소비자는 SQS queue URL 을 사용하고, SNS 구독 설정은 queue ARN 을 사용합니다.
+- report server 는 `JUDGE_COMPLETED` 이벤트만 처리하고, 그 외 `eventType` 은 안전하게 로그 후 삭제합니다.
+- SQS 메시지는 direct JSON body 와 SNS envelope body 를 모두 지원합니다.
+- OJ 가 SNS FIFO topic 으로 publish 할 때 `MessageGroupId` 를 반드시 포함해야 합니다. 이 값이 없으면 SNS publish 자체가 실패하므로 SQS 에 메시지가 도착하지 않습니다.
+
+#### Judge Submission Consumer 환경 변수
+
+```properties
+AWS_REGION=ap-northeast-2
+REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED=true
+REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL=https://sqs.ap-northeast-2.amazonaws.com/<account-id>/online-judge-submission-events-queue
+REPORT_JUDGE_SUBMISSION_EVENTS_WAIT_TIME_SECONDS=20
+REPORT_JUDGE_SUBMISSION_EVENTS_MAX_MESSAGES=10
+REPORT_JUDGE_SUBMISSION_EVENTS_VISIBILITY_TIMEOUT_SECONDS=60
+```
+
+- `REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL` 는 애플리케이션의 SQS polling 대상입니다.
+- `AWS_REGION` 은 AWS SDK client region 으로 사용됩니다.
+- queue ARN, topic ARN, account id 같은 인프라 식별자는 코드에 하드코딩하지 않고 배포 설정 또는 IaC 에서 주입해야 합니다.
+
+#### SNS -> SQS 구독 예시
+
+```bash
+aws sns subscribe \
+  --topic-arn "$OJ_SUBMISSION_EVENTS_TOPIC_ARN" \
+  --protocol sqs \
+  --notification-endpoint "$REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_ARN" \
+  --attributes RawMessageDelivery=true
+```
+
+- `--notification-endpoint` 에는 queue URL 이 아니라 queue ARN 을 사용해야 합니다.
+- `RawMessageDelivery=true` 이면 direct JSON body 로 전달되고, `false` 여도 report server 는 SNS envelope 을 파싱합니다.
+
+#### SQS Queue Policy 예시
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowOnlineJudgeSubmissionTopic",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "sns.amazonaws.com"
+      },
+      "Action": "sqs:SendMessage",
+      "Resource": "$REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_ARN",
+      "Condition": {
+        "ArnEquals": {
+          "aws:SourceArn": "$OJ_SUBMISSION_EVENTS_TOPIC_ARN"
+        }
+      }
+    }
+  ]
+}
+```
+
+#### Runtime IAM Policy 예시
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:ChangeMessageVisibility"
+      ],
+      "Resource": "$REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_ARN"
+    }
+  ]
+}
+```
+
+#### 검증 방법
+
+1. 애플리케이션 시작 로그에서 `judge-submission SQS consumer started` 와 `queueUrl`, `region`, `visibilityTimeoutSeconds` 값을 확인합니다.
+2. direct JSON 메시지를 넣고 projection 이 반영된 뒤 같은 메시지가 queue 에 남지 않는지 확인합니다.
+3. SNS envelope 메시지를 넣고 동일하게 projection 반영과 메시지 삭제를 확인합니다.
+4. 저장 로직을 강제로 실패시키거나 잘못된 DB 연결로 실행해 보고, 실패한 메시지가 삭제되지 않고 visibility timeout 이후 재수신되는지 확인합니다.
+
+direct JSON 테스트 예시:
+
+```bash
+aws sqs send-message \
+  --queue-url "$REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL" \
+  --message-body '{"eventType":"JUDGE_COMPLETED","publicCode":"A00123","problemId":"quiz-101","score":80,"passedCases":8,"totalCases":10,"timestamp":"2026-04-09T02:15:30.123Z"}'
+```
+
+SNS envelope 테스트 예시:
+
+```bash
+aws sqs send-message \
+  --queue-url "$REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL" \
+  --message-body '{"Type":"Notification","Message":"{\"eventType\":\"JUDGE_COMPLETED\",\"publicCode\":\"A00123\",\"problemId\":\"quiz-101\",\"score\":80,\"passedCases\":8,\"totalCases\":10,\"timestamp\":\"2026-04-09T02:15:30.123Z\"}"}'
+```
+
 ## 🗂️ ERD
 
 <img src="https://github.com/user-attachments/assets/0ac35082-bce5-4b96-8915-35d0312b71d6" width="800"/>

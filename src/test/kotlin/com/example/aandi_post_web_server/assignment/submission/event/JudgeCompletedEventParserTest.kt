@@ -44,7 +44,7 @@ class JudgeCompletedEventParserTest : StringSpec({
             {
               "Type": "Notification",
               "MessageId": "52f8a9dd-19e1-4c13-a5b5-77d59c35d001",
-              "TopicArn": "arn:aws:sns:ap-northeast-2:123456789012:judge-submission-events",
+              "TopicArn": "arn:aws:sns:ap-northeast-2:000000000000:judge-submission-events.fifo",
               "Message": "{\"eventType\":\"JUDGE_COMPLETED\",\"publicCode\":\"A00123\",\"problemId\":\"quiz-101\",\"score\":100,\"passedCases\":10,\"totalCases\":10,\"timestamp\":\"2026-04-09T02:15:30.123Z\"}"
             }
             """.trimIndent()

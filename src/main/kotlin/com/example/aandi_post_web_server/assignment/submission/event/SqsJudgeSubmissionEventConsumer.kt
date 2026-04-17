@@ -3,6 +3,7 @@ package com.example.aandi_post_web_server.assignment.submission.event
 import com.example.aandi_post_web_server.assignment.submission.service.AssignmentSubmissionStatusProjectionService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.SmartLifecycle
 import org.springframework.stereotype.Component
 import reactor.core.Disposable
@@ -17,6 +18,7 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Component
+@ConditionalOnProperty(prefix = "app.events.judge-submission", name = ["enabled"], havingValue = "true")
 class SqsJudgeSubmissionEventConsumer(
     private val properties: JudgeSubmissionEventProperties,
     @Qualifier("judgeSubmissionSqsAsyncClient")
@@ -35,7 +37,10 @@ class SqsJudgeSubmissionEventConsumer(
         }
 
         require(properties.queueUrl.isNotBlank()) {
-            "app.events.judge-submission.queue-url must not be blank when enabled=true"
+            "REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL must not be blank when REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED=true"
+        }
+        require(properties.region.isNotBlank()) {
+            "AWS_REGION must not be blank when REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED=true"
         }
 
         pollingSubscription = Mono.defer { pollBatch().then() }
@@ -60,7 +65,8 @@ class SqsJudgeSubmissionEventConsumer(
             )
 
         log.info(
-            "judge-submission SQS consumer started: queueUrl={}, waitTimeSeconds={}, maxNumberOfMessages={}, visibilityTimeoutSeconds={}, pollDelay={}",
+            "judge-submission SQS consumer started: region={}, queueUrl={}, waitTimeSeconds={}, maxNumberOfMessages={}, visibilityTimeoutSeconds={}, pollDelay={}",
+            properties.region,
             properties.queueUrl,
             properties.waitTimeSeconds,
             properties.maxNumberOfMessages,

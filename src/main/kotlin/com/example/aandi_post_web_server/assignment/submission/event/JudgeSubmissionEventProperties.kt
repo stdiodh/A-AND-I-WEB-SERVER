@@ -7,7 +7,7 @@ import java.time.Duration
 data class JudgeSubmissionEventProperties(
     val enabled: Boolean = false,
     val queueUrl: String = "",
-    val region: String = "ap-northeast-2",
+    val region: String = "",
     val waitTimeSeconds: Int = 20,
     val maxNumberOfMessages: Int = 10,
     val visibilityTimeoutSeconds: Int = 60,
