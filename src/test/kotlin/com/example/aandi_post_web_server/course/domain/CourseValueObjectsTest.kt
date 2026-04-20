@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.course.domain
+package com.example.aandi_post_web_server.course.domain.model
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe

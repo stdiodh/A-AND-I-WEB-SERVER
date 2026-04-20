@@ -1,25 +1,25 @@
-package com.example.aandi_post_web_server.course.service
+package com.example.aandi_post_web_server.course.application.service
 
-import com.example.aandi_post_web_server.assignment.domain.AssignmentTestCaseValidator
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseValidator
 import com.example.aandi_post_web_server.assignment.entity.Assignment
-import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEvent
-import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventMapper
-import com.example.aandi_post_web_server.assignment.event.AssignmentReportTestCaseEventPublisher
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
-import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.jackson.AssignmentMetadataPayloadTestCasePresenceTracker
-import com.example.aandi_post_web_server.assignment.repository.AssignmentExampleRepository
-import com.example.aandi_post_web_server.assignment.repository.AssignmentRepository
-import com.example.aandi_post_web_server.assignment.repository.AssignmentRequirementRepository
+import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEvent
+import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventMapper
+import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventPublisher
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.infrastructure.jackson.AssignmentMetadataPayloadTestCasePresenceTracker
+import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentExampleRepository
+import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
+import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
-import com.example.aandi_post_web_server.course.enum.CourseTrack
-import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
-import com.example.aandi_post_web_server.course.repository.CourseEnrollmentRepository
-import com.example.aandi_post_web_server.course.repository.CourseRepository
-import com.example.aandi_post_web_server.course.repository.CourseWeekRepository
-import com.example.aandi_post_web_server.user.repository.ReportUserRepository
+import com.example.aandi_post_web_server.course.domain.model.CourseTrack
+import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
+import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
+import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
+import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
+import com.example.aandi_post_web_server.user.infrastructure.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.mockito.Mockito
@@ -134,7 +134,7 @@ private class Fixture {
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentTestCaseRepository = assignmentExampleRepository,
-        assignmentDeliveryRepository = Mockito.mock(com.example.aandi_post_web_server.assignment.repository.AssignmentDeliveryRepository::class.java),
+        assignmentDeliveryRepository = Mockito.mock(com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository::class.java),
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         reportUserRepository = reportUserRepository,

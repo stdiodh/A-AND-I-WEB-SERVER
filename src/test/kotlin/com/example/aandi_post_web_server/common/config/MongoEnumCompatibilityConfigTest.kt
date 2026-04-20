@@ -1,6 +1,6 @@
 package com.example.aandi_post_web_server.common.config
 
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe

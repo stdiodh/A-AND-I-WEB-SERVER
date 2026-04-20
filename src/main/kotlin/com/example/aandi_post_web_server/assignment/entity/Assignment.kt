@@ -1,8 +1,8 @@
 package com.example.aandi_post_web_server.assignment.entity
 
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
-import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTemplateLanguage
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.mapping.Document

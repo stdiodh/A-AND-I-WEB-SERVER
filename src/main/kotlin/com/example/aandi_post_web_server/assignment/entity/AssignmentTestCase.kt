@@ -1,6 +1,6 @@
 package com.example.aandi_post_web_server.assignment.entity
 
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.mapping.Document

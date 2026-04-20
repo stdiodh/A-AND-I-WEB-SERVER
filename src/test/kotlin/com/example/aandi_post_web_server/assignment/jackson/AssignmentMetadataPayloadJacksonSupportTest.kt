@@ -1,6 +1,6 @@
-package com.example.aandi_post_web_server.assignment.jackson
+package com.example.aandi_post_web_server.assignment.infrastructure.jackson
 
-import com.example.aandi_post_web_server.assignment.dtos.UpdateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue

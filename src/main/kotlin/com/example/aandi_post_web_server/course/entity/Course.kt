@@ -1,8 +1,8 @@
 package com.example.aandi_post_web_server.course.entity
 
-import com.example.aandi_post_web_server.course.enum.CourseStatus
-import com.example.aandi_post_web_server.course.enum.CourseTrack
-import com.example.aandi_post_web_server.course.enum.CoursePhase
+import com.example.aandi_post_web_server.course.domain.model.CourseStatus
+import com.example.aandi_post_web_server.course.domain.model.CourseTrack
+import com.example.aandi_post_web_server.course.domain.model.CoursePhase
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document

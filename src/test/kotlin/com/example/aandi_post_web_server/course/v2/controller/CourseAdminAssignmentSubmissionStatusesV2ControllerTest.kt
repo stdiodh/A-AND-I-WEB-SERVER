@@ -1,16 +1,16 @@
 @file:Suppress("DEPRECATION")
 
-package com.example.aandi_post_web_server.course.v2.controller
+package com.example.aandi_post_web_server.course.api.v2.controller
 
-import com.example.aandi_post_web_server.assignment.v2.dto.AdminAssignmentSubmissionStatusItemResponse
-import com.example.aandi_post_web_server.assignment.v2.dto.AdminAssignmentSubmissionStatusesResponse
-import com.example.aandi_post_web_server.assignment.v2.service.AdminAssignmentSubmissionStatusesV2Service
+import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusItemResponse
+import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
+import com.example.aandi_post_web_server.assignment.application.service.AdminAssignmentSubmissionStatusesV2Service
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.error.GlobalApiExceptionHandler
 import com.example.aandi_post_web_server.common.error.GlobalWebExceptionHandler
 import com.example.aandi_post_web_server.common.security.SecurityConfig
-import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
+import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.extensions.spring.SpringExtension
 import org.mockito.Mockito

@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.assignment.submission.event
+package com.example.aandi_post_web_server.assignment.infrastructure.submission.event
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper

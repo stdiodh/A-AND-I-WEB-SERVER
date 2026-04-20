@@ -1,6 +1,6 @@
 @file:Suppress("DEPRECATION")
 
-package com.example.aandi_post_web_server.common.v2.logging
+package com.example.aandi_post_web_server.common.logging.v2
 
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.core.read.ListAppender
@@ -10,18 +10,18 @@ import com.example.aandi_post_web_server.common.error.GlobalApiExceptionHandler
 import com.example.aandi_post_web_server.common.error.GlobalWebExceptionHandler
 import com.example.aandi_post_web_server.common.error.RequestIdWebFilter
 import com.example.aandi_post_web_server.common.security.SecurityConfig
-import com.example.aandi_post_web_server.course.controller.CourseV1Controller
-import com.example.aandi_post_web_server.course.controller.CourseQueryV1Controller
-import com.example.aandi_post_web_server.course.dtos.CreateCourseRequest
-import com.example.aandi_post_web_server.course.dtos.CourseMetadataResponse
-import com.example.aandi_post_web_server.course.dtos.CourseMetadataPayload
-import com.example.aandi_post_web_server.course.dtos.CourseResponse
-import com.example.aandi_post_web_server.course.enum.CoursePhase
-import com.example.aandi_post_web_server.course.enum.CourseStatus
-import com.example.aandi_post_web_server.course.enum.CourseTrack
-import com.example.aandi_post_web_server.course.service.CourseV1Service
-import com.example.aandi_post_web_server.course.v2.controller.CourseAdminV2Controller
-import com.example.aandi_post_web_server.course.v2.controller.CourseQueryV2Controller
+import com.example.aandi_post_web_server.course.api.v1.controller.CourseV1Controller
+import com.example.aandi_post_web_server.course.api.v1.controller.CourseQueryV1Controller
+import com.example.aandi_post_web_server.course.api.dto.CreateCourseRequest
+import com.example.aandi_post_web_server.course.api.dto.CourseMetadataResponse
+import com.example.aandi_post_web_server.course.api.dto.CourseMetadataPayload
+import com.example.aandi_post_web_server.course.api.dto.CourseResponse
+import com.example.aandi_post_web_server.course.domain.model.CoursePhase
+import com.example.aandi_post_web_server.course.domain.model.CourseStatus
+import com.example.aandi_post_web_server.course.domain.model.CourseTrack
+import com.example.aandi_post_web_server.course.application.service.CourseV1Service
+import com.example.aandi_post_web_server.course.api.v2.controller.CourseAdminV2Controller
+import com.example.aandi_post_web_server.course.api.v2.controller.CourseQueryV2Controller
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.core.spec.style.StringSpec

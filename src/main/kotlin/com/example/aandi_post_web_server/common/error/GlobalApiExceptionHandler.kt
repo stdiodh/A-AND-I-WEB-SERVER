@@ -1,10 +1,10 @@
 package com.example.aandi_post_web_server.common.error
 
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
-import com.example.aandi_post_web_server.common.v2.api.V2ApiEnvelope
-import com.example.aandi_post_web_server.common.v2.api.V2ApiResponseFactory
-import com.example.aandi_post_web_server.common.v2.error.V2ExceptionMapper
-import com.example.aandi_post_web_server.common.v2.security.V2PathMatcher
+import com.example.aandi_post_web_server.common.api.envelope.V2ApiEnvelope
+import com.example.aandi_post_web_server.common.api.factory.V2ApiResponseFactory
+import com.example.aandi_post_web_server.common.error.v2.V2ExceptionMapper
+import com.example.aandi_post_web_server.common.security.v2.V2PathMatcher
 import org.slf4j.LoggerFactory
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order

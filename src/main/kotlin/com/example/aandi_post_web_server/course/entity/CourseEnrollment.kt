@@ -1,6 +1,6 @@
 package com.example.aandi_post_web_server.course.entity
 
-import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
+import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.mapping.Document

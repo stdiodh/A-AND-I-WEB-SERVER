@@ -4,9 +4,9 @@ package com.example.aandi_post_web_server.common.error
 
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.security.SecurityConfig
-import com.example.aandi_post_web_server.course.controller.CourseQueryV1Controller
-import com.example.aandi_post_web_server.course.controller.CourseV1Controller
-import com.example.aandi_post_web_server.course.service.CourseV1Service
+import com.example.aandi_post_web_server.course.api.v1.controller.CourseQueryV1Controller
+import com.example.aandi_post_web_server.course.api.v1.controller.CourseV1Controller
+import com.example.aandi_post_web_server.course.application.service.CourseV1Service
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.extensions.spring.SpringExtension
 import org.mockito.Mockito
