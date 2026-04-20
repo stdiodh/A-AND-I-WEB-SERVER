@@ -400,10 +400,10 @@ class CourseCommandService(
             startAt = startAt,
             endAt = endAt,
             metadata = metadata,
-            status = effectiveAssignmentStatus(startAt, now),
+            status = AssignmentStatus.PUBLISHED,
             createdAt = now,
             updatedAt = now,
-            publishedAt = effectivePublishedAt(startAt, null, now),
+            publishedAt = initialPublishedAt(startAt, now),
         )
     }
 
@@ -531,9 +531,9 @@ class CourseCommandService(
             startAt = targetStartAt,
             endAt = targetEndAt,
             metadata = metadata,
-            status = effectiveAssignmentStatus(targetStartAt, now),
+            status = AssignmentStatus.PUBLISHED,
             updatedAt = now,
-            publishedAt = effectivePublishedAt(targetStartAt, assignment.publishedAt, now),
+            publishedAt = assignment.publishedAt ?: targetStartAt,
         )
 
         val checkDuplicate = ensureAssignmentSlotAvailable(courseId, candidate, parsedAssignmentId)
@@ -666,26 +666,24 @@ class CourseCommandService(
             assignmentReportTestCaseEventMapper.deleted(assignmentId)
         )
 
-    private fun effectiveAssignmentStatus(startAt: Instant, now: Instant = Instant.now()): AssignmentStatus {
-        if (now >= startAt) {
-            return AssignmentStatus.PUBLISHED
-        }
-        return AssignmentStatus.DRAFT
-    }
+    private fun initialPublishedAt(startAt: Instant, now: Instant = Instant.now()): Instant =
+        if (now >= startAt) now else startAt
 
-    private fun isPublished(assignment: Assignment, now: Instant = Instant.now()): Boolean =
-        effectiveAssignmentStatus(assignment.startAt, now) == AssignmentStatus.PUBLISHED
-
-    private fun effectivePublishedAt(
-        startAt: Instant,
-        publishedAt: Instant?,
+    private fun effectiveResponseStatus(
+        assignment: Assignment,
         now: Instant = Instant.now(),
-    ): Instant? {
-        if (effectiveAssignmentStatus(startAt, now) == AssignmentStatus.PUBLISHED) {
-            return publishedAt ?: startAt
+    ): AssignmentStatus {
+        if (assignment.status != AssignmentStatus.PUBLISHED) {
+            return assignment.status
         }
-        return null
+        return if (now >= assignment.startAt) AssignmentStatus.PUBLISHED else AssignmentStatus.DRAFT
     }
+
+    private fun effectiveResponsePublishedAt(
+        assignment: Assignment,
+        now: Instant = Instant.now(),
+    ): Instant? =
+        if (effectiveResponseStatus(assignment, now) == AssignmentStatus.PUBLISHED) assignment.publishedAt else null
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> {
         return courseRepository.findBySlug(slug.value)
@@ -884,8 +882,8 @@ class CourseCommandService(
         orderInWeek = assignment.orderInWeek,
         startAt = assignment.startAt,
         endAt = assignment.endAt,
-        status = effectiveAssignmentStatus(assignment.startAt),
-        publishedAt = effectivePublishedAt(assignment.startAt, assignment.publishedAt),
+        status = effectiveResponseStatus(assignment),
+        publishedAt = effectiveResponsePublishedAt(assignment),
         metadata = assignment.metadata.toDetailResponse(requirements, testCases),
     )
 }
