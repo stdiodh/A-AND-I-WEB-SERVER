@@ -197,8 +197,13 @@ class CourseCommandServiceTest : StringSpec({
                 updated.id shouldBe assignmentId
                 updated.weekNo shouldBe 2
                 updated.orderInWeek shouldBe 2
+                updated.status shouldBe AssignmentStatus.DRAFT
+                updated.publishedAt shouldBe null
             }
             .verifyComplete()
+
+        persistedAssignment.status shouldBe AssignmentStatus.PUBLISHED
+        persistedAssignment.publishedAt shouldBe target.startAt
     }
 
     "BANNED 상태 변경은 banReason이 필수다" {
@@ -621,7 +626,7 @@ class CourseCommandServiceTest : StringSpec({
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases.last().caseId shouldBe 2
     }
 
-    "draft 로 생성된 과제도 PROBLEM_CREATED 를 발행한다" {
+    "예약 공개 과제는 PUBLISHED 상태로 저장하고 응답은 DRAFT 로 반환한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
         val startAt = Instant.now().plusSeconds(3600)
@@ -682,9 +687,14 @@ class CourseCommandServiceTest : StringSpec({
             .thenAnswer { Flux.fromIterable(persistedTestCases) }
 
         StepVerifier.create(fixture.service.createAssignment("back-basic", request, "admin"))
-            .expectNextCount(1)
+            .assertNext { created ->
+                created.status shouldBe AssignmentStatus.DRAFT
+                created.publishedAt shouldBe null
+            }
             .verifyComplete()
 
+        requireNotNull(persistedAssignment).status shouldBe AssignmentStatus.PUBLISHED
+        requireNotNull(persistedAssignment).publishedAt shouldBe startAt
         fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_CREATED
         java.util.UUID.fromString(fixture.assignmentReportTestCaseEventPublisher.events.single().problemId).toString() shouldBe fixture.assignmentReportTestCaseEventPublisher.events.single().problemId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
@@ -796,6 +806,8 @@ class CourseCommandServiceTest : StringSpec({
             .assertNext { updated ->
                 updated.metadata.examples shouldHaveSize 1
                 updated.metadata.examples.first().inputValues shouldBe listOf("updated input")
+                updated.status shouldBe AssignmentStatus.PUBLISHED
+                updated.publishedAt shouldBe target.publishedAt
             }
             .verifyComplete()
 
