@@ -4,6 +4,7 @@ import com.example.aandi_post_web_server.course.domain.model.CourseStatus
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.domain.model.CoursePhase
 import org.springframework.data.annotation.Id
+import org.springframework.data.annotation.TypeAlias
 import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
@@ -17,6 +18,7 @@ data class CourseMetadata(
 )
 
 @Document(collection = "courses")
+@TypeAlias("course")
 data class Course(
     @Id
     val id: String? = null,

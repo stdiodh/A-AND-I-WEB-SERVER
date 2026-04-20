@@ -2,11 +2,13 @@ package com.example.aandi_post_web_server.assignment.entity
 
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import org.springframework.data.annotation.Id
+import org.springframework.data.annotation.TypeAlias
 import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
 
 @Document(collection = "assignment_test_cases")
+@TypeAlias("assignmentTestCase")
 @CompoundIndex(name = "ux_assignment_test_case_seq", def = "{'assignmentId': 1, 'seq': 1}", unique = true)
 data class AssignmentTestCase(
     @Id

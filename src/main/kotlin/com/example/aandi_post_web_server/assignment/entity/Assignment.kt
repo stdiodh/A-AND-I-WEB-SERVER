@@ -4,6 +4,7 @@ import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDiffi
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTemplateLanguage
 import org.springframework.data.annotation.Id
+import org.springframework.data.annotation.TypeAlias
 import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
@@ -23,6 +24,7 @@ data class AssignmentMetadata(
 )
 
 @Document(collection = "assignments")
+@TypeAlias("assignment")
 @CompoundIndex(name = "ux_assignment_course_week_order", def = "{'courseId': 1, 'weekNo': 1, 'orderInWeek': 1}", unique = true)
 data class Assignment(
     @Id
