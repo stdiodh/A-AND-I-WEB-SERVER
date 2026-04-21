@@ -1,6 +1,6 @@
-package com.example.aandi_post_web_server.assignment.domain
+package com.example.aandi_post_web_server.assignment.domain.model
 
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTemplateLanguage
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe

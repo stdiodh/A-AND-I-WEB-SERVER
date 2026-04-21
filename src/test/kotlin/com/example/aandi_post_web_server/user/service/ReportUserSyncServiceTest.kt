@@ -1,8 +1,8 @@
-package com.example.aandi_post_web_server.user.service
+package com.example.aandi_post_web_server.user.application.service
 
 import com.example.aandi_post_web_server.user.entity.ReportUser
-import com.example.aandi_post_web_server.user.event.AuthUserEvent
-import com.example.aandi_post_web_server.user.event.AuthUserEventType
+import com.example.aandi_post_web_server.user.infrastructure.event.AuthUserEvent
+import com.example.aandi_post_web_server.user.infrastructure.event.AuthUserEventType
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import io.kotest.core.spec.style.StringSpec

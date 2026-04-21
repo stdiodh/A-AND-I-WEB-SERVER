@@ -1,13 +1,13 @@
 package com.example.aandi_post_web_server.common.openapi
 
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentSummaryResponse
-import com.example.aandi_post_web_server.assignment.v2.dto.AdminAssignmentSubmissionStatusesResponse
-import com.example.aandi_post_web_server.common.v2.api.V2ApiError
-import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
-import com.example.aandi_post_web_server.course.dtos.CourseOutlineResponse
-import com.example.aandi_post_web_server.course.dtos.CourseResponse
-import com.example.aandi_post_web_server.course.dtos.CourseWeekResponse
+import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResponse
+import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryResponse
+import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
+import com.example.aandi_post_web_server.common.api.envelope.V2ApiError
+import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
+import com.example.aandi_post_web_server.course.api.dto.CourseOutlineResponse
+import com.example.aandi_post_web_server.course.api.dto.CourseResponse
+import com.example.aandi_post_web_server.course.api.dto.CourseWeekResponse
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(

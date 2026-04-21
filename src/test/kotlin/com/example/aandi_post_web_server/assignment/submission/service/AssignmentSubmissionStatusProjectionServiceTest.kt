@@ -1,7 +1,7 @@
-package com.example.aandi_post_web_server.assignment.submission.service
+package com.example.aandi_post_web_server.assignment.application.submission.service
 
 import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
-import com.example.aandi_post_web_server.assignment.submission.event.JudgeCompletedEvent
+import com.example.aandi_post_web_server.assignment.infrastructure.submission.event.JudgeCompletedEvent
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe

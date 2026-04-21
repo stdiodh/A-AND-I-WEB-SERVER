@@ -1,9 +1,9 @@
-package com.example.aandi_post_web_server.assignment.domain
+package com.example.aandi_post_web_server.assignment.domain.model
 
-import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentExampleRequest
-import com.example.aandi_post_web_server.assignment.dtos.CreateAssignmentRequirementRequest
+import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentExampleRequest
+import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly

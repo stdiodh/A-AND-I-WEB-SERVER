@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.assignment.event
+package com.example.aandi_post_web_server.assignment.infrastructure.event
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.core.spec.style.StringSpec

@@ -1,9 +1,9 @@
 package com.example.aandi_post_web_server.common.config
 
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
-import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
-import com.example.aandi_post_web_server.course.enum.CourseStatus
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
+import com.example.aandi_post_web_server.course.domain.model.CourseStatus
 import org.bson.Document
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean

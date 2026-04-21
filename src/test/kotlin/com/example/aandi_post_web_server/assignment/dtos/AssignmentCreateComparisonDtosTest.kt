@@ -1,9 +1,9 @@
-package com.example.aandi_post_web_server.assignment.dtos
+package com.example.aandi_post_web_server.assignment.api.dto
 
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
-import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTemplateLanguage
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTemplateLanguage
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import java.time.Instant

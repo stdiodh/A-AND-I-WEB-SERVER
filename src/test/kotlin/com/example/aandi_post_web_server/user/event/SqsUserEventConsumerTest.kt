@@ -1,8 +1,8 @@
-package com.example.aandi_post_web_server.user.event
+package com.example.aandi_post_web_server.user.infrastructure.event
 
-import com.example.aandi_post_web_server.user.config.UserSyncEventProperties
+import com.example.aandi_post_web_server.user.infrastructure.config.UserSyncEventProperties
 import com.example.aandi_post_web_server.user.entity.ReportUser
-import com.example.aandi_post_web_server.user.service.ReportUserSyncService
+import com.example.aandi_post_web_server.user.application.service.ReportUserSyncService
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.mongodb.client.result.UpdateResult

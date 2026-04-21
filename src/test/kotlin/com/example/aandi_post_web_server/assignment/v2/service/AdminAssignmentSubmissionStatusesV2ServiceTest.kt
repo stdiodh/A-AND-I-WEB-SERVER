@@ -1,14 +1,14 @@
-package com.example.aandi_post_web_server.assignment.v2.service
+package com.example.aandi_post_web_server.assignment.application.service
 
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailMetadataResponse
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentDetailResponse
+import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailMetadataResponse
+import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
-import com.example.aandi_post_web_server.assignment.submission.repository.AssignmentSubmissionStatusProjectionRepository
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
-import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.course.dtos.CourseEnrollmentResponse
-import com.example.aandi_post_web_server.course.enum.EnrollmentStatus
-import com.example.aandi_post_web_server.course.service.CourseV1Service
+import com.example.aandi_post_web_server.assignment.infrastructure.submission.repository.AssignmentSubmissionStatusProjectionRepository
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
+import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
+import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
+import com.example.aandi_post_web_server.course.application.service.CourseV1Service
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.mockito.Mockito

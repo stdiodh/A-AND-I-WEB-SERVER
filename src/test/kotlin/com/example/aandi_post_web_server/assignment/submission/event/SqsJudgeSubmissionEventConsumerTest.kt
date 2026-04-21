@@ -1,9 +1,9 @@
-package com.example.aandi_post_web_server.assignment.submission.event
+package com.example.aandi_post_web_server.assignment.infrastructure.submission.event
 
 import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
-import com.example.aandi_post_web_server.assignment.submission.service.AssignmentSubmissionStatusProjectionService
-import com.example.aandi_post_web_server.assignment.submission.service.AssignmentSubmissionStatusProjectionStoreException
-import com.example.aandi_post_web_server.assignment.submission.service.AssignmentSubmissionStatusProjectionStore
+import com.example.aandi_post_web_server.assignment.application.submission.service.AssignmentSubmissionStatusProjectionService
+import com.example.aandi_post_web_server.assignment.application.submission.service.AssignmentSubmissionStatusProjectionStoreException
+import com.example.aandi_post_web_server.assignment.application.submission.service.AssignmentSubmissionStatusProjectionStore
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.kotest.core.spec.style.StringSpec

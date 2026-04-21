@@ -1,6 +1,6 @@
 package com.example.aandi_post_web_server.common.openapi
 
-import com.example.aandi_post_web_server.assignment.v2.dto.AdminAssignmentSubmissionStatusesResponse
+import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(

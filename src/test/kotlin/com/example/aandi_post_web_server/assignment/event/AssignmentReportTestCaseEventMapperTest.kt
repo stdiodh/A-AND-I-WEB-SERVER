@@ -1,11 +1,11 @@
-package com.example.aandi_post_web_server.assignment.event
+package com.example.aandi_post_web_server.assignment.infrastructure.event
 
-import com.example.aandi_post_web_server.assignment.dtos.AssignmentExampleResponse
+import com.example.aandi_post_web_server.assignment.api.dto.AssignmentExampleResponse
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata
-import com.example.aandi_post_web_server.assignment.enum.AssignmentDifficulty
-import com.example.aandi_post_web_server.assignment.enum.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.enum.AssignmentTestCaseVisibility
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
