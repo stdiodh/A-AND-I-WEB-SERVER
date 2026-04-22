@@ -45,7 +45,7 @@ class AssignmentSubmissionStatusProjectionServiceTest : StringSpec({
         projection.latestTotalCases shouldBe 10
     }
 
-    "더 최신 timestamp 이벤트가 오면 latest 필드가 갱신되고 firstCompletedAt 은 유지된다" {
+    "더 높은 점수 이벤트가 오면 최고 점수 기준 필드가 갱신되고 firstCompletedAt 은 유지된다" {
         val store = InMemoryAssignmentSubmissionStatusProjectionStore()
         val service = AssignmentSubmissionStatusProjectionService(
             store = store,
@@ -81,6 +81,45 @@ class AssignmentSubmissionStatusProjectionServiceTest : StringSpec({
         projection.lastEventTimestamp shouldBe newerEvent.timestamp
         projection.latestScore shouldBe 90
         projection.latestPassedCases shouldBe 9
+        projection.latestTotalCases shouldBe 10
+    }
+
+    "더 최신 이벤트라도 점수가 낮으면 최고 점수 기준 필드는 유지되고 마지막 제출 시각만 갱신된다" {
+        val store = InMemoryAssignmentSubmissionStatusProjectionStore()
+        val service = AssignmentSubmissionStatusProjectionService(
+            store = store,
+            clock = Clock.fixed(Instant.parse("2026-04-13T09:00:00Z"), ZoneOffset.UTC),
+        )
+        val bestEvent = JudgeCompletedEvent(
+            assignmentId = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001",
+            publicCode = "A00123",
+            score = 100,
+            passedCases = 10,
+            totalCases = 10,
+            timestamp = Instant.parse("2026-04-13T08:20:11Z"),
+        )
+        val lowerButNewerEvent = JudgeCompletedEvent(
+            assignmentId = bestEvent.assignmentId,
+            publicCode = bestEvent.publicCode,
+            score = 60,
+            passedCases = 6,
+            totalCases = 10,
+            timestamp = Instant.parse("2026-04-13T08:40:11Z"),
+        )
+
+        StepVerifier.create(service.upsert(bestEvent))
+            .expectNextCount(1)
+            .verifyComplete()
+        StepVerifier.create(service.upsert(lowerButNewerEvent))
+            .expectNextCount(1)
+            .verifyComplete()
+
+        val projection = store.findAll().single()
+        projection.firstCompletedAt shouldBe bestEvent.timestamp
+        projection.lastCompletedAt shouldBe lowerButNewerEvent.timestamp
+        projection.lastEventTimestamp shouldBe bestEvent.timestamp
+        projection.latestScore shouldBe 100
+        projection.latestPassedCases shouldBe 10
         projection.latestTotalCases shouldBe 10
     }
 })

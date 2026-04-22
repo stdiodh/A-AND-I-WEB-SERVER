@@ -45,7 +45,9 @@ class AssignmentSubmissionStatusProjectionService(
             )
         }
 
-        val shouldRefreshLatest = !event.timestamp.isBefore(existing.lastEventTimestamp)
+        val shouldRefreshLatest =
+            event.score > existing.latestScore ||
+                (event.score == existing.latestScore && !event.timestamp.isBefore(existing.lastEventTimestamp))
         return existing.copy(
             submitted = true,
             firstCompletedAt = minOf(existing.firstCompletedAt, event.timestamp),
@@ -53,7 +55,7 @@ class AssignmentSubmissionStatusProjectionService(
             latestScore = if (shouldRefreshLatest) event.score else existing.latestScore,
             latestPassedCases = if (shouldRefreshLatest) event.passedCases else existing.latestPassedCases,
             latestTotalCases = if (shouldRefreshLatest) event.totalCases else existing.latestTotalCases,
-            lastEventTimestamp = maxOf(existing.lastEventTimestamp, event.timestamp),
+            lastEventTimestamp = if (shouldRefreshLatest) event.timestamp else existing.lastEventTimestamp,
             updatedAt = now,
         )
     }

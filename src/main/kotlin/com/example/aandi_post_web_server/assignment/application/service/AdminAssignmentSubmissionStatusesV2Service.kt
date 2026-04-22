@@ -6,6 +6,8 @@ import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSu
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.application.service.CourseV1Service
+import com.example.aandi_post_web_server.user.entity.ReportUser
+import com.example.aandi_post_web_server.user.infrastructure.repository.ReportUserRepository
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
@@ -13,6 +15,7 @@ import reactor.core.publisher.Mono
 class AdminAssignmentSubmissionStatusesV2Service(
     private val courseV1Service: CourseV1Service,
     private val projectionRepository: AssignmentSubmissionStatusProjectionRepository,
+    private val reportUserRepository: ReportUserRepository,
 ) {
 
     fun getSubmissionStatuses(
@@ -21,17 +24,24 @@ class AdminAssignmentSubmissionStatusesV2Service(
     ): Mono<AdminAssignmentSubmissionStatusesResponse> =
         courseV1Service.getAdminAssignmentDetail(courseSlug, assignmentId)
             .flatMap {
-                Mono.zip(
-                    courseV1Service.getEnrollments(courseSlug).collectList(),
-                    projectionRepository.findAllByAssignmentId(assignmentId).collectList(),
-                )
+                courseV1Service.getEnrollments(courseSlug).collectList()
+                    .flatMap { enrollments ->
+                        Mono.zip(
+                            Mono.just(enrollments),
+                            projectionRepository.findAllByAssignmentId(assignmentId).collectList(),
+                            reportUserRepository.findAllById(enrollments.map(CourseEnrollmentResponse::userId).distinct())
+                                .collectMap(ReportUser::id),
+                        )
+                    }
             }
             .map { tuple ->
                 val enrollments = tuple.t1
                 val projectionsByPublicCode = tuple.t2.associateBy(AssignmentSubmissionStatusProjection::publicCode)
+                val reportUsersById = tuple.t3
                 val items = enrollments.map { enrollment ->
                     val projection = projectionsByPublicCode[enrollment.publicCode]
-                    toItemResponse(enrollment, projection)
+                    val reportUser = reportUsersById[enrollment.userId]
+                    toItemResponse(enrollment, projection, reportUser)
                 }
                 val submittedCount = items.count { it.submitted }
                 AdminAssignmentSubmissionStatusesResponse(
@@ -47,11 +57,12 @@ class AdminAssignmentSubmissionStatusesV2Service(
     private fun toItemResponse(
         enrollment: CourseEnrollmentResponse,
         projection: AssignmentSubmissionStatusProjection?,
+        reportUser: ReportUser?,
     ): AdminAssignmentSubmissionStatusItemResponse =
         AdminAssignmentSubmissionStatusItemResponse(
             userId = enrollment.userId,
             publicCode = enrollment.publicCode,
-            username = enrollment.username,
+            username = reportUser?.nickname?.takeIf { it.isNotBlank() } ?: enrollment.username,
             enrollmentStatus = enrollment.status,
             submitted = projection?.submitted == true,
             score = projection?.latestScore,

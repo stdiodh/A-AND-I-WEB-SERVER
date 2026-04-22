@@ -9,6 +9,8 @@ import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatu
 import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
 import com.example.aandi_post_web_server.course.application.service.CourseV1Service
+import com.example.aandi_post_web_server.user.entity.ReportUser
+import com.example.aandi_post_web_server.user.infrastructure.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.mockito.Mockito
@@ -22,13 +24,14 @@ import java.time.Instant
 class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
     val courseV1Service = Mockito.mock(CourseV1Service::class.java)
     val projectionRepository = Mockito.mock(AssignmentSubmissionStatusProjectionRepository::class.java)
-    val service = AdminAssignmentSubmissionStatusesV2Service(courseV1Service, projectionRepository)
+    val reportUserRepository = Mockito.mock(ReportUserRepository::class.java)
+    val service = AdminAssignmentSubmissionStatusesV2Service(courseV1Service, projectionRepository, reportUserRepository)
 
     val courseSlug = "back-basic"
     val assignmentId = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001"
 
     beforeTest {
-        Mockito.reset(courseV1Service, projectionRepository)
+        Mockito.reset(courseV1Service, projectionRepository, reportUserRepository)
     }
 
     "코스 수강생 전체 기준으로 제출/미제출 현황을 조합한다" {
@@ -58,6 +61,13 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
                     )
                 )
             )
+        Mockito.`when`(reportUserRepository.findAllById(listOf("user-1", "user-2")))
+            .thenReturn(
+                Flux.just(
+                    sampleReportUser("user-1", "#BE301", "alice-id", "앨리스"),
+                    sampleReportUser("user-2", "#BE302", "bob-id", null),
+                )
+            )
 
         StepVerifier.create(service.getSubmissionStatuses(courseSlug, assignmentId))
             .assertNext { response ->
@@ -67,10 +77,12 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
                 response.submittedCount shouldBe 1
                 response.notSubmittedCount shouldBe 1
                 response.items[0].userId shouldBe "user-1"
+                response.items[0].username shouldBe "앨리스"
                 response.items[0].submitted shouldBe true
                 response.items[0].score shouldBe 90
                 response.items[0].completedAt shouldBe Instant.parse("2026-04-13T08:40:11Z")
                 response.items[1].userId shouldBe "user-2"
+                response.items[1].username shouldBe "bob"
                 response.items[1].submitted shouldBe false
                 response.items[1].score shouldBe null
                 response.items[1].completedAt shouldBe null
@@ -85,12 +97,15 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
             .thenReturn(Flux.just(sampleEnrollment("user-1", "#BE301", "alice")))
         Mockito.`when`(projectionRepository.findAllByAssignmentId(assignmentId))
             .thenReturn(Flux.empty())
+        Mockito.`when`(reportUserRepository.findAllById(listOf("user-1")))
+            .thenReturn(Flux.empty())
 
         StepVerifier.create(service.getSubmissionStatuses(courseSlug, assignmentId))
             .assertNext { response ->
                 response.totalEnrolled shouldBe 1
                 response.submittedCount shouldBe 0
                 response.notSubmittedCount shouldBe 1
+                response.items.single().username shouldBe "alice"
                 response.items.single().submitted shouldBe false
             }
             .verifyComplete()
@@ -157,4 +172,18 @@ private fun sampleEnrollment(
         bannedAt = null,
         banReason = null,
         updatedAt = Instant.parse("2026-03-05T09:20:18Z"),
+    )
+
+private fun sampleReportUser(
+    userId: String,
+    publicCode: String,
+    username: String,
+    nickname: String?,
+): ReportUser =
+    ReportUser(
+        id = userId,
+        publicCode = publicCode,
+        username = username,
+        role = "USER",
+        nickname = nickname,
     )
