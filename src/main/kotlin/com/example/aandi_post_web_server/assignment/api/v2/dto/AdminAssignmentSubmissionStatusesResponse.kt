@@ -26,18 +26,18 @@ data class AdminAssignmentSubmissionStatusItemResponse(
     val userId: String,
     @field:Schema(description = "유저 publicCode", example = "#BE301")
     val publicCode: String,
-    @field:Schema(description = "사용자 이름", example = "alice")
+    @field:Schema(description = "사용자 닉네임. 닉네임이 없으면 username 이 반환됩니다.", example = "메카존")
     val username: String,
     @field:Schema(description = "수강 상태", example = "ENABLED")
     val enrollmentStatus: EnrollmentStatus,
     @field:Schema(description = "현재 기준 채점 완료 projection 존재 여부", example = "true")
     val submitted: Boolean,
-    @field:Schema(description = "OJ가 발행한 최종 완료 점수. projection 이 없으면 null.", example = "90")
+    @field:Schema(description = "OJ가 발행한 최고 점수 기준 결과 점수. projection 이 없으면 null.", example = "90")
     val score: Int? = null,
-    @field:Schema(description = "OJ가 발행한 최종 완료 결과의 통과 케이스 수. projection 이 없으면 null.", example = "9")
+    @field:Schema(description = "OJ가 발행한 최고 점수 기준 결과의 통과 케이스 수. projection 이 없으면 null.", example = "9")
     val passedCases: Int? = null,
-    @field:Schema(description = "OJ가 발행한 최종 완료 결과의 전체 케이스 수. projection 이 없으면 null.", example = "10")
+    @field:Schema(description = "OJ가 발행한 최고 점수 기준 결과의 전체 케이스 수. projection 이 없으면 null.", example = "10")
     val totalCases: Int? = null,
-    @field:Schema(description = "최신 `JUDGE_COMPLETED` 이벤트 시각(UTC ISO-8601). projection 이 없으면 null.")
+    @field:Schema(description = "최고 점수 기준 결과가 기록된 `JUDGE_COMPLETED` 이벤트 시각(UTC ISO-8601). projection 이 없으면 null.")
     val completedAt: Instant? = null,
 )

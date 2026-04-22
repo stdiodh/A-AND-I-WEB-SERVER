@@ -38,7 +38,7 @@ class CourseAdminAssignmentSubmissionStatusesV2Controller(
             특정 코스의 수강생 전체를 기준으로 과제 제출 현황을 조회합니다.
             이 API는 OJ `JUDGE_COMPLETED` 이벤트 기반 projection 을 읽고, 코스 수강생 목록과 left join 해서 제출 여부를 계산합니다.
             projection 이 없으면 미제출(`submitted=false`)로 간주합니다.
-            제출 횟수를 모두 나열하는 API가 아니며, 현재는 최신 완료 제출 기준 요약 정보(`score`, `passedCases`, `totalCases`, `completedAt`)만 제공합니다.
+            제출 횟수를 모두 나열하는 API가 아니며, 현재는 최고 점수 기준 요약 정보(`score`, `passedCases`, `totalCases`, `completedAt`)만 제공합니다.
             A&I v2 공통 헤더와 ADMIN 권한이 필요합니다.
             """,
     )
