@@ -126,6 +126,11 @@ private class Fixture {
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
     val assignmentTestCaseValidator = AssignmentTestCaseValidator()
     val assignmentMetadataPayloadTestCasePresenceTracker = AssignmentMetadataPayloadTestCasePresenceTracker()
+    private val courseEnrollmentCommandService = CourseEnrollmentCommandService(
+        courseRepository = courseRepository,
+        courseEnrollmentRepository = courseEnrollmentRepository,
+        reportUserRepository = reportUserRepository,
+    )
 
     private val courseCommandService = CourseCommandService(
         courseRepository = courseRepository,
@@ -137,7 +142,7 @@ private class Fixture {
         assignmentDeliveryRepository = Mockito.mock(com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository::class.java),
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
-        reportUserRepository = reportUserRepository,
+        courseEnrollmentCommandService = courseEnrollmentCommandService,
         assignmentTestCaseValidator = assignmentTestCaseValidator,
         assignmentMetadataPayloadTestCasePresenceTracker = assignmentMetadataPayloadTestCasePresenceTracker,
     )

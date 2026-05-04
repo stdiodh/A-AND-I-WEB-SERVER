@@ -1055,6 +1055,11 @@ private class CommandFixture {
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
     val assignmentTestCaseValidator = AssignmentTestCaseValidator()
     val assignmentMetadataPayloadTestCasePresenceTracker = AssignmentMetadataPayloadTestCasePresenceTracker()
+    val courseEnrollmentCommandService = CourseEnrollmentCommandService(
+        courseRepository = courseRepository,
+        courseEnrollmentRepository = courseEnrollmentRepository,
+        reportUserRepository = reportUserRepository,
+    )
     val service = CourseCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
@@ -1065,7 +1070,7 @@ private class CommandFixture {
         assignmentDeliveryRepository = assignmentDeliveryRepository,
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
-        reportUserRepository = reportUserRepository,
+        courseEnrollmentCommandService = courseEnrollmentCommandService,
         assignmentTestCaseValidator = assignmentTestCaseValidator,
         assignmentMetadataPayloadTestCasePresenceTracker = assignmentMetadataPayloadTestCasePresenceTracker,
     )
