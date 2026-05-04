@@ -65,16 +65,15 @@ val coverageExcludes = listOf(
 	"**/Application*",
 	"**/*$*",
 	"**/entity/**",
-	"**/enum/**",
 	"**/repository/**",
-	"**/dtos/**",
+	"**/dto/**",
 	"**/common/openapi/**",
 	"**/common/annotation/**",
 	"**/common/config/SwaggerConfig*",
 	"**/common/config/WebConfig*",
-	"**/course/controller/**",
-	"**/course/service/CourseCommandService*",
-	"**/course/service/CourseV1Service*",
+	"**/course/api/**/controller/**",
+	"**/course/application/service/CourseCommandService*",
+	"**/course/application/service/CourseV1Service*",
 )
 
 val kotlinMainClasses = layout.buildDirectory.dir("classes/kotlin/main")
