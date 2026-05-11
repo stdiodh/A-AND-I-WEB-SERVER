@@ -15,30 +15,44 @@ class V2StructuredLogSanitizer(
         val node = runCatching { objectMapper.valueToTree<JsonNode>(value) }.getOrNull()
             ?: return null
 
-        return sanitizeNode(null, node)
+        return sanitizeNode(fieldName = null, node = node, parentHidden = false)
     }
 
-    private fun sanitizeNode(fieldName: String?, node: JsonNode): Any? {
+    private fun sanitizeNode(fieldName: String?, node: JsonNode, parentHidden: Boolean): Any? {
         if (node.isNull) {
             return null
         }
 
+        if (fieldName.isNullableSecretField()) {
+            return maskedSecret(fieldName!!)
+        }
+        if (fieldName.isHiddenField()) {
+            return "****"
+        }
+        if (fieldName?.isSensitivePayloadField() == true) {
+            return "****"
+        }
+
         if (node.isObject) {
+            val hidden = parentHidden || fieldName.isHiddenField() || node.hasHiddenVisibility()
             val sanitized = linkedMapOf<String, Any?>()
             node.fields().forEachRemaining { (childName, childNode) ->
-                sanitized[childName] = sanitizeNode(childName, childNode)
+                sanitized[childName] = if (hidden && childName.isHiddenPayloadChild()) {
+                    "****"
+                } else {
+                    sanitizeNode(childName, childNode, hidden)
+                }
             }
             return sanitized
         }
 
         if (node.isArray) {
-            return node.map { child -> sanitizeNode(fieldName, child) }
+            return node.map { child -> sanitizeNode(fieldName, child, parentHidden || fieldName.isHiddenField()) }
         }
 
         val textValue = node.asText()
         return when {
             fieldName == null -> primitiveValue(node)
-            fieldName.isSecretField() -> maskedSecret(fieldName)
             fieldName.isPartialMaskField() -> partiallyMask(fieldName, textValue)
             else -> primitiveValue(node)
         }
@@ -98,24 +112,98 @@ class V2StructuredLogSanitizer(
     }
 
     private fun String.isSecretField(): Boolean {
-        val normalized = lowercase()
+        val normalized = normalizedFieldName()
         return normalized == "password" ||
+            normalized.contains("password") ||
             normalized == "accesstoken" ||
             normalized == "refreshtoken" ||
+            normalized == "token" ||
+            normalized.endsWith("token") ||
             normalized == "authenticate" ||
             normalized == "salt" ||
             normalized == "authorization" ||
             normalized == "authorizations" ||
-            normalized.endsWith("authorization")
+            normalized.endsWith("authorization") ||
+            normalized == "secret" ||
+            normalized.endsWith("secret") ||
+            normalized == "credential" ||
+            normalized == "credentials" ||
+            normalized.contains("credential") ||
+            normalized == "privatekey" ||
+            normalized.endsWith("privatekey") ||
+            normalized == "clientsecret" ||
+            normalized == "session" ||
+            normalized.endsWith("session") ||
+            normalized == "cookie" ||
+            normalized.endsWith("cookie")
     }
 
     private fun String.isPartialMaskField(): Boolean {
-        val normalized = lowercase()
+        val normalized = normalizedFieldName()
         return normalized == "email" ||
             normalized == "phone" ||
             normalized == "loginid" ||
+            normalized == "username" ||
             normalized.endsWith("email") ||
             normalized.endsWith("phone") ||
-            normalized.endsWith("loginid")
+            normalized.endsWith("loginid") ||
+            normalized.endsWith("username")
     }
+
+    private fun String?.isNullableSecretField(): Boolean =
+        this?.isSecretField() ?: false
+
+    private fun String?.isHiddenField(): Boolean {
+        val normalized = this?.normalizedFieldName() ?: return false
+        return normalized == "privatetestcases" ||
+            normalized == "hiddentestcases" ||
+            normalized == "hiddencase" ||
+            normalized.contains("privatetestcase") ||
+            normalized.contains("hiddentestcase") ||
+            normalized.contains("hiddencase")
+    }
+
+    private fun String.isSensitivePayloadField(): Boolean {
+        val normalized = normalizedFieldName()
+        return normalized == "expectedoutput" ||
+            normalized.endsWith("expectedoutput") ||
+            normalized == "input" ||
+            normalized.endsWith("input") ||
+            normalized == "output" ||
+            normalized.endsWith("output") ||
+            normalized == "code" ||
+            normalized.endsWith("code") ||
+            normalized == "sourcecode" ||
+            normalized == "submittedcode" ||
+            normalized == "submittedsource" ||
+            normalized == "usercode" ||
+            normalized == "useranswercode" ||
+            normalized == "codecontent"
+    }
+
+    private fun String.isHiddenPayloadChild(): Boolean {
+        val normalized = normalizedFieldName()
+        return normalized == "input" ||
+            normalized == "output" ||
+            normalized == "expectedoutput" ||
+            normalized == "sourcecode" ||
+            normalized == "submittedcode" ||
+            normalized == "usercode"
+    }
+
+    private fun JsonNode.hasHiddenVisibility(): Boolean {
+        val visibility = path("visibility").takeIf { !it.isMissingNode && !it.isNull }?.asText()
+            ?: path("caseVisibility").takeIf { !it.isMissingNode && !it.isNull }?.asText()
+        val normalizedVisibility = visibility?.lowercase().orEmpty()
+        if (normalizedVisibility.contains("private") || normalizedVisibility.contains("hidden")) {
+            return true
+        }
+
+        return path("isPrivate").takeIf { !it.isMissingNode && !it.isNull }?.asBoolean(false) == true ||
+            path("private").takeIf { !it.isMissingNode && !it.isNull }?.asBoolean(false) == true ||
+            path("hidden").takeIf { !it.isMissingNode && !it.isNull }?.asBoolean(false) == true
+    }
+
+    private fun String.normalizedFieldName(): String =
+        lowercase().filter { it.isLetterOrDigit() }
 }

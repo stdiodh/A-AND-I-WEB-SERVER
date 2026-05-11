@@ -1,0 +1,55 @@
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-northeast-2}
+        awslogs-group: ${AWSLOGS_GROUP_REPORT_MONGODB:-/a-and-i/prod/report-mongodb}
+        awslogs-stream: ${HOSTNAME:-ec2}-report-mongodb
+        awslogs-create-group: "true"
+
+  report-server:
+    image: ${REPORT_SERVER_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "${REPORT_SERVER_PORT:-8080}:8080"
+    environment:
+      APP_ENV: prod
+      APP_V2_LOG_SERVICE_NAME: report-service
+      APP_V2_LOG_DOMAIN_CODE: 4
+      APP_VERSION: ${APP_VERSION:-0.0.1-SNAPSHOT}
+      APP_V2_LOG_INSTANCE_ID: ${HOSTNAME:-report-server-local}
+      APP_V2_LOG_MAX_BODY_BYTES: 8192
+      APP_V2_LOG_INCLUDE_PATH_PREFIXES: /v2,/api/v2
+      MONGO_DB_URL: ${MONGO_DB_URL}
+      SWAGGER_URL: ${SWAGGER_URL}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-northeast-2}
+        awslogs-group: ${AWSLOGS_GROUP_REPORT:-/a-and-i/prod/report}
+        awslogs-stream: ${HOSTNAME:-ec2}-report-server
+        awslogs-create-group: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  mongodb_data:

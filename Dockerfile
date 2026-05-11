@@ -13,7 +13,14 @@ RUN ./gradlew clean bootJar -x test --no-daemon
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /workspace/build/libs/*.jar app.jar
 
 EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 --start-period=30s \
+    CMD curl -fsS http://localhost:8080/actuator/health/readiness | grep -q '"status":"UP"' || exit 1
+
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

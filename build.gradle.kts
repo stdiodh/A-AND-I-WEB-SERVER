@@ -23,6 +23,7 @@ dependencies {
 	implementation(platform("software.amazon.awssdk:bom:2.25.20"))
 	implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
@@ -65,16 +66,15 @@ val coverageExcludes = listOf(
 	"**/Application*",
 	"**/*$*",
 	"**/entity/**",
-	"**/enum/**",
 	"**/repository/**",
-	"**/dtos/**",
+	"**/dto/**",
 	"**/common/openapi/**",
 	"**/common/annotation/**",
 	"**/common/config/SwaggerConfig*",
 	"**/common/config/WebConfig*",
-	"**/course/controller/**",
-	"**/course/service/CourseCommandService*",
-	"**/course/service/CourseV1Service*",
+	"**/course/api/**/controller/**",
+	"**/course/application/service/CourseCommandService*",
+	"**/course/application/service/CourseV1Service*",
 )
 
 val kotlinMainClasses = layout.buildDirectory.dir("classes/kotlin/main")
