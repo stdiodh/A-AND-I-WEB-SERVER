@@ -41,6 +41,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.collections.shouldHaveSize
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.web.server.ResponseStatusException
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
@@ -808,6 +809,10 @@ class CourseCommandServiceTest : StringSpec({
         )
         Mockito.`when`(fixture.assignmentRepository.findByCourseIdAndOriginAssignmentId("target-course-id", sourceId))
             .thenReturn(Mono.just(existing))
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo(ArgumentMatchers.anyString(), ArgumentMatchers.anyInt()))
+            .thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as CourseWeek) }
 
         StepVerifier.create(
             fixture.service.copyAssignment("target-course", CopyAssignmentRequest(sourceAssignmentId = sourceId), "admin")
@@ -817,6 +822,8 @@ class CourseCommandServiceTest : StringSpec({
                 error.reason shouldBe "이미 대상 코스에 동일한 원본 과제가 존재합니다."
             }
             .verify()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.never()).save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 
     "복사본을 다시 복사해도 최초 원본 ID를 유지한다" {
@@ -872,6 +879,10 @@ class CourseCommandServiceTest : StringSpec({
         )
         Mockito.`when`(fixture.assignmentRepository.findByCourseIdAndCopyFingerprint(ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
             .thenReturn(Mono.just(existing))
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo(ArgumentMatchers.anyString(), ArgumentMatchers.anyInt()))
+            .thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as CourseWeek) }
 
         StepVerifier.create(
             fixture.service.copyAssignment("target-course", CopyAssignmentRequest(sourceAssignmentId = sourceId), "admin")
@@ -881,6 +892,77 @@ class CourseCommandServiceTest : StringSpec({
                 error.reason shouldBe "이미 대상 코스에 동일한 내용의 과제가 존재합니다."
             }
             .verify()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.never()).save(ArgumentMatchers.any(CourseWeek::class.java))
+    }
+
+    "과제 복사 저장 중 DuplicateKeyException 이 발생하면 CONFLICT 로 변환한다" {
+        val fixture = CommandFixture()
+        val sourceId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val sourceCourse = queryCourse(id = "source-course-id", slug = "source-course", title = "원본 코스")
+        val targetCourse = queryCourse(id = "target-course-id", slug = "target-course", title = "대상 코스")
+        val sourceAssignment = commandAssignment(id = sourceId, courseId = "source-course-id", courseSlug = "source-course", status = AssignmentStatus.PUBLISHED)
+
+        stubCopyHappyPath(
+            fixture = fixture,
+            sourceCourse = sourceCourse,
+            targetCourse = targetCourse,
+            sourceAssignment = sourceAssignment,
+            persistedAssignment = { null },
+            onPersistAssignment = {},
+        )
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenReturn(Mono.error(DuplicateKeyException("duplicate copy")))
+
+        StepVerifier.create(
+            fixture.service.copyAssignment("target-course", CopyAssignmentRequest(sourceAssignmentId = sourceId), "admin")
+        )
+            .expectErrorSatisfies { error ->
+                (error as ResponseStatusException).statusCode shouldBe HttpStatus.CONFLICT
+                error.reason shouldBe "이미 대상 코스에 동일한 원본 또는 동일한 내용의 과제가 존재합니다."
+            }
+            .verify()
+    }
+
+    "과제 복사 본문 저장 중 DuplicateKeyException 이 발생하면 정리 후 CONFLICT 로 변환한다" {
+        val fixture = CommandFixture()
+        val sourceId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val sourceCourse = queryCourse(id = "source-course-id", slug = "source-course", title = "원본 코스")
+        val targetCourse = queryCourse(id = "target-course-id", slug = "target-course", title = "대상 코스")
+        val sourceAssignment = commandAssignment(id = sourceId, courseId = "source-course-id", courseSlug = "source-course", status = AssignmentStatus.PUBLISHED)
+        val sourceRequirements = listOf(AssignmentRequirement(assignmentId = sourceId, sortOrder = 1, requirementText = "함수 분리 필수"))
+        var persistedAssignment: Assignment? = null
+
+        stubCopyHappyPath(
+            fixture = fixture,
+            sourceCourse = sourceCourse,
+            targetCourse = targetCourse,
+            sourceAssignment = sourceAssignment,
+            sourceRequirements = sourceRequirements,
+            persistedAssignment = { persistedAssignment },
+            onPersistAssignment = { persistedAssignment = it },
+        )
+        Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
+            .thenReturn(Flux.error(DuplicateKeyException("duplicate requirement")))
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
+            .thenReturn(Mono.just(0))
+        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
+            .thenReturn(Mono.just(0))
+        Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
+            .thenReturn(Mono.just(0))
+        Mockito.`when`(fixture.assignmentRepository.deleteById(ArgumentMatchers.anyString()))
+            .thenReturn(Mono.empty())
+
+        StepVerifier.create(
+            fixture.service.copyAssignment("target-course", CopyAssignmentRequest(sourceAssignmentId = sourceId), "admin")
+        )
+            .expectErrorSatisfies { error ->
+                (error as ResponseStatusException).statusCode shouldBe HttpStatus.CONFLICT
+                error.reason shouldBe "이미 대상 코스에 동일한 원본 또는 동일한 내용의 과제가 존재합니다."
+            }
+            .verify()
+
+        Mockito.verify(fixture.assignmentRepository).deleteById(requireNotNull(requireNotNull(persistedAssignment).id))
     }
 
     "대상 코스의 같은 주차 순번 슬롯이 사용 중이면 CONFLICT 를 반환한다" {

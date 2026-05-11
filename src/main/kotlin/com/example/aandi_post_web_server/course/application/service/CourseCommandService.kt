@@ -47,6 +47,7 @@ import com.example.aandi_post_web_server.course.infrastructure.repository.Course
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import org.slf4j.LoggerFactory
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -451,16 +452,19 @@ class CourseCommandService(
             copyFingerprint = copyFingerprint,
         )
 
-        return ensureWeekExistsOrCreate(
-            courseId = targetCourseId,
-            weekNo = targetWeekNo,
-            startAt = targetStartAt,
-            endAt = targetEndAt,
-        )
-            .then(ensureNoOriginAssignmentDuplicate(targetCourseId, originAssignmentId, sourceAssignmentId, targetCourse.slug))
+        return ensureNoOriginAssignmentDuplicate(targetCourseId, originAssignmentId, sourceAssignmentId, targetCourse.slug)
             .then(ensureNoCopyFingerprintDuplicate(targetCourseId, copyFingerprint, sourceAssignmentId, targetCourse.slug))
             .then(ensureAssignmentSlotAvailableForCreate(targetCourseId, targetWeekNo.value, targetOrderInWeek))
+            .then(
+                ensureWeekExistsOrCreate(
+                    courseId = targetCourseId,
+                    weekNo = targetWeekNo,
+                    startAt = targetStartAt,
+                    endAt = targetEndAt,
+                )
+            )
             .then(assignmentRepository.save(copiedAssignment))
+            .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentCopyConflict() }
             .flatMap { saved ->
                 val savedAssignmentId = parseAssignmentId(requireNotNull(saved.id))
                 Mono.zip(
@@ -469,7 +473,7 @@ class CourseCommandService(
                 )
                     .onErrorResume { error ->
                         deleteCopiedAssignmentDocuments(savedAssignmentId.value)
-                            .then(Mono.error(error))
+                            .then(Mono.error(mapDuplicateAssignmentCopyConflict(error)))
                     }
                     .flatMap { tuple ->
                         val response = toAssignmentDetailResponse(
@@ -820,6 +824,19 @@ class CourseCommandService(
             }
             .then()
     }
+
+    private fun mapDuplicateAssignmentCopyConflict(error: Throwable): Throwable {
+        if (error is DuplicateKeyException) {
+            return duplicateAssignmentCopyConflict()
+        }
+        return error
+    }
+
+    private fun duplicateAssignmentCopyConflict(): ResponseStatusException =
+        ResponseStatusException(
+            HttpStatus.CONFLICT,
+            "이미 대상 코스에 동일한 원본 또는 동일한 내용의 과제가 존재합니다.",
+        )
 
     private fun deleteCopiedAssignmentDocuments(assignmentId: String): Mono<Void> =
         Mono.whenDelayError(

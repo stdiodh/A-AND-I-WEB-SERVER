@@ -6,6 +6,7 @@ import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTempl
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.TypeAlias
 import org.springframework.data.mongodb.core.index.CompoundIndex
+import org.springframework.data.mongodb.core.index.CompoundIndexes
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
 
@@ -25,7 +26,21 @@ data class AssignmentMetadata(
 
 @Document(collection = "assignments")
 @TypeAlias("assignment")
-@CompoundIndex(name = "ux_assignment_course_week_order", def = "{'courseId': 1, 'weekNo': 1, 'orderInWeek': 1}", unique = true)
+@CompoundIndexes(
+    CompoundIndex(name = "ux_assignment_course_week_order", def = "{'courseId': 1, 'weekNo': 1, 'orderInWeek': 1}", unique = true),
+    CompoundIndex(
+        name = "ux_assignment_course_origin",
+        def = "{'courseId': 1, 'originAssignmentId': 1}",
+        unique = true,
+        partialFilter = "{'originAssignmentId': {'\$type': 'string'}}",
+    ),
+    CompoundIndex(
+        name = "ux_assignment_course_copy_fingerprint",
+        def = "{'courseId': 1, 'copyFingerprint': 1}",
+        unique = true,
+        partialFilter = "{'copyFingerprint': {'\$type': 'string'}}",
+    ),
+)
 data class Assignment(
     @Id
     val id: String? = null,
