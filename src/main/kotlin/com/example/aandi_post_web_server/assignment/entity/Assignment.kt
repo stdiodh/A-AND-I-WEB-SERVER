@@ -32,13 +32,13 @@ data class AssignmentMetadata(
         name = "ux_assignment_course_origin",
         def = "{'courseId': 1, 'originAssignmentId': 1}",
         unique = true,
-        partialFilter = "{'originAssignmentId': {'\$type': 'string'}}",
+        partialFilter = "{'originAssignmentId': {'\$exists': true, '\$ne': null}}",
     ),
     CompoundIndex(
         name = "ux_assignment_course_copy_fingerprint",
         def = "{'courseId': 1, 'copyFingerprint': 1}",
         unique = true,
-        partialFilter = "{'copyFingerprint': {'\$type': 'string'}}",
+        partialFilter = "{'copyFingerprint': {'\$exists': true, '\$ne': null}}",
     ),
 )
 data class Assignment(

@@ -1,6 +1,8 @@
 package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseValidator
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyFingerprintCalculator
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyService
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
@@ -207,6 +209,56 @@ class CourseCommandServiceTest : StringSpec({
 
         persistedAssignment.status shouldBe AssignmentStatus.PUBLISHED
         persistedAssignment.publishedAt shouldBe target.startAt
+    }
+
+    "과제 수정 슬롯 중복은 새 주차를 생성하지 않고 CONFLICT 를 반환한다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+        val duplicated = commandAssignment(
+            id = "7c53f1b3-0df8-4a9d-a56d-a5f50b96b7a1",
+            courseId = "course-1",
+            status = AssignmentStatus.DRAFT,
+        )
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.just(duplicated))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        )
+            .thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as CourseWeek) }
+
+        StepVerifier.create(
+            fixture.service.updateAssignment(
+                courseSlug = "back-basic",
+                assignmentId = assignmentId,
+                request = UpdateAssignmentRequest(
+                    weekNo = 9,
+                    orderInWeek = 2,
+                ),
+            )
+        )
+            .expectErrorSatisfies { error ->
+                (error as ResponseStatusException).statusCode shouldBe HttpStatus.CONFLICT
+                error.reason shouldBe "동일 코스/주차/순번 과제가 이미 존재합니다."
+            }
+            .verify()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.never()).save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 
     "BANNED 상태 변경은 banReason이 필수다" {
@@ -539,6 +591,59 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.courseWeekRepository).save(ArgumentMatchers.any(CourseWeek::class.java))
         Mockito.verify(fixture.assignmentRepository)
             .findByCourseIdAndWeekNoAndOrderInWeek("course-1", 2, 1)
+    }
+
+    "과제 생성 슬롯 중복은 새 주차를 생성하지 않고 CONFLICT 를 반환한다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val existing = commandAssignment(id = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111", courseId = "course-1", status = AssignmentStatus.DRAFT)
+        val request = CreateAssignmentRequest(
+            weekNo = 9,
+            orderInWeek = 2,
+            startAt = Instant.now().plusSeconds(3600),
+            endAt = Instant.now().plusSeconds(7200),
+            metadata = AssignmentMetadataPayload(
+                title = "중복 슬롯",
+                difficulty = AssignmentDifficulty.MID,
+                description = "문제 설명",
+                testCases = listOf(
+                    CreateAssignmentExampleRequest(
+                        seq = 1,
+                        inputValues = listOf("1 2"),
+                        outputText = "3",
+                        visibility = AssignmentTestCaseVisibility.PUBLIC,
+                    )
+                ),
+            ),
+        )
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        )
+            .thenReturn(Mono.just(existing))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        )
+            .thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as CourseWeek) }
+
+        StepVerifier.create(fixture.service.createAssignment("back-basic", request, "admin"))
+            .expectErrorSatisfies { error ->
+                (error as ResponseStatusException).statusCode shouldBe HttpStatus.CONFLICT
+                error.reason shouldBe "동일 코스/주차/순번 과제가 이미 존재합니다."
+            }
+            .verify()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.never()).save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 
     "게시 상태로 생성된 과제는 EXCLUDED 를 제외한 케이스만 PROBLEM_CREATED 로 발행한다" {
@@ -981,17 +1086,27 @@ class CourseCommandServiceTest : StringSpec({
             persistedAssignment = { null },
             onPersistAssignment = {},
         )
-        Mockito.`when`(fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek("target-course-id", 1, 1))
+        Mockito.`when`(fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek("target-course-id", 2, 1))
             .thenReturn(Mono.just(existing))
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("target-course-id", 2))
+            .thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as CourseWeek) }
 
         StepVerifier.create(
-            fixture.service.copyAssignment("target-course", CopyAssignmentRequest(sourceAssignmentId = sourceId), "admin")
+            fixture.service.copyAssignment(
+                "target-course",
+                CopyAssignmentRequest(sourceAssignmentId = sourceId, targetWeekNo = 2),
+                "admin",
+            )
         )
             .expectErrorSatisfies { error ->
                 (error as ResponseStatusException).statusCode shouldBe HttpStatus.CONFLICT
                 error.reason shouldBe "동일 코스/주차/순번 과제가 이미 존재합니다."
             }
             .verify()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.never()).save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 
     "과제 복사는 대상 코스와 원본 과제 없음 및 잘못된 날짜를 명확히 거절한다" {
@@ -1431,11 +1546,23 @@ private class CommandFixture {
     val assignmentReportTestCaseEventPublisher = RecordingAssignmentReportTestCaseEventPublisher()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
     val assignmentTestCaseValidator = AssignmentTestCaseValidator()
+    val assignmentCopyFingerprintCalculator = AssignmentCopyFingerprintCalculator()
     val assignmentMetadataPayloadTestCasePresenceTracker = AssignmentMetadataPayloadTestCasePresenceTracker()
     val courseEnrollmentCommandService = CourseEnrollmentCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
         reportUserRepository = reportUserRepository,
+    )
+    val assignmentCopyService = AssignmentCopyService(
+        courseRepository = courseRepository,
+        courseWeekRepository = courseWeekRepository,
+        assignmentRepository = assignmentRepository,
+        assignmentRequirementRepository = assignmentRequirementRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentDeliveryRepository = assignmentDeliveryRepository,
+        assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
+        assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
+        assignmentCopyFingerprintCalculator = assignmentCopyFingerprintCalculator,
     )
     val service = CourseCommandService(
         courseRepository = courseRepository,
@@ -1448,6 +1575,7 @@ private class CommandFixture {
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         courseEnrollmentCommandService = courseEnrollmentCommandService,
+        assignmentCopyService = assignmentCopyService,
         assignmentTestCaseValidator = assignmentTestCaseValidator,
         assignmentMetadataPayloadTestCasePresenceTracker = assignmentMetadataPayloadTestCasePresenceTracker,
     )

@@ -1,6 +1,8 @@
 package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseValidator
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyFingerprintCalculator
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyService
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEvent
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventMapper
@@ -8,6 +10,7 @@ import com.example.aandi_post_web_server.assignment.infrastructure.event.Assignm
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.infrastructure.jackson.AssignmentMetadataPayloadTestCasePresenceTracker
+import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentExampleRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
@@ -121,15 +124,28 @@ private class Fixture {
     val assignmentRepository: AssignmentRepository = Mockito.mock(AssignmentRepository::class.java)
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
     val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
+    val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
     val assignmentReportTestCaseEventPublisher = NoopAssignmentReportTestCaseEventPublisherForTest()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
     val assignmentTestCaseValidator = AssignmentTestCaseValidator()
+    val assignmentCopyFingerprintCalculator = AssignmentCopyFingerprintCalculator()
     val assignmentMetadataPayloadTestCasePresenceTracker = AssignmentMetadataPayloadTestCasePresenceTracker()
     private val courseEnrollmentCommandService = CourseEnrollmentCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
         reportUserRepository = reportUserRepository,
+    )
+    private val assignmentCopyService = AssignmentCopyService(
+        courseRepository = courseRepository,
+        courseWeekRepository = courseWeekRepository,
+        assignmentRepository = assignmentRepository,
+        assignmentRequirementRepository = assignmentRequirementRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentDeliveryRepository = assignmentDeliveryRepository,
+        assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
+        assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
+        assignmentCopyFingerprintCalculator = assignmentCopyFingerprintCalculator,
     )
 
     private val courseCommandService = CourseCommandService(
@@ -139,10 +155,11 @@ private class Fixture {
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentTestCaseRepository = assignmentExampleRepository,
-        assignmentDeliveryRepository = Mockito.mock(com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository::class.java),
+        assignmentDeliveryRepository = assignmentDeliveryRepository,
         assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
         assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         courseEnrollmentCommandService = courseEnrollmentCommandService,
+        assignmentCopyService = assignmentCopyService,
         assignmentTestCaseValidator = assignmentTestCaseValidator,
         assignmentMetadataPayloadTestCasePresenceTracker = assignmentMetadataPayloadTestCasePresenceTracker,
     )
