@@ -167,6 +167,12 @@ class V2StructuredLogSanitizer(
         val normalized = normalizedFieldName()
         return normalized == "expectedoutput" ||
             normalized.endsWith("expectedoutput") ||
+            normalized == "input" ||
+            normalized.endsWith("input") ||
+            normalized == "output" ||
+            normalized.endsWith("output") ||
+            normalized == "code" ||
+            normalized.endsWith("code") ||
             normalized == "sourcecode" ||
             normalized == "submittedcode" ||
             normalized == "submittedsource" ||

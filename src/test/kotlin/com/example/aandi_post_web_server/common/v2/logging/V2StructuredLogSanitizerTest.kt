@@ -28,6 +28,9 @@ class V2StructuredLogSanitizerTest : StringSpec({
                     mapOf("visibility" to "PUBLIC", "input" to "public input", "expectedOutput" to "public output"),
                     mapOf("visibility" to "HIDDEN", "input" to "hidden input", "expectedOutput" to "hidden output"),
                 ),
+                "output" to "raw output",
+                "code" to "raw code",
+                "sourceCode" to "raw source code",
                 "submittedCode" to "fun main() = println(\"secret\")",
             )
         ) as Map<*, *>
@@ -43,12 +46,15 @@ class V2StructuredLogSanitizerTest : StringSpec({
         sanitized["loginId"] shouldBe "han*****"
         sanitized["userName"] shouldBe "tes*******"
         sanitized["privateTestCases"] shouldBe "****"
+        sanitized["output"] shouldBe "****"
+        sanitized["code"] shouldBe "****"
+        sanitized["sourceCode"] shouldBe "****"
         sanitized["submittedCode"] shouldBe "****"
 
         val testCases = sanitized["testCases"] as List<*>
         val publicCase = testCases[0] as Map<*, *>
         val hiddenCase = testCases[1] as Map<*, *>
-        publicCase["input"] shouldBe "public input"
+        publicCase["input"] shouldBe "****"
         publicCase["expectedOutput"] shouldBe "****"
         hiddenCase["input"] shouldBe "****"
         hiddenCase["expectedOutput"] shouldBe "****"
@@ -69,6 +75,11 @@ private fun String.shouldNotContainRawSecrets() {
         "private output",
         "hidden input",
         "hidden output",
+        "public input",
+        "public output",
+        "raw output",
+        "raw code",
+        "raw source code",
         "fun main()",
     ).forEach { forbidden ->
         this shouldNotContain forbidden

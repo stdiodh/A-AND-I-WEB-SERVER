@@ -33,7 +33,7 @@ CloudWatch 전송은 애플리케이션 appender가 아니라 Docker `awslogs` l
 - `client`: ip, userAgent, appVersion
 - `actor`: userId, role, isAuthenticated
 - `request`: sanitized query, pathVariables, body
-- `response`: success, sanitized data, error, timestamp
+- `response`: success, omitted data summary, error, timestamp
 - `tags`: route 기반 태그와 `success` 또는 `fail`
 
 ## Masking Policy
@@ -46,7 +46,9 @@ CloudWatch 전송은 애플리케이션 appender가 아니라 Docker `awslogs` l
 - session, cookie
 - private/hidden testcase
 - expectedOutput
+- input/output
 - 사용자 제출 코드
+- response.data 원문 전체
 - OJ 입력/출력 원문 중 private/hidden 성격의 데이터
 
 부분 마스킹:

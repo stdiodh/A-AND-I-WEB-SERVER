@@ -27,6 +27,20 @@ EC2 인스턴스 또는 Docker 호스트의 IAM Role에는 최소한 다음 권�
 
 운영 환경에서는 리소스를 `/a-and-i/prod/report*` ARN으로 좁히는 것을 권장한다.
 
+GitHub Actions 배포 role에는 log group retention 설정을 위해 다음 권한이 추가로 필요하다.
+
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "logs:CreateLogGroup",
+    "logs:PutRetentionPolicy",
+    "logs:DescribeLogGroups"
+  ],
+  "Resource": "*"
+}
+```
+
 ## Log Groups
 
 - report server: `/a-and-i/prod/report`
@@ -53,11 +67,11 @@ docker compose -f docker-compose.prod.yml up -d
 
 ## Logs Insights Queries
 
-최근 `API_ERROR`:
+최근 에러:
 
 ```sql
-fields @timestamp, level, logType, service.name, trace.traceId, trace.requestId, http.method, http.path, http.statusCode, http.latencyMs, response.error.code, response.error.value, response.error.message
-| filter logType = "API_ERROR"
+fields @timestamp, level, logType, service.name, trace.traceId, trace.requestId, http.method, http.path, http.statusCode, http.latencyMs, response.error.code, response.error.value, response.error.message, message
+| filter logType = "API_ERROR" or level = "ERROR" or http.statusCode >= 500
 | sort @timestamp desc
 | limit 50
 ```
@@ -74,8 +88,8 @@ fields @timestamp, trace.traceId, http.method, http.path, http.statusCode, http.
 traceId 단위 조회:
 
 ```sql
-fields @timestamp, level, logType, http.method, http.path, http.statusCode, http.latencyMs, response.error.code, message
-| filter trace.traceId = "PUT_TRACE_ID_HERE"
+fields @timestamp, level, logType, service.name, trace.traceId, http.method, http.path, http.statusCode, http.latencyMs, response.error.code, response.error.value, message
+| filter trace.traceId = "PUT_TRACE_ID_HERE" or traceId = "PUT_TRACE_ID_HERE"
 | sort @timestamp asc
 | limit 100
 ```

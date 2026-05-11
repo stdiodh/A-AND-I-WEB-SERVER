@@ -186,7 +186,9 @@ class V2StructuredLogFormatter(
 
         val success = parsedRoot?.path("success")?.asBoolean(statusCode < 400) ?: (statusCode < 400)
         val data = if (success) {
-            parsedRoot?.get("data")?.let(sanitizer::sanitize)
+            parsedRoot?.get("data")
+                ?.takeIf { !it.isNull && !it.isMissingNode }
+                ?.let { responseDataSummary(snapshot) }
                 ?: if (snapshot.text != null && (snapshot.truncated || snapshot.omittedReason != null)) {
                     bodySummary(snapshot.withReason(if (snapshot.truncated) "size-limit" else snapshot.omittedReason))
                 } else {
@@ -234,6 +236,14 @@ class V2StructuredLogFormatter(
             "capturedBytes" to snapshot.capturedBytes,
             "totalBytes" to snapshot.totalBytes,
             "truncated" to snapshot.truncated,
+        )
+
+    private fun responseDataSummary(snapshot: BodySnapshot): Map<String, Any?> =
+        linkedMapOf(
+            "omitted" to true,
+            "reason" to "response-data-omitted",
+            "capturedBytes" to snapshot.capturedBytes,
+            "totalBytes" to snapshot.totalBytes,
         )
 
     private fun resolveLevel(statusCode: Int): String =

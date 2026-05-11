@@ -14,7 +14,7 @@ services:
       driver: awslogs
       options:
         awslogs-region: ${AWS_REGION:-ap-northeast-2}
-        awslogs-group: ${AWSLOGS_GROUP_MONGODB:-/a-and-i/prod/report-mongodb}
+        awslogs-group: ${AWSLOGS_GROUP_REPORT_MONGODB:-/a-and-i/prod/report-mongodb}
         awslogs-stream: ${HOSTNAME:-ec2}-report-mongodb
         awslogs-create-group: "true"
 

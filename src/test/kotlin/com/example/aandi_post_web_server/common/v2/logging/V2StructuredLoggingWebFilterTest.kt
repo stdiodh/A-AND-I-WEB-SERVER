@@ -160,7 +160,8 @@ class V2StructuredLoggingWebFilterTest : StringSpec() {
             payload["request"]["body"]["metadata"]["attributes"]["loginId"].asText() shouldBe "han*****"
             payload["response"]["success"].asBoolean() shouldBe true
             payload["response"]["error"].shouldBeNullNode()
-            payload["response"]["data"]["slug"].asText() shouldBe "back-basic"
+            payload["response"]["data"]["omitted"].asBoolean() shouldBe true
+            payload["response"]["data"]["reason"].asText() shouldBe "response-data-omitted"
         }
 
         "v2 실패 요청은 계약 JSON WARN 로그를 남긴다" {
