@@ -2,6 +2,7 @@ package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryResponse
+import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
@@ -69,6 +70,13 @@ class CourseV1Service(
         createdBy: String,
     ): Mono<AssignmentDetailResponse> =
         courseCommandService.createAssignment(courseSlug, request, createdBy)
+
+    fun copyAssignment(
+        targetCourseSlug: String,
+        request: CopyAssignmentRequest,
+        createdBy: String,
+    ): Mono<AssignmentDetailResponse> =
+        courseCommandService.copyAssignment(targetCourseSlug, request, createdBy)
 
     fun updateAssignment(
         courseSlug: String,

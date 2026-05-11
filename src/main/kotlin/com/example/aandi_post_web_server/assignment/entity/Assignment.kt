@@ -41,4 +41,7 @@ data class Assignment(
     val createdAt: Instant = Instant.now(),
     val updatedAt: Instant = Instant.now(),
     val publishedAt: Instant? = null,
+    val originAssignmentId: String? = null,
+    val originCourseSlug: String? = null,
+    val copyFingerprint: String? = null,
 )

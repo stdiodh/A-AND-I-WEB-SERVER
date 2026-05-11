@@ -9,6 +9,7 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentLearningGo
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentRequirementResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
+import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
@@ -217,6 +218,28 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
                 .jsonPath("$.success").isEqualTo(true)
                 .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
                 .jsonPath("$.data.courseSlug").isEqualTo("back-basic")
+        }
+
+        "v2 admin 과제 복사 API는 ADMIN 토큰으로 호출하면 성공한다" {
+            val request = CopyAssignmentRequest(
+                sourceAssignmentId = assignmentId,
+                targetWeekNo = 1,
+                targetOrderInWeek = 2,
+                targetStartAt = Instant.parse("2026-05-12T00:00:00Z"),
+                targetEndAt = Instant.parse("2026-05-19T00:00:00Z"),
+            )
+            Mockito.`when`(courseV1Service.copyAssignment("target-course", request, adminId))
+                .thenReturn(Mono.just(sampleAssignmentDetailResponse().copy(courseSlug = "target-course", orderInWeek = 2)))
+
+            v2AdminClient().post()
+                .uri("/v2/admin/courses/target-course/assignments/copy")
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isOk
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(true)
+                .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
+                .jsonPath("$.data.courseSlug").isEqualTo("target-course")
         }
 
         "v2 코스 조회 API는 공통 헤더가 누락되면 40301을 반환한다" {

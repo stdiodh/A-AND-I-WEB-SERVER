@@ -118,6 +118,35 @@ data class CreateAssignmentRequest(
 )
 
 @Schema(
+    description = "과제 복사 요청",
+    example =
+        """
+        {
+          "sourceAssignmentId": "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
+          "targetWeekNo": 1,
+          "targetOrderInWeek": 2,
+          "targetStartAt": "2026-05-12T09:00:00+09:00",
+          "targetEndAt": "2026-05-19T08:59:59+09:00"
+        }
+        """,
+)
+data class CopyAssignmentRequest(
+    @field:NotBlank(message = "sourceAssignmentId는 필수입니다.")
+    @field:Schema(description = "복사할 원본 과제 UUID", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
+    val sourceAssignmentId: String,
+    @field:Min(1)
+    @field:Schema(description = "대상 주차 번호(옵션, 미입력 시 원본 값 사용)", example = "1")
+    val targetWeekNo: Int? = null,
+    @field:Min(1)
+    @field:Schema(description = "대상 주차 내 순서(옵션, 미입력 시 원본 값 사용)", example = "2")
+    val targetOrderInWeek: Int? = null,
+    @field:Schema(description = "대상 공개 시작 시각(옵션, 미입력 시 원본 값 사용)", example = "2026-05-12T09:00:00+09:00")
+    val targetStartAt: Instant? = null,
+    @field:Schema(description = "대상 마감 시각(옵션, 미입력 시 원본 값 사용)", example = "2026-05-19T08:59:59+09:00")
+    val targetEndAt: Instant? = null,
+)
+
+@Schema(
     description = "과제 수정 요청",
     example =
         """

@@ -2,6 +2,7 @@ package com.example.aandi_post_web_server.course.api.v2.controller
 
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryResponse
+import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
@@ -268,6 +269,28 @@ class CourseAdminV2Controller(
         authentication: Authentication,
     ): Mono<V2ApiEnvelope<AssignmentDetailResponse>> =
         courseV1Service.createAssignment(courseSlug, request, authentication.name).map(V2ApiResponseFactory::success)
+
+    @Operation(
+        summary = "과제 복사",
+        description = "원본 과제를 대상 코스에 복사합니다. 동일 원본 과제가 이미 대상 코스에 있으면 409를 반환합니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "복사 성공", content = [Content(schema = Schema(implementation = V2AssignmentDetailEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "400", description = "요청값 오류", content = [Content(schema = Schema(implementation = V2ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "403", description = "ADMIN 권한 아님", content = [Content(schema = Schema(implementation = V2ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "404", description = "대상 코스 또는 원본 과제를 찾을 수 없음", content = [Content(schema = Schema(implementation = V2ErrorEnvelopeDoc::class))]),
+            ApiResponse(responseCode = "409", description = "동일 원본/동일 내용/동일 슬롯 중복", content = [Content(schema = Schema(implementation = V2ErrorEnvelopeDoc::class))]),
+        ],
+    )
+    @PostMapping("/{targetCourseSlug}/assignments/copy")
+    fun copyAssignment(
+        @Parameter(description = "복사 대상 코스를 구분하는 슬러그", example = "target-course")
+        @PathVariable targetCourseSlug: String,
+        @Valid @RequestBody request: CopyAssignmentRequest,
+        authentication: Authentication,
+    ): Mono<V2ApiEnvelope<AssignmentDetailResponse>> =
+        courseV1Service.copyAssignment(targetCourseSlug, request, authentication.name).map(V2ApiResponseFactory::success)
 
     @Operation(
         summary = "과제 수정",
