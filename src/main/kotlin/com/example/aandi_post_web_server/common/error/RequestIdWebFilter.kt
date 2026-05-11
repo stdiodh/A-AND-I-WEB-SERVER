@@ -16,17 +16,25 @@ class RequestIdWebFilter : WebFilter, Ordered {
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
         val incomingRequestId = exchange.request.headers.getFirst(RequestIdSupport.HEADER_NAME)?.trim().orEmpty()
         val requestId = if (incomingRequestId.isNotBlank()) incomingRequestId else UUID.randomUUID().toString()
+        val traceId = RequestIdSupport.resolveTraceId(exchange)
 
         exchange.attributes[RequestIdSupport.ATTRIBUTE_NAME] = requestId
+        exchange.attributes[RequestIdSupport.TRACE_ATTRIBUTE_NAME] = traceId
         exchange.response.headers.set(RequestIdSupport.HEADER_NAME, requestId)
+        exchange.response.headers.set(RequestIdSupport.TRACE_HEADER_NAME, traceId)
 
         val mutatedRequest = exchange.request.mutate()
             .header(RequestIdSupport.HEADER_NAME, requestId)
+            .header(RequestIdSupport.TRACE_HEADER_NAME, traceId)
             .build()
 
         val mutatedExchange = exchange.mutate().request(mutatedRequest).build()
 
         return chain.filter(mutatedExchange)
-            .contextWrite { context -> context.put(RequestIdSupport.ATTRIBUTE_NAME, requestId) }
+            .contextWrite { context ->
+                context
+                    .put(RequestIdSupport.ATTRIBUTE_NAME, requestId)
+                    .put(RequestIdSupport.TRACE_ATTRIBUTE_NAME, traceId)
+            }
     }
 }

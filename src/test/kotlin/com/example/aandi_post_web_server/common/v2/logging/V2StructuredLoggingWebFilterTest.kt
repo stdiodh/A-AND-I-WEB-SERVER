@@ -4,6 +4,7 @@ package com.example.aandi_post_web_server.common.logging.v2
 
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.core.read.ListAppender
+import com.example.aandi_post_web_server.Application
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.error.GlobalApiExceptionHandler
@@ -39,6 +40,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt
+import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.server.ResponseStatusException
@@ -55,6 +57,7 @@ import java.time.LocalDate
         CourseAdminV2Controller::class,
     ],
 )
+@ContextConfiguration(classes = [Application::class])
 @Import(
     WebConfig::class,
     SecurityConfig::class,
@@ -67,11 +70,12 @@ import java.time.LocalDate
 @TestPropertySource(
     properties = [
         "app.logging.v2.env=test",
-        "app.logging.v2.service.name=aandi_post_web_server",
-        "app.logging.v2.service.domain-code=0",
+        "app.logging.v2.service.name=report-service",
+        "app.logging.v2.service.domain-code=4",
         "app.logging.v2.service.version=test-version",
         "app.logging.v2.service.instance-id=test-instance",
         "app.logging.v2.max-body-bytes=16384",
+        "app.logging.v2.include-path-prefixes=/v2,/api/v2",
     ],
 )
 class V2StructuredLoggingWebFilterTest : StringSpec() {
@@ -142,6 +146,8 @@ class V2StructuredLoggingWebFilterTest : StringSpec() {
 
             payload["level"].asText() shouldBe "INFO"
             payload["logType"].asText() shouldBe "API"
+            payload["service"]["name"].asText() shouldBe "report-service"
+            payload["service"]["domainCode"].asInt() shouldBe 4
             payload["http"]["path"].asText() shouldBe "/v2/admin/courses"
             payload["http"]["route"].asText() shouldBe "/v2/admin/courses"
             payload["headers"]["deviceOS"].asText() shouldBe "ios"
@@ -186,6 +192,44 @@ class V2StructuredLoggingWebFilterTest : StringSpec() {
             payload["response"]["error"]["message"].asText() shouldBe "코스를 찾을 수 없습니다."
         }
 
+        "v2 서버 예외 요청은 ERROR API_ERROR 로그를 남긴다" {
+            Mockito.`when`(courseV1Service.getCourse("explode", userId))
+                .thenReturn(Mono.error(IllegalStateException("unexpected failure")))
+
+            v2UserClient().get()
+                .uri("/v2/courses/explode")
+                .header("deviceOS", "android")
+                .header("timestamp", "2026-04-15T10:17:00+09:00")
+                .exchange()
+                .expectStatus().is5xxServerError
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+
+            listAppender.list shouldHaveSize 1
+            val payload = parseLoggedJson()
+
+            payload["level"].asText() shouldBe "ERROR"
+            payload["logType"].asText() shouldBe "API_ERROR"
+            payload["http"]["statusCode"].asInt() shouldBe 500
+            payload["response"]["success"].asBoolean() shouldBe false
+            payload["response"]["error"].isNull shouldBe false
+        }
+
+        "/api/v2 prefix 요청도 설정에 따라 구조화 로그 대상이다" {
+            v2UserClient().get()
+                .uri("/api/v2/courses")
+                .header("deviceOS", "ios")
+                .header("timestamp", "2026-04-15T10:17:00+09:00")
+                .exchange()
+                .expectStatus().isNotFound
+
+            listAppender.list shouldHaveSize 1
+            val payload = parseLoggedJson()
+
+            payload["logType"].asText() shouldBe "API_ERROR"
+            payload["http"]["path"].asText() shouldBe "/api/v2/courses"
+        }
+
         "v1 요청은 구조화 v2 로그를 남기지 않는다" {
             Mockito.`when`(courseV1Service.getCourses(userId)).thenReturn(Flux.just(sampleCourseResponse()))
 
@@ -193,6 +237,22 @@ class V2StructuredLoggingWebFilterTest : StringSpec() {
                 .uri("/v1/courses")
                 .exchange()
                 .expectStatus().isOk
+
+            listAppender.list shouldHaveSize 0
+        }
+
+        "actuator와 swagger 경로는 구조화 v2 로그를 남기지 않는다" {
+            webTestClient.get()
+                .uri("/actuator/health")
+                .exchange()
+
+            webTestClient.get()
+                .uri("/swagger-ui/index.html")
+                .exchange()
+
+            webTestClient.get()
+                .uri("/v3/api-docs/report-v2")
+                .exchange()
 
             listAppender.list shouldHaveSize 0
         }

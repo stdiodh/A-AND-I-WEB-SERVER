@@ -25,6 +25,25 @@ swagger:
   server:
     url: ${SWAGGER_URL:https://api.aandiclub.com}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: ${MANAGEMENT_HEALTH_SHOW_DETAILS:never}
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,mongo
+  health:
+    mongo:
+      enabled: true
+
 security:
   jwt:
     issuer: ${AUTH_ISSUER_URI:http://localhost:9000}
@@ -44,11 +63,13 @@ app:
     v2:
       env: ${APP_ENV:local}
       max-body-bytes: ${APP_V2_LOG_MAX_BODY_BYTES:16384}
+      include-path-prefixes: ${APP_V2_LOG_INCLUDE_PATH_PREFIXES:/v2,/api/v2}
+      exclude-path-prefixes: ${APP_V2_LOG_EXCLUDE_PATH_PREFIXES:/actuator,/swagger-ui,/v3/api-docs,/favicon.ico,/static,/assets,/webjars}
       service:
-        name: ${APP_V2_LOG_SERVICE_NAME:${spring.application.name}}
-        domain-code: ${APP_V2_LOG_DOMAIN_CODE:0}
+        name: ${APP_V2_LOG_SERVICE_NAME:report-service}
+        domain-code: ${APP_V2_LOG_DOMAIN_CODE:4}
         version: ${APP_V2_LOG_SERVICE_VERSION:${APP_VERSION:0.0.1-SNAPSHOT}}
-        instance-id: ${APP_V2_LOG_INSTANCE_ID:${HOSTNAME:local-instance}}
+        instance-id: ${APP_V2_LOG_INSTANCE_ID:${HOSTNAME:report-service-local}}
   events:
     report-test-case:
       enabled: ${APP_EVENTS_REPORT_TEST_CASE_ENABLED:false}

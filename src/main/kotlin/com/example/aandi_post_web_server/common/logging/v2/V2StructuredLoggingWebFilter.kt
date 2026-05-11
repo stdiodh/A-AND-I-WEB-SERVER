@@ -32,7 +32,7 @@ class V2StructuredLoggingWebFilter(
 
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
         val path = exchange.request.path.pathWithinApplication().value()
-        if (!V2PathMatcher.isV2Path(path)) {
+        if (!V2PathMatcher.isV2Path(path, properties.includePathPrefixes, properties.excludePathPrefixes)) {
             return chain.filter(exchange)
         }
 
@@ -84,11 +84,11 @@ class V2StructuredLoggingWebFilter(
 
         return chain.filter(decoratedExchange)
             .onErrorResume { throwable ->
-                finalizeLog(exchange, startedAt, requestCapture, responseCapture)
+                finalizeLog(exchange, startedAt, requestCapture, responseCapture, throwable)
                     .onErrorResume { Mono.empty() }
                     .then(Mono.error(throwable))
             }
-            .then(finalizeLog(exchange, startedAt, requestCapture, responseCapture))
+            .then(finalizeLog(exchange, startedAt, requestCapture, responseCapture, null))
     }
 
     private fun finalizeLog(
@@ -96,6 +96,7 @@ class V2StructuredLoggingWebFilter(
         startedAt: Instant,
         requestCapture: BodyCapture,
         responseCapture: BodyCapture,
+        failure: Throwable?,
     ): Mono<Void> =
         resolveActor(exchange)
             .timeout(Duration.ofSeconds(1))
@@ -103,25 +104,35 @@ class V2StructuredLoggingWebFilter(
             .doOnNext { actor ->
                 runCatching {
                     val completedAt = Instant.now()
+                    val statusCode = resolveStatusCode(exchange, failure)
                     val context = V2StructuredLogFormatter.LoggingContext(
                         exchange = exchange,
                         actor = actor,
                         requestBodySnapshot = requestCapture.snapshot(),
                         responseBodySnapshot = responseCapture.snapshot(),
-                        statusCode = exchange.response.statusCode?.value() ?: 200,
+                        statusCode = statusCode,
                         latencyMs = Duration.between(startedAt, completedAt).toMillis(),
                         completedAt = completedAt,
                     )
                     val json = formatter.format(context)
-                    if (context.statusCode >= 400) {
-                        structuredLogger.warn(json)
-                    } else {
-                        structuredLogger.info(json)
+                    when {
+                        context.statusCode >= 500 -> structuredLogger.error(json)
+                        context.statusCode >= 400 -> structuredLogger.warn(json)
+                        else -> structuredLogger.info(json)
                     }
                 }
             }
             .onErrorResume { Mono.empty() }
             .then()
+
+    private fun resolveStatusCode(exchange: ServerWebExchange, failure: Throwable?): Int {
+        val responseStatus = exchange.response.statusCode?.value()
+        return when {
+            failure != null && (responseStatus == null || responseStatus < 400) -> 500
+            responseStatus != null -> responseStatus
+            else -> 200
+        }
+    }
 
     private fun resolveActor(exchange: ServerWebExchange): Mono<V2StructuredAccessLog.Actor> =
         ReactiveSecurityContextHolder.getContext()

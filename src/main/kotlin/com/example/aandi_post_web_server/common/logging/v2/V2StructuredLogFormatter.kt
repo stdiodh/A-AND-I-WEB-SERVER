@@ -12,7 +12,6 @@ import org.springframework.web.server.ServerWebExchange
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 
 class V2StructuredLogFormatter(
     private val objectMapper: ObjectMapper,
@@ -40,13 +39,13 @@ class V2StructuredLogFormatter(
             statusCode = context.statusCode,
             completedAt = completedAt,
         )
-        val isFailure = context.statusCode >= 400 || !responseEnvelope.success
-        val traceId = resolveTraceId(exchange)
+        val isFailure = context.statusCode >= 400
+        val traceId = RequestIdSupport.resolveTraceId(exchange)
         val requestId = RequestIdSupport.resolveRequestId(exchange)
 
         return V2StructuredAccessLog(
             timestamp = completedAt,
-            level = if (isFailure) "WARN" else "INFO",
+            level = resolveLevel(context.statusCode),
             logType = if (isFailure) "API_ERROR" else "API",
             message = buildMessage(isFailure, responseEnvelope.error),
             env = resolveEnvironmentName(),
@@ -71,8 +70,8 @@ class V2StructuredLogFormatter(
             client = buildClient(exchange),
             actor = context.actor,
             request = V2StructuredAccessLog.Request(
-                query = resolveQuery(exchange),
-                pathVariables = resolvePathVariables(exchange),
+                query = sanitizer.sanitize(resolveQuery(exchange)) as? Map<String, Any?> ?: emptyMap(),
+                pathVariables = sanitizer.sanitize(resolvePathVariables(exchange)) as? Map<String, Any?> ?: emptyMap(),
                 body = requestEnvelope,
             ),
             response = responseEnvelope,
@@ -133,35 +132,6 @@ class V2StructuredLogFormatter(
         return match.groupValues.getOrNull(1)?.takeIf { it.isNotBlank() }
     }
 
-    private fun resolveTraceId(exchange: ServerWebExchange): String {
-        val cached = exchange.getAttribute<String>(TRACE_ID_ATTRIBUTE)?.takeIf { it.isNotBlank() }
-        if (cached != null) {
-            return cached
-        }
-
-        val headers = exchange.request.headers
-        val candidates = listOf(
-            headers.getFirst("X-Trace-Id"),
-            headers.getFirst("traceId"),
-            headers.getFirst("X-Amzn-Trace-Id"),
-            extractTraceIdFromTraceParent(headers.getFirst("traceparent")),
-        )
-        val traceId = candidates.firstOrNull { !it.isNullOrBlank() }?.trim()
-            ?: UUID.randomUUID().toString().replace("-", "")
-
-        exchange.attributes[TRACE_ID_ATTRIBUTE] = traceId
-        return traceId
-    }
-
-    private fun extractTraceIdFromTraceParent(value: String?): String? {
-        if (value.isNullOrBlank()) {
-            return null
-        }
-
-        val parts = value.split('-')
-        return parts.getOrNull(1)?.takeIf { it.isNotBlank() }
-    }
-
     private fun resolveRoute(exchange: ServerWebExchange, fallbackPath: String): String {
         val bestMatchingPattern = exchange.getAttribute<Any>(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)
             ?.toString()
@@ -196,7 +166,7 @@ class V2StructuredLogFormatter(
             return null
         }
         if (snapshot.truncated) {
-            return bodySummary(snapshot.copy(omittedReason = snapshot.omittedReason ?: "size-limit"))
+            return bodySummary(snapshot.withReason("size-limit"))
         }
 
         return parseJson(snapshot.text)?.let(sanitizer::sanitize)
@@ -217,7 +187,11 @@ class V2StructuredLogFormatter(
         val success = parsedRoot?.path("success")?.asBoolean(statusCode < 400) ?: (statusCode < 400)
         val data = if (success) {
             parsedRoot?.get("data")?.let(sanitizer::sanitize)
-                ?: if (snapshot.text != null && (snapshot.truncated || snapshot.omittedReason != null)) bodySummary(snapshot) else null
+                ?: if (snapshot.text != null && (snapshot.truncated || snapshot.omittedReason != null)) {
+                    bodySummary(snapshot.withReason(if (snapshot.truncated) "size-limit" else snapshot.omittedReason))
+                } else {
+                    null
+                }
         } else {
             null
         }
@@ -262,6 +236,13 @@ class V2StructuredLogFormatter(
             "truncated" to snapshot.truncated,
         )
 
+    private fun resolveLevel(statusCode: Int): String =
+        when {
+            statusCode >= 500 -> "ERROR"
+            statusCode >= 400 -> "WARN"
+            else -> "INFO"
+        }
+
     private fun buildMessage(isFailure: Boolean, error: V2StructuredAccessLog.Error?): String =
         if (!isFailure) {
             "HTTP request completed"
@@ -284,9 +265,10 @@ class V2StructuredLogFormatter(
         instant.atZone(seoulZone).format(timestampFormatter)
 
     private fun resolveEnvironmentName(): String =
-        environment.activeProfiles.firstOrNull()
+        properties.env.takeIf { it.isNotBlank() }
+            ?: environment.activeProfiles.firstOrNull()
             ?.takeIf { it.isNotBlank() }
-            ?: properties.env
+            ?: "local"
 
     data class LoggingContext(
         val exchange: ServerWebExchange,
@@ -304,10 +286,12 @@ class V2StructuredLogFormatter(
         val capturedBytes: Int,
         val truncated: Boolean,
         val omittedReason: String?,
-    )
+    ) {
+        fun withReason(reason: String?): BodySnapshot =
+            copy(omittedReason = reason ?: omittedReason)
+    }
 
     companion object {
-        private const val TRACE_ID_ATTRIBUTE: String = "aandi.v2.logging.traceId"
         private val USER_AGENT_VERSION_REGEX = Regex("""/(\d+(?:\.\d+)+)""")
     }
 }
