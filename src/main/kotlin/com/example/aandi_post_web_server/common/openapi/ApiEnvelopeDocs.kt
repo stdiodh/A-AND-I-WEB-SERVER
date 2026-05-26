@@ -123,7 +123,7 @@ data class CourseOutlineEnvelopeDoc(
 
 @Schema(
     description = "과제 목록 성공 응답",
-    example = """{"success":true,"data":[{"assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"PUBLISHED","metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","requirements":[{"sortOrder":1,"requirementText":"함수 분리 필수"}],"learningGoals":[{"sortOrder":1,"learningGoalText":"함수 분리"}],"testCases":[{"seq":1,"inputValues":["ADD 1","CLOSE"],"outputText":"+1","visibility":"PUBLIC"}],"codeTemplates":[{"language":"KOTLIN","functionTemplate":"/* ... */\nfun solution(): String { ... }"}]}}],"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
+    example = """{"success":true,"data":[{"assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"PUBLISHED","publishedAt":"2026-03-03T00:00:00Z","metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","requirements":[{"sortOrder":1,"requirementText":"함수 분리 필수"}],"learningGoals":[{"sortOrder":1,"learningGoalText":"함수 분리"}],"testCases":[{"seq":1,"inputValues":["ADD 1","CLOSE"],"outputText":"+1","visibility":"PUBLIC"}],"codeTemplates":[{"language":"KOTLIN","functionTemplate":"/* ... */\nfun solution(): String { ... }"}]},"title":"터미널 계산기","problemId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"}],"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
 )
 data class AssignmentSummaryListEnvelopeDoc(
     @field:Schema(example = "true")
@@ -137,7 +137,7 @@ data class AssignmentSummaryListEnvelopeDoc(
 
 @Schema(
     description = "과제 상세 성공 응답",
-    example = """{"success":true,"data":{"assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","courseSlug":"fl-basic","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"PUBLISHED","publishedAt":"2026-03-03T00:00:00Z","metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","requirements":[{"sortOrder":1,"requirementText":"함수 분리 필수"}],"learningGoals":[{"sortOrder":1,"learningGoalText":"함수 분리"}],"testCases":[{"seq":1,"inputValues":["ADD 1","CLOSE"],"outputText":"+1","visibility":"PUBLIC"}],"codeTemplates":[{"language":"KOTLIN","functionTemplate":"/* ... */\nfun solution(): String { ... }"}]}},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
+    example = """{"success":true,"data":{"assignmentId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111","courseSlug":"fl-basic","weekNo":1,"orderInWeek":1,"startAt":"2026-03-03T00:00:00Z","endAt":"2026-03-11T00:00:00Z","status":"PUBLISHED","publishedAt":"2026-03-03T00:00:00Z","metadata":{"title":"터미널 계산기","difficulty":"MID","description":"# 문제 설명","requirements":[{"sortOrder":1,"requirementText":"함수 분리 필수"}],"learningGoals":[{"sortOrder":1,"learningGoalText":"함수 분리"}],"testCases":[{"seq":1,"inputValues":["ADD 1","CLOSE"],"outputText":"+1","visibility":"PUBLIC"}],"codeTemplates":[{"language":"KOTLIN","functionTemplate":"/* ... */\nfun solution(): String { ... }"}]},"title":"터미널 계산기","problemId":"8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"},"error":null,"timestamp":"2026-03-09T12:00:00+09:00"}""",
 )
 data class AssignmentDetailEnvelopeDoc(
     @field:Schema(example = "true")

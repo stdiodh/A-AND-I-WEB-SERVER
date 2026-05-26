@@ -7,7 +7,9 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailMeta
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentLearningGoalResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentMetadataPayload
+import com.example.aandi_post_web_server.assignment.api.dto.AssignmentMetadataResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentRequirementResponse
+import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequest
@@ -218,6 +220,56 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
                 .jsonPath("$.success").isEqualTo(true)
                 .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
                 .jsonPath("$.data.courseSlug").isEqualTo("back-basic")
+        }
+
+        "v2 admin 과제 목록 응답은 title, publishedAt, problemId 를 포함한다" {
+            val publishedAt = Instant.parse("2026-03-03T00:00:00Z")
+            Mockito.`when`(courseV1Service.getAdminAssignments("back-basic", null, AssignmentStatus.PUBLISHED))
+                .thenReturn(
+                    Flux.just(
+                        AssignmentSummaryResponse(
+                            id = assignmentId,
+                            weekNo = 1,
+                            orderInWeek = 1,
+                            startAt = Instant.parse("2026-03-03T00:00:00Z"),
+                            endAt = Instant.parse("2026-03-11T00:00:00Z"),
+                            status = AssignmentStatus.PUBLISHED,
+                            publishedAt = publishedAt,
+                            metadata = AssignmentMetadataResponse(
+                                title = "터미널 계산기",
+                                difficulty = AssignmentDifficulty.MID,
+                                description = "# 문제 설명",
+                            ),
+                        )
+                    )
+                )
+
+            v2AdminClient().get()
+                .uri("/v2/admin/courses/back-basic/assignments?status=PUBLISHED")
+                .exchange()
+                .expectStatus().isOk
+                .expectBody()
+                .jsonPath("$.data[0].assignmentId").isEqualTo(assignmentId)
+                .jsonPath("$.data[0].title").isEqualTo("터미널 계산기")
+                .jsonPath("$.data[0].publishedAt").isEqualTo("2026-03-03T00:00:00Z")
+                .jsonPath("$.data[0].problemId").isEqualTo(assignmentId)
+                .jsonPath("$.data[0].metadata.title").isEqualTo("터미널 계산기")
+        }
+
+        "v2 admin 과제 상세 응답은 title, publishedAt, problemId 를 포함한다" {
+            Mockito.`when`(courseV1Service.getAdminAssignmentDetail("back-basic", assignmentId))
+                .thenReturn(Mono.just(sampleAssignmentDetailResponse()))
+
+            v2AdminClient().get()
+                .uri("/v2/admin/courses/back-basic/assignments/$assignmentId")
+                .exchange()
+                .expectStatus().isOk
+                .expectBody()
+                .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
+                .jsonPath("$.data.title").isEqualTo("터미널 계산기")
+                .jsonPath("$.data.publishedAt").isEqualTo("2026-03-03T00:00:00Z")
+                .jsonPath("$.data.problemId").isEqualTo(assignmentId)
+                .jsonPath("$.data.metadata.title").isEqualTo("터미널 계산기")
         }
 
         "v2 admin 과제 복사 API는 ADMIN 토큰으로 호출하면 성공한다" {

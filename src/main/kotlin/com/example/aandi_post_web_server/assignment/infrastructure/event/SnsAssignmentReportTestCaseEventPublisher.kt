@@ -38,9 +38,10 @@ class SnsAssignmentReportTestCaseEventPublisher(
             }
             .doOnError { error ->
                 log.error(
-                    "Failed to publish assignment problem sync event to SNS. eventType={}, problemId={}",
+                    "Failed to publish assignment problem sync event to SNS. eventType={}, problemId={}, topicArn={}",
                     event.eventType,
                     event.problemId,
+                    topicArn,
                     error,
                 )
             }

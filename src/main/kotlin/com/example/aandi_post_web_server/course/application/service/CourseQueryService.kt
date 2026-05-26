@@ -449,6 +449,7 @@ class CourseQueryService(
         startAt = assignment.startAt,
         endAt = assignment.endAt,
         status = effectiveAssignment.status,
+        publishedAt = effectiveAssignment.publishedAt,
         metadata = assignment.metadata.toResponse(requirements, testCases),
     )
 

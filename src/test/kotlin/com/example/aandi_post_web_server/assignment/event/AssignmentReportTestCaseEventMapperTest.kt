@@ -55,6 +55,42 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
         event.testCases[1].input shouldBe listOf("C")
     }
 
+    "problem sync 이벤트의 problemId 는 assignmentId 와 동일하다" {
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val event = mapper.created(
+            assignment = assignment(
+                id = assignmentId,
+                status = AssignmentStatus.PUBLISHED,
+            ),
+            testCases = emptyList(),
+        )
+
+        event.problemId shouldBe assignmentId
+    }
+
+    "ASSIGNMENT_PUBLISHED Report EVENT payload 는 monitor 필드를 모두 담는다" {
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val publishedAt = Instant.parse("2026-03-18T00:00:00Z")
+        val payload = AssignmentReportEventPayload.from(
+            eventType = AssignmentReportEventType.ASSIGNMENT_PUBLISHED,
+            assignment = assignment(
+                id = assignmentId,
+                status = AssignmentStatus.PUBLISHED,
+            ).copy(publishedAt = publishedAt),
+            status = AssignmentStatus.PUBLISHED,
+            publishedAt = publishedAt,
+        )
+
+        payload.assignmentId shouldBe assignmentId
+        payload.courseSlug shouldBe "back-basic"
+        payload.title shouldBe "title"
+        payload.status shouldBe AssignmentStatus.PUBLISHED
+        payload.startAt shouldBe Instant.parse("2026-03-18T00:00:00Z")
+        payload.endAt shouldBe Instant.parse("2026-03-25T00:00:00Z")
+        payload.publishedAt shouldBe publishedAt
+        payload.problemId shouldBe assignmentId
+    }
+
     "빈 입력은 빈 args 배열로 변환한다" {
         val event = mapper.created(
             assignment = assignment(
@@ -119,6 +155,7 @@ private fun assignment(
 ): Assignment = Assignment(
     id = id,
     courseId = "course-1",
+    courseSlug = "back-basic",
     createdBy = "admin-1",
     weekNo = 1,
     orderInWeek = 1,

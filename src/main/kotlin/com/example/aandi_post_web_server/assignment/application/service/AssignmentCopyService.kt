@@ -9,6 +9,8 @@ import com.example.aandi_post_web_server.assignment.domain.model.toDetailRespons
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
+import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventPayload
+import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventType
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEvent
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventMapper
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventPublisher
@@ -160,6 +162,7 @@ class AssignmentCopyService(
                             requirements = tuple.t1,
                             testCases = tuple.t2,
                         )
+                        logAssignmentReportEvent(AssignmentReportEventType.ASSIGNMENT_CREATED, saved)
                         publishProblemSyncOnCreate(saved)
                             .thenReturn(response)
                     }
@@ -446,7 +449,25 @@ class AssignmentCopyService(
         assignment: Assignment,
         now: Instant = Instant.now(),
     ): Instant? =
-        if (effectiveResponseStatus(assignment, now) == AssignmentStatus.PUBLISHED) assignment.publishedAt else null
+        if (effectiveResponseStatus(assignment, now) == AssignmentStatus.PUBLISHED) {
+            assignment.publishedAt ?: assignment.startAt
+        } else {
+            null
+        }
+
+    private fun logAssignmentReportEvent(
+        eventType: AssignmentReportEventType,
+        assignment: Assignment,
+        now: Instant = Instant.now(),
+    ) {
+        val payload = AssignmentReportEventPayload.from(
+            eventType = eventType,
+            assignment = assignment,
+            status = effectiveResponseStatus(assignment, now),
+            publishedAt = assignment.publishedAt ?: effectiveResponsePublishedAt(assignment, now),
+        )
+        log.info("Report EVENT payload={}", payload)
+    }
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> {
         return courseRepository.findBySlug(slug.value)
