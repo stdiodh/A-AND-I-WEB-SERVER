@@ -39,4 +39,28 @@ class SnsAssignmentReportTestCaseEventPublisherTest : StringSpec({
         requestCaptor.value.messageGroupId() shouldBe "assignment-uuid"
         requestCaptor.value.messageDeduplicationId().isNullOrBlank() shouldBe false
     }
+
+    "SNS publish 실패는 오류로 전파된다" {
+        val snsAsyncClient = Mockito.mock(SnsAsyncClient::class.java)
+        Mockito.`when`(snsAsyncClient.publish(Mockito.any(PublishRequest::class.java)))
+            .thenReturn(CompletableFuture.failedFuture(RuntimeException("sns down")))
+
+        val publisher = SnsAssignmentReportTestCaseEventPublisher(
+            snsAsyncClient = snsAsyncClient,
+            objectMapper = ObjectMapper().registerModule(JavaTimeModule()),
+            topicArn = "arn:aws:sns:ap-northeast-2:362622729632:report-testcase-events-topic",
+        )
+
+        val event = AssignmentReportTestCaseEvent(
+            eventType = AssignmentReportTestCaseEventType.PROBLEM_UPDATED,
+            problemId = "assignment-uuid",
+            testCases = emptyList(),
+        )
+
+        StepVerifier.create(publisher.publish(event))
+            .expectErrorSatisfies { error ->
+                error.message shouldBe "sns down"
+            }
+            .verify()
+    }
 })

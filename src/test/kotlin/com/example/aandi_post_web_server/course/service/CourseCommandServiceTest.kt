@@ -211,6 +211,63 @@ class CourseCommandServiceTest : StringSpec({
         persistedAssignment.publishedAt shouldBe target.startAt
     }
 
+    "draft 과제를 즉시 공개하면 publishedAt 을 저장하고 응답과 이벤트 problemId 를 채운다" {
+        val fixture = CommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val startAt = Instant.now().minusSeconds(3600)
+        val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+            .copy(startAt = startAt, endAt = startAt.plusSeconds(7200), publishedAt = null)
+        var persistedAssignment: Assignment = target
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.courseWeekRepository.findByCourseIdAndWeekNo(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyInt(),
+            )
+        ).thenReturn(Mono.just(CourseWeek(id = "week-1", courseId = "course-1", weekNo = 1, title = "1주차")))
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                persistedAssignment = assignment
+                Mono.just(assignment)
+            }
+        Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenAnswer { Mono.just(persistedAssignment) }
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+            .thenReturn(Flux.empty())
+
+        StepVerifier.create(
+            fixture.service.updateAssignment(
+                courseSlug = "back-basic",
+                assignmentId = assignmentId,
+                request = UpdateAssignmentRequest(orderInWeek = 1),
+            )
+        )
+            .assertNext { updated ->
+                updated.status shouldBe AssignmentStatus.PUBLISHED
+                (updated.publishedAt == null) shouldBe false
+                updated.title shouldBe "테스트 과제"
+                updated.problemId shouldBe assignmentId
+            }
+            .verifyComplete()
+
+        (persistedAssignment.publishedAt == null) shouldBe false
+        persistedAssignment.publishedAt!!.isBefore(startAt) shouldBe false
+        fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
+    }
+
     "과제 수정 슬롯 중복은 새 주차를 생성하지 않고 CONFLICT 를 반환한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
