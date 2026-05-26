@@ -17,6 +17,8 @@ import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequ
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventPayload
+import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventType
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEvent
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventMapper
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventPublisher
@@ -198,6 +200,7 @@ class CourseCommandService(
                                             requirements = tuple.t1,
                                             testCases = tuple.t2,
                                         )
+                                        logAssignmentCreatedEvents(assignment)
                                         publishProblemSyncOnCreate(assignment)
                                             .thenReturn(response)
                                     }
@@ -275,7 +278,15 @@ class CourseCommandService(
                             )
                         )
                     )
-                    .then(deleteAssignmentCascade(parsedAssignmentId.value))
+                    .flatMap { assignment ->
+                        deleteAssignmentCascade(parsedAssignmentId.value)
+                            .doOnSuccess {
+                                logAssignmentReportEvent(
+                                    AssignmentReportEventType.ASSIGNMENT_DELETED,
+                                    assignment,
+                                )
+                            }
+                    }
             }
             .then()
     }
@@ -399,11 +410,10 @@ class CourseCommandService(
 
     private fun deleteAssignmentsByCourse(courseId: String): Mono<Void> {
         return assignmentRepository.findAllByCourseId(courseId)
-            .map { it.id }
-            .filter { it != null }
-            .map { it!! }
             .collectList()
-            .flatMap { assignmentIds ->
+            .flatMap { assignments ->
+                val deletableAssignments = assignments.filter { it.id != null }
+                val assignmentIds = deletableAssignments.map { requireNotNull(it.id) }
                 if (assignmentIds.isEmpty()) {
                     Mono.empty<Void>()
                 } else {
@@ -413,8 +423,17 @@ class CourseCommandService(
                         assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentRepository.deleteAllById(assignmentIds).then()
                     ).then(
-                        Flux.fromIterable(assignmentIds)
-                            .concatMap(::publishDeletedTestCases)
+                        Flux.fromIterable(deletableAssignments)
+                            .concatMap { assignment ->
+                                val assignmentId = requireNotNull(assignment.id)
+                                publishDeletedTestCases(assignmentId)
+                                    .doOnSuccess {
+                                        logAssignmentReportEvent(
+                                            AssignmentReportEventType.ASSIGNMENT_DELETED,
+                                            assignment,
+                                        )
+                                    }
+                            }
                             .then()
                     )
                 }
@@ -457,7 +476,7 @@ class CourseCommandService(
             metadata = metadata,
             status = AssignmentStatus.PUBLISHED,
             updatedAt = now,
-            publishedAt = assignment.publishedAt ?: targetStartAt,
+            publishedAt = assignment.publishedAt ?: initialPublishedAt(targetStartAt, now),
         )
 
         val checkDuplicate = ensureAssignmentSlotAvailable(courseId, candidate, parsedAssignmentId)
@@ -478,6 +497,7 @@ class CourseCommandService(
                     .zipWith(loadOrReplaceTestCases(parsedAssignmentId, testCaseDrafts))
                     .flatMap { tuple ->
                         val response = toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
+                        logAssignmentUpdatedEvents(previous = assignment, current = saved)
                         publishProblemSyncOnUpdate(saved)
                             .thenReturn(response)
                     }
@@ -633,7 +653,46 @@ class CourseCommandService(
         assignment: Assignment,
         now: Instant = Instant.now(),
     ): Instant? =
-        if (effectiveResponseStatus(assignment, now) == AssignmentStatus.PUBLISHED) assignment.publishedAt else null
+        if (effectiveResponseStatus(assignment, now) == AssignmentStatus.PUBLISHED) {
+            assignment.publishedAt ?: assignment.startAt
+        } else {
+            null
+        }
+
+    private fun logAssignmentCreatedEvents(assignment: Assignment) {
+        val now = Instant.now()
+        logAssignmentReportEvent(AssignmentReportEventType.ASSIGNMENT_CREATED, assignment, now)
+        if (effectiveResponseStatus(assignment, now) == AssignmentStatus.PUBLISHED) {
+            logAssignmentReportEvent(AssignmentReportEventType.ASSIGNMENT_PUBLISHED, assignment, now)
+        }
+    }
+
+    private fun logAssignmentUpdatedEvents(previous: Assignment, current: Assignment) {
+        val now = Instant.now()
+        val previousStatus = effectiveResponseStatus(previous, now)
+        val currentStatus = effectiveResponseStatus(current, now)
+        logAssignmentReportEvent(AssignmentReportEventType.ASSIGNMENT_UPDATED, current, now)
+        when {
+            previousStatus != AssignmentStatus.PUBLISHED && currentStatus == AssignmentStatus.PUBLISHED ->
+                logAssignmentReportEvent(AssignmentReportEventType.ASSIGNMENT_PUBLISHED, current, now)
+            previousStatus == AssignmentStatus.PUBLISHED && currentStatus != AssignmentStatus.PUBLISHED ->
+                logAssignmentReportEvent(AssignmentReportEventType.ASSIGNMENT_UNPUBLISHED, current, now)
+        }
+    }
+
+    private fun logAssignmentReportEvent(
+        eventType: AssignmentReportEventType,
+        assignment: Assignment,
+        now: Instant = Instant.now(),
+    ) {
+        val payload = AssignmentReportEventPayload.from(
+            eventType = eventType,
+            assignment = assignment,
+            status = effectiveResponseStatus(assignment, now),
+            publishedAt = assignment.publishedAt ?: effectiveResponsePublishedAt(assignment, now),
+        )
+        log.info("Report EVENT payload={}", payload)
+    }
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> {
         return courseRepository.findBySlug(slug.value)

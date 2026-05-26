@@ -95,9 +95,21 @@ data class AssignmentSummaryResponse(
     val endAt: Instant,
     @field:Schema(description = "과제 상태(startAt이 지나면 사용자에게는 PUBLISHED로 보임)", example = "PUBLISHED")
     val status: AssignmentStatus,
+    @field:Schema(description = "사용자에게 공개된 시각(KST/Asia/Seoul)")
+    val publishedAt: Instant? = null,
     @field:Schema(description = "과제 메타데이터")
     val metadata: AssignmentMetadataResponse,
-)
+) {
+    @get:Schema(description = "과제 제목", example = "터미널 계산기")
+    @get:JsonProperty("title")
+    val title: String
+        get() = metadata.title
+
+    @get:Schema(description = "OJ problem ID. 과제 UUID와 동일합니다.", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
+    @get:JsonProperty("problemId")
+    val problemId: String
+        get() = id
+}
 
 @Schema(description = "과제 상세 응답")
 data class AssignmentDetailResponse(
@@ -120,4 +132,14 @@ data class AssignmentDetailResponse(
     val publishedAt: Instant?,
     @field:Schema(description = "과제 메타데이터")
     val metadata: AssignmentDetailMetadataResponse,
-)
+) {
+    @get:Schema(description = "과제 제목", example = "터미널 계산기")
+    @get:JsonProperty("title")
+    val title: String
+        get() = metadata.title
+
+    @get:Schema(description = "OJ problem ID. 과제 UUID와 동일합니다.", example = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111")
+    @get:JsonProperty("problemId")
+    val problemId: String
+        get() = id
+}

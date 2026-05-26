@@ -115,6 +115,64 @@ class CourseQueryServiceTest : StringSpec({
             .verifyComplete()
     }
 
+    "관리자 과제 목록 응답은 top-level title, publishedAt, problemId 를 포함한다" {
+        val fixture = QueryFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val published = queryAssignment(id = assignmentId, courseId = "course-1")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
+            .thenReturn(Flux.just(published))
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+            .thenReturn(Flux.empty())
+
+        StepVerifier.create(
+            fixture.service.getAdminAssignments(
+                courseSlug = "back-basic",
+                weekNo = null,
+                status = AssignmentStatus.PUBLISHED,
+            )
+        )
+            .assertNext { summary ->
+                summary.id shouldBe assignmentId
+                summary.title shouldBe "배포 조회 테스트 과제"
+                summary.metadata.title shouldBe "배포 조회 테스트 과제"
+                summary.publishedAt shouldBe published.publishedAt
+                summary.problemId shouldBe assignmentId
+            }
+            .verifyComplete()
+    }
+
+    "관리자 과제 상세 응답은 top-level title, publishedAt, problemId 를 포함한다" {
+        val fixture = QueryFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val published = queryAssignment(id = assignmentId, courseId = "course-1")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(published))
+        Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+            .thenReturn(Flux.empty())
+
+        StepVerifier.create(
+            fixture.service.getAdminAssignmentDetail("back-basic", assignmentId)
+        )
+            .assertNext { detail ->
+                detail.id shouldBe assignmentId
+                detail.title shouldBe "배포 조회 테스트 과제"
+                detail.metadata.title shouldBe "배포 조회 테스트 과제"
+                detail.publishedAt shouldBe published.publishedAt
+                detail.problemId shouldBe assignmentId
+            }
+            .verifyComplete()
+    }
+
     "코스 조회는 ENABLED 상태로 수강 중인 코스만 반환한다" {
         val fixture = QueryFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
