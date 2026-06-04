@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net" modified="2026-06-04T00:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="architecture" name="Architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="760" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="client" value="Client / Admin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="50" y="170" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="entry" value="Swagger / REST API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="270" y="170" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="server" value="A&amp;I Web Server&#xa;Kotlin WebFlux" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a8a;strokeColor=#0f172a;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="150" width="190" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="aws" value="AWS Cloud" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#94a3b8;dashed=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="450" y="30" width="560" height="330" as="geometry"/>
+        </mxCell>
+        <mxCell id="sns" value="SNS Topics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bfdbfe;strokeColor=#2563eb;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="540" y="60" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="sqs" value="SQS Queues" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#16a34a;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="750" y="60" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="mongo" value="MongoDB" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dcfce7;strokeColor=#16a34a;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="790" y="170" width="150" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="oj" value="Online Judge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#64748b;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="95" width="140" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="auth" value="Auth Server" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#64748b;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="220" width="140" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="logs" value="CloudWatch Logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="500" y="430" width="160" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="alert" value="Discord Alert" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#64748b;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="720" y="430" width="150" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="cicd" value="GitHub Actions&#xa;ECR / EC2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="260" y="430" width="160" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" value="HTTPS" style="endArrow=block;html=1;rounded=0;strokeColor=#2563eb;fontColor=#334155;" edge="1" parent="1" source="client" target="entry">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" value="REST" style="endArrow=block;html=1;rounded=0;strokeColor=#2563eb;fontColor=#334155;" edge="1" parent="1" source="entry" target="server">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" value="read/write" style="endArrow=block;html=1;rounded=0;strokeColor=#16a34a;fontColor=#334155;" edge="1" parent="1" source="server" target="mongo">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" value="problem sync" style="endArrow=block;html=1;rounded=0;strokeColor=#2563eb;fontColor=#334155;" edge="1" parent="1" source="server" target="sns">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" value="deliver" style="endArrow=block;html=1;rounded=0;strokeColor=#2563eb;fontColor=#334155;" edge="1" parent="1" source="sns" target="sqs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="poll" style="endArrow=block;html=1;rounded=0;strokeColor=#64748b;fontColor=#334155;" edge="1" parent="1" source="sqs" target="oj">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" value="judge/user events" style="endArrow=block;html=1;rounded=0;strokeColor=#64748b;fontColor=#334155;" edge="1" parent="1" source="auth" target="sns">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="consume" style="endArrow=block;html=1;rounded=0;strokeColor=#16a34a;fontColor=#334155;" edge="1" parent="1" source="sqs" target="server">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" value="stdout JSON" style="endArrow=block;html=1;rounded=0;strokeColor=#0284c7;fontColor=#334155;" edge="1" parent="1" source="server" target="logs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="filter" style="endArrow=block;html=1;rounded=0;strokeColor=#0284c7;fontColor=#334155;" edge="1" parent="1" source="logs" target="alert">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e11" value="deploy" style="endArrow=block;html=1;rounded=0;strokeColor=#64748b;fontColor=#334155;" edge="1" parent="1" source="cicd" target="server">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
