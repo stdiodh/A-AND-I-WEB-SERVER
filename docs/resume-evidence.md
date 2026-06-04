@@ -57,4 +57,4 @@
 | 문서 | [Query Tuning](./query-tuning.md) | 쿼리 튜닝 후보와 측정 보류 사유 |
 | 문서 | [Event-driven Sync](./event-driven-sync.md) | SNS/SQS 이벤트 흐름 |
 | 문서 | [Structured Logging](./structured-logging.md) | 로그/알림 기준 |
-| 커밋/PR | [확인 필요] | 이번 문서 정리 commit/PR 생성 후 링크 추가 |
+| 커밋/PR | [PR #52](https://github.com/Team-AnI/A-AND-I-WEB-SERVER/pull/52), commit `6dec677` | 문서 정리와 coverage evidence commit/push 완료 |
