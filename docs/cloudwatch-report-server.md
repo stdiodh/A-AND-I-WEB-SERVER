@@ -61,7 +61,7 @@ aws logs put-retention-policy \
 ```bash
 REPORT_SERVER_IMAGE=ghcr.io/team-ani/a-and-i-web-server:latest \
 MONGO_DB_URL=mongodb://mongodb:27017/aandi \
-SWAGGER_URL=https://api.aandiclub.com \
+SWAGGER_URL=https://<report-api-domain> \
 docker compose -f docker-compose.prod.yml up -d
 ```
 

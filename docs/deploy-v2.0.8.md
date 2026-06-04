@@ -18,12 +18,12 @@ Gateway 리포지토리는 건드리지 않고, Gateway 새 태그도 만들지 
 - `ECR_REPOSITORY=aandi-report-server`
 - `APP_DIR=/opt/aandi-report-server`
 - `MONGO_DB_NAME=aandi`
-- `SWAGGER_URL=https://api.aandiclub.com`
-- `AUTH_ISSUER_URI=https://auth.aandiclub.com`
-- `AUTH_SERVICE_BASE_URL=https://api.aandiclub.com`
+- `SWAGGER_URL=https://<report-api-domain>`
+- `AUTH_ISSUER_URI=https://<auth-domain>`
+- `AUTH_SERVICE_BASE_URL=https://<gateway-api-domain>`
 - `AUTH_AUDIENCE=aandiclub-api`
 - `AUTH_JWT_CLOCK_SKEW_SECONDS=30`
-- `APP_CORS_ALLOWED_ORIGIN_PATTERNS=https://aandiclub.com,https://www.aandiclub.com,https://*.aandiclub.com`
+- `APP_CORS_ALLOWED_ORIGIN_PATTERNS=https://<frontend-domain>,https://<frontend-subdomain-pattern>`
 - `ONLINE_JUDGE_BASE_URL=http://<ONLINE_JUDGE_PRIVATE_IP>:8080`
 - `APP_ENV=prod`
 - `APP_V2_LOG_SERVICE_NAME=report-service`
@@ -130,7 +130,7 @@ aws logs describe-log-streams \
 Do not deploy a new Gateway tag. Confirm existing `REPORT_SERVICE_URI` points to the Report private URL, then call through Gateway:
 
 ```bash
-curl -i -X POST "https://api.aandiclub.com/v2/admin/courses/<targetCourseSlug>/assignments/copy" \
+curl -i -X POST "https://<gateway-api-domain>/v2/admin/courses/<targetCourseSlug>/assignments/copy" \
   -H "Authorization: Bearer <ADMIN_ACCESS_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{

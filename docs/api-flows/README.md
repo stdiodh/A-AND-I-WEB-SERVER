@@ -1,11 +1,24 @@
 # API / Event Flow Index
 
-README에서 압축한 기능별 상세 흐름을 이 디렉터리에 분리한다.
+> 상위 문서로 돌아가기: [Docs Index](../README.md)
 
-| 문서 | 포함 내용 |
+본 디렉터리는 README에서 분리한 API/Event 상세 흐름을 보관합니다.
+
+## Portfolio Flow Docs
+
+| 문서 | 설명 |
 | :--- | :--- |
-| [과제 공개 및 조회 흐름](./assignment-publish-flow.md) | 사용자 코스/과제 조회 API, 공개 상태 계산, 예외 흐름 |
-| [테스트케이스 OJ 동기화 흐름](./testcase-oj-sync-flow.md) | 관리자 과제 변경 후 SNS problem sync 이벤트 발행 |
-| [Judge Completion 이벤트 소비 흐름](./judge-completion-consumer-flow.md) | SQS 메시지 파싱, projection upsert, 관리자 제출 현황 조회 |
-| [관리자 코스/과제 관리 흐름](./admin-course-assignment-flow.md) | 관리자 API 목록과 코스/수강/과제 운영 절차 |
-| [v2 인증 및 권한 흐름](./auth-flow.md) | JWT Resource Server, v2 헤더 검증, role 기반 인가 |
+| [Assignment Lifecycle](./assignment-lifecycle.md) | 과제 생성/수정/삭제, 공개 상태 계산, 테스트케이스 응답 기준 |
+| [Problem Sync](./problem-sync.md) | WEB에서 SNS로 Online Judge problem sync 이벤트 발행 |
+| [Judge Completed](./judge-completed.md) | OJ 채점 완료 이벤트를 SQS로 소비하고 projection에 반영 |
+| [Auth User Sync](./auth-user-sync.md) | Auth 사용자 이벤트를 SQS로 소비하고 report user에 반영 |
+
+## Existing Detailed Docs
+
+| 문서 | 설명 |
+| :--- | :--- |
+| [과제 공개 및 조회 흐름](./assignment-publish-flow.md) | `startAt` 기준 과제 공개 상태 계산과 사용자 조회 흐름 |
+| [테스트케이스 OJ 동기화 흐름](./testcase-oj-sync-flow.md) | 과제 생성/수정/삭제 후 OJ problem sync 이벤트를 발행하는 흐름 |
+| [Judge Completion 이벤트 소비 흐름](./judge-completion-consumer-flow.md) | OJ 채점 완료 이벤트를 SQS로 소비하고 projection에 반영하는 흐름 |
+| [관리자 코스/과제 관리 흐름](./admin-course-assignment-flow.md) | 관리자 API 기반 코스, 수강생, 과제 운영 흐름 |
+| [v2 인증 및 권한 흐름](./auth-flow.md) | JWT, v2 헤더, role 기반 접근 제어 흐름 |

@@ -1,171 +1,199 @@
-# A&I Web Server
+# A-AND-I-WEB-SERVER
 
-> 본 프로젝트는 A&I 동아리의 코스 운영, 과제 공개, 테스트케이스 관리, Online Judge 연동을 담당하는 `Kotlin Spring Boot WebFlux` 기반 백엔드 서버입니다.
-> 서버는 `MongoDB`에 코스/과제/수강/사용자 동기화 데이터를 저장하고, `AWS SNS/SQS`로 문제 동기화와 채점 완료 이벤트를 연결합니다.
+본 프로젝트는 A&I 동아리의 과제 운영을 담당하는 `Kotlin / Spring Boot WebFlux` 기반 백엔드 서버입니다. 코스별 과제 공개, 테스트케이스 관리, Online Judge 문제 동기화, 채점 완료 결과 반영, Auth 사용자 동기화, 구조화 로그를 한 흐름으로 관리합니다.
 
-> 자세한 흐름은 [동작 과정](#-동작-과정-how-it-works)과 [상세 문서](#-상세-문서-docs)에 정리했습니다.
+> 상세 구현 근거는 [Docs Index](./docs/README.md)와 [Resume Evidence](./docs/resume-evidence.md)에서 확인할 수 있습니다.
 
-## 📌 프로젝트 정보
+## 🧭 목차 (Table of Contents)
 
-### ⏰ 개발 기간
+- [프로젝트 목표와 다짐](#goals)
+- [문제 정의와 해결 방향](#problem-approach)
+- [시스템 아키텍처](#architecture)
+- [핵심 기능 및 동작 화면](#features-demo)
+- [동작 과정](#how-it-works)
+- [테스트 및 검증](#test-verification)
+- [개발 로그 및 트러블 슈팅](#troubleshooting-log)
+- [기술 스택](#tech-stack)
+- [로컬 실행 방법](#getting-started)
+- [상세 문서](#docs)
+- [Resume Highlights](#resume-highlights)
+- [회고와 개선점](#retrospective-next-step)
 
-- **2025년 03월 07일 ~ 진행 중**
-- 이 저장소는 **Back-End Repository**입니다.
+<a id="goals"></a>
+## 🏃‍♂️ 프로젝트 목표와 다짐 (Goals)
 
-### 👥 프로젝트 팀원
+### 프로젝트 정보
+
+- 개발 기간: **2025년 03월 07일 ~ 진행 중**
+- 저장소 역할: **A&I Back-End Repository**
 
 | Front-End | Back-End |
 | :---: | :---: |
 | <img src="https://github.com/user-attachments/assets/3e22107e-3e30-44d5-8d4a-61cfbab8eac2" width="100"/> | <img src="https://github.com/user-attachments/assets/a51e908a-f9ca-4819-a36a-5f26da14a3aa" width="100"/> |
 | [Han Sang Wook](https://github.com/SangWook16074) | [Hood](https://github.com/stdiodh) |
 
-## 🏃‍♂️ 프로젝트 목표와 다짐 (Goals)
+### 목표
 
-이번 프로젝트에서 중점으로 둔 기준은 `운영 흐름 이해`, `외부 시스템 연동`, `문서화 가능한 설계`입니다.
+1. **Assignment Operation:** 과제 생성, 공개, 조회, 테스트케이스 관리, 복사 흐름을 운영 관점에서 추적 가능하게 만듭니다.
+2. **Event-driven Sync:** 과제 변경, 채점 완료, 사용자 변경을 `AWS SNS/SQS` 기반 이벤트 흐름으로 분리합니다.
+3. **Operational Evidence:** 구조화 로그, CloudWatch, Discord alert 연계 기준을 문서화해 운영 중 원인 추적 근거를 남깁니다.
 
-1. **운영 흐름 이해:** 과제 생성, 공개, 제출 결과 반영까지 서버가 맡는 구간을 추적합니다.
-2. **외부 시스템 연동:** 테스트케이스 변경과 채점 완료 이벤트를 `SNS/SQS` 기반 비동기 흐름으로 연결합니다.
-3. **문서화 가능한 설계:** README는 전체 그림을 보여주고, API/Event 상세는 `docs/`로 분리합니다.
+<a id="problem-approach"></a>
+## 🧩 문제 정의와 해결 방향 (Problem & Approach)
 
-## 문제 정의와 해결 방향 (Problem & Approach)
+| 문제 | 해결 방향 | 근거 |
+| :--- | :--- | :--- |
+| 공개 전 과제와 비공개 테스트케이스가 수강생에게 노출되면 안 됩니다. | `startAt` 기준 공개 상태를 계산하고 사용자 응답에는 `PUBLIC` 테스트케이스만 포함합니다. | `CourseQueryService` |
+| 과제 변경과 Online Judge 문제 데이터가 어긋날 수 있습니다. | 테스트케이스 snapshot을 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED` 이벤트로 발행합니다. | `AssignmentReportTestCaseEventMapper`, `SnsAssignmentReportTestCaseEventPublisher` |
+| 채점 결과를 관리자 제출 현황에 반영해야 합니다. | `JUDGE_COMPLETED` 이벤트를 SQS로 소비하고 제출 상태 projection을 upsert합니다. | `SqsJudgeSubmissionEventConsumer`, `AssignmentSubmissionStatusProjectionService` |
+| Auth 서버의 사용자 변경을 과제 운영 서버에 반영해야 합니다. | `UserProfileUpdated`, `UserDeleted` 이벤트를 SQS로 소비해 report user 데이터를 upsert/delete합니다. | `SqsUserEventConsumer`, `ReportUserSyncService` |
+| 운영 장애를 추적하려면 요청 단위 로그가 필요합니다. | `traceId`, `requestId`, `statusCode`, `latencyMs` 중심의 JSON 로그를 stdout으로 남기고 CloudWatch에서 수집합니다. | `V2StructuredLoggingWebFilter`, `docker-compose.prod.yml` |
 
-A&I Web Server는 과제를 단순히 저장하는 서버가 아닙니다.
-과제 공개 시점, 테스트케이스 동기화, 채점 완료 이벤트처럼 운영 흐름이 코드와 직접 연결되는 문제를 다룹니다.
-
-### 1. 공개 전 과제 노출 제어
-
-- **문제:** 수강생에게 공개 전 과제가 노출되면 안 됩니다.
-- **해결:** `startAt` 기준으로 공개 상태를 계산하고, 공개 테스트케이스만 응답합니다.
-- **근거:** `CourseQueryService`
-
-### 2. 반복되는 관리자 과제 운영
-
-- **문제:** 코스, 수강, 과제 운영이 반복 작업으로 이어집니다.
-- **해결:** 관리자 API와 과제 복사 기능으로 운영 흐름을 단순화합니다.
-- **근거:** `CourseAdminV2Controller`, `AssignmentCopyService`
-
-### 3. 테스트케이스와 Online Judge 문제 동기화
-
-- **문제:** 과제 테스트케이스 변경이 OJ 문제 데이터와 어긋나면 안 됩니다.
-- **해결:** 테스트케이스 snapshot 기준으로 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED` 이벤트를 발행합니다.
-- **근거:** `AssignmentReportTestCaseEventMapper`
-
-### 4. 채점 완료 이벤트 반영
-
-- **문제:** OJ 채점 결과를 관리자 화면에서 확인해야 합니다.
-- **해결:** `JUDGE_COMPLETED` 이벤트를 SQS로 소비하고 제출 상태 projection을 갱신합니다.
-- **근거:** `SqsJudgeSubmissionEventConsumer`, `AssignmentSubmissionStatusProjectionService`
-
-### 5. 운영 장애 추적
-
-- **문제:** API 장애와 느린 요청을 운영 환경에서 추적해야 합니다.
-- **해결:** v2 API 구조화 로그를 JSON으로 남기고 CloudWatch에서 수집합니다.
-- **근거:** `docs/logging-v2.md`, `docker-compose.prod.yml`
-
+<a id="architecture"></a>
 ## 🏗️ 시스템 아키텍처 (System Architecture)
 
-> [이미지 필요] `docs/assets/images/architecture.png`에 전체 시스템 흐름 이미지를 추가합니다.
-> 촬영/제작 기준은 [Demo Assets Guide](./docs/assets/README.md)를 참고합니다.
-
 ```text
-Client
-  → A&I Web Server
-      → MongoDB
-      → AWS SNS: assignment problem sync event
-      → AWS SQS: user sync event, judge completion event
-  → Online Judge Server
+Client / Admin
+  -> A&I Web Server
+      -> MongoDB
+      -> AWS SNS: assignment problem sync event
+      -> AWS SQS: auth user sync event
+      -> AWS SQS: judge completed event
+  -> Online Judge Server
+  -> CloudWatch Logs -> Discord Alert Lambda/Webhook
 ```
 
-- **Client:** JWT를 포함해 코스/과제 조회와 관리자 요청을 보냅니다.
-- **A&I Web Server:** `v1`, `v2` API를 제공하고, 코스/과제/수강/제출 projection 데이터를 관리합니다.
-- **MongoDB:** 코스, 주차, 과제, 요구사항, 테스트케이스, 수강 정보, 사용자 동기화 데이터, 제출 상태 projection을 저장합니다.
-- **AWS SNS/SQS:** 테스트케이스 문제 동기화 이벤트를 발행하고, 사용자/채점 완료 이벤트를 소비합니다.
-- **Operations:** Docker, GitHub Actions, ECR, EC2, CloudWatch Logs 기반 운영 문서가 포함되어 있습니다.
+- `MongoDB`는 코스, 수강, 과제, 테스트케이스, 사용자 동기화 데이터, 제출 상태 projection을 저장합니다.
+- `AWS SNS/SQS`는 WEB, AUTH, OJ 서버 간 데이터 동기화 경로를 분리합니다.
+- 운영 로그는 애플리케이션이 JSON 한 줄로 stdout에 출력하고, Docker `awslogs` logging driver가 CloudWatch Logs로 전달합니다.
 
+자세한 구조는 [Architecture](./docs/architecture.md)에서 확인할 수 있습니다.
+
+<a id="features-demo"></a>
 ## 🚀 핵심 기능 및 동작 화면 (Features & Demo)
 
-### 1. 코스별 과제 조회와 공개 상태 계산
+> 자동 생성된 공통 이미지: [v2 Swagger/OpenAPI 화면](./docs/assets/images/swagger-ui-v2.jpg)
+> 기능별 GIF는 아직 생성하지 않았으며, 필요한 데모 데이터와 수동 촬영 기준은 [Demo Capture](./docs/demo-capture.md)에 기록했습니다.
 
-수강 중인 사용자는 접근 권한이 있는 코스와 과제를 조회합니다.
-서버는 `startAt` 기준으로 공개 상태를 계산하고, 공개된 과제의 `PUBLIC` 테스트케이스만 응답합니다.
+<a id="feature-assignment-lifecycle"></a>
+### 과제 공개 및 테스트케이스 관리
 
-> **동작 화면**
->
-> - GIF 위치: `docs/assets/demo-assignment-flow.gif`
-> - 보여줄 흐름: 로그인 사용자 요청 → 코스 목록 조회 → 과제 목록 조회 → 과제 상세 확인
-> - 대체 기준: 프론트엔드 화면이 없으면 Swagger UI 또는 API Client로 대체
+관리자는 코스별 과제를 생성, 수정, 삭제하고 테스트케이스 visibility를 관리합니다. 수강생 조회에서는 `startAt`이 지난 과제만 공개 상태로 계산되며, `PUBLIC` 테스트케이스만 응답합니다.
 
-> 자세한 흐름은 [과제 공개 및 조회 흐름](./docs/api-flows/assignment-publish-flow.md)에 정리했습니다.
+> **🎬 동작 화면**
+> - GIF 위치: `docs/assets/gifs/assignment-publish-demo.gif`
+> - 대체 이미지: `docs/assets/images/assignment-publish-result.png`
+> - 촬영 범위: 관리자 과제 생성/수정 요청, 사용자 과제 조회 응답, `PUBLIC` 테스트케이스 필터링 결과
 
-### 2. 관리자 코스/수강/과제 운영
+> **핵심 구현 포인트**
+> - `CourseQueryService`가 사용자 접근 권한과 공개 상태를 함께 검증합니다.
+> - `AssignmentTestCaseVisibility.EXCLUDED`는 OJ sync payload에서도 제외됩니다.
 
-관리자는 코스 생성, 수강생 등록, 과제 생성/수정/삭제, 과제 복사를 수행합니다.
-과제 변경은 저장된 테스트케이스 snapshot을 기준으로 OJ 문제 동기화 이벤트까지 이어집니다.
+자세한 흐름은 [Assignment Lifecycle](./docs/api-flows/assignment-lifecycle.md)에서 확인할 수 있습니다.
 
-> **동작 화면**
->
-> - GIF 위치: `docs/assets/demo-admin-assignment-flow.gif`
-> - 보여줄 흐름: 관리자 토큰 요청 → 코스 선택 → 과제 생성 또는 복사 → 응답 확인
+<a id="feature-problem-sync"></a>
+### Online Judge problem sync
 
-> 자세한 흐름은 [관리자 코스/과제 관리 흐름](./docs/api-flows/admin-course-assignment-flow.md)에 정리했습니다.
+과제 생성, 수정, 삭제 이후 서버는 최신 테스트케이스 snapshot을 problem sync 이벤트로 발행합니다. 이벤트 발행이 꺼진 로컬 환경에서는 noop publisher가 로그만 남기고, 운영 환경에서는 SNS topic ARN 설정을 요구합니다.
 
-### 3. 테스트케이스 Online Judge 동기화
+> **🎬 동작 화면**
+> - GIF 위치: `docs/assets/gifs/problem-sync-demo.gif`
+> - 대체 이미지: `docs/assets/images/problem-sync-flow.png`
+> - 촬영 범위: 테스트케이스 저장, problem sync 이벤트 로그, SNS/SQS 전달 확인
 
-관리자가 과제를 생성하거나 수정하면 서버는 `EXCLUDED` 테스트케이스를 제외한 최종 snapshot을 OJ 문제 이벤트로 발행합니다.
-삭제 시에는 같은 `problemId`에 빈 테스트케이스 배열을 담은 `PROBLEM_DELETED` 이벤트를 보냅니다.
+> **핵심 구현 포인트**
+> - 이벤트 타입은 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED`입니다.
+> - FIFO topic ARN이면 `problemId`를 `messageGroupId`로 사용합니다.
 
-> **동작 화면**
->
-> - GIF 위치: `docs/assets/demo-testcase-oj-sync.gif`
-> - 보여줄 흐름: 테스트케이스 저장 → problem sync 이벤트 로그 확인 → SNS/SQS 전달 확인
+자세한 흐름은 [Problem Sync](./docs/api-flows/problem-sync.md)에서 확인할 수 있습니다.
 
-> 자세한 흐름은 [테스트케이스 OJ 동기화 흐름](./docs/api-flows/testcase-oj-sync-flow.md)에 정리했습니다.
+<a id="feature-judge-completed"></a>
+### Judge completed event 소비
 
-### 4. Judge Completion 이벤트 소비와 제출 현황 projection
+Online Judge Server의 채점 완료 이벤트는 SQS consumer가 읽고, 제출 상태 projection에 저장됩니다. 관리자는 projection과 수강생 목록을 조합한 제출/미제출 현황을 조회합니다.
 
-Online Judge Server가 채점 완료 이벤트를 보내면 서버는 SQS 메시지를 소비하고 제출 상태 projection을 갱신합니다.
-관리자 제출 현황 API는 코스 수강생 목록과 projection을 조합해 제출/미제출 상태를 반환합니다.
+> **🎬 동작 화면**
+> - GIF 위치: `docs/assets/gifs/judge-completed-demo.gif`
+> - 대체 이미지: `docs/assets/images/judge-completed-flow.png`
+> - 촬영 범위: SQS 메시지 주입, consumer 처리 로그, 관리자 제출 현황 조회
 
-> **동작 화면**
->
-> - GIF 위치: `docs/assets/demo-judge-completion-flow.gif`
-> - 보여줄 흐름: SQS 메시지 주입 → consumer 로그 확인 → 관리자 제출 현황 조회
+> **핵심 구현 포인트**
+> - direct JSON body와 SNS envelope body를 모두 지원합니다.
+> - `JUDGE_COMPLETED`가 아닌 메시지는 reason 로그를 남기고 삭제합니다.
 
-> 자세한 흐름은 [Judge Completion 이벤트 소비 흐름](./docs/api-flows/judge-completion-consumer-flow.md)에 정리했습니다.
+자세한 흐름은 [Judge Completed](./docs/api-flows/judge-completed.md)에서 확인할 수 있습니다.
 
-### 5. v2 인증, 공통 응답, 구조화 로깅
+<a id="feature-auth-user-sync"></a>
+### Auth user sync
 
-`v2` API는 `Authenticate` 또는 `Authorization` Bearer 토큰을 사용하고, `deviceOS`, `timestamp`, 선택적 `salt` 헤더를 검증합니다.
-응답은 `success`, `data`, `error`, `timestamp` 구조로 통일되며, 운영 로그는 한 줄 JSON으로 남깁니다.
+AUTH 서버의 사용자 변경 이벤트를 소비해 과제 운영 서버의 사용자 표시 정보를 최신화합니다. `updatedAt` 또는 `occurredAt` 기준으로 오래된 이벤트는 반영하지 않습니다.
 
-> 자세한 인증 흐름은 [v2 인증 및 권한 흐름](./docs/api-flows/auth-flow.md)에 정리했습니다.
+> **🎬 동작 화면**
+> - GIF 위치: `docs/assets/gifs/auth-user-sync-demo.gif`
+> - 대체 이미지: `docs/assets/images/auth-user-sync-flow.png`
+> - 촬영 범위: Auth user event body, SQS consumer 로그, report user upsert/delete 결과
 
+> **핵심 구현 포인트**
+> - `UserProfileUpdated`는 upsert, `UserDeleted`는 delete로 처리합니다.
+> - direct JSON body와 SNS envelope body를 모두 파싱합니다.
+
+자세한 흐름은 [Auth User Sync](./docs/api-flows/auth-user-sync.md)에서 확인할 수 있습니다.
+
+<a id="feature-structured-logging"></a>
+### 구조화 로그와 운영 알림
+
+v2 API 요청은 `traceId`, `requestId`, `statusCode`, `latencyMs`, error fields를 포함한 JSON 로그로 남습니다. CloudWatch Logs에서는 5xx, 지연 요청, traceId 단위 조회가 가능하고 Discord alert는 allowlist 필드만 전달하는 기준으로 문서화했습니다.
+
+> **🎬 동작 화면**
+> - GIF 위치: `docs/assets/gifs/structured-logging-demo.gif`
+> - 대체 이미지: `docs/assets/images/cloudwatch-log-example.png`, `docs/assets/images/discord-alert-example.png`
+> - 촬영 범위: v2 API 요청, stdout JSON 로그, CloudWatch Logs Insights 조회, Discord alert payload
+
+> **핵심 구현 포인트**
+> - password, token, authorization, private testcase, user submitted code 원문은 마스킹하거나 출력하지 않습니다.
+> - CloudWatch 전송은 앱 내부 appender가 아니라 Docker `awslogs` driver가 담당합니다.
+
+자세한 기준은 [Structured Logging](./docs/structured-logging.md)에서 확인할 수 있습니다.
+
+<a id="how-it-works"></a>
 ## 🔄 동작 과정 (How It Works)
 
-| 기능 | 사용자가 보는 흐름 | 상세 문서 |
+| 흐름 | 요약 | 상세 문서 |
 | :--- | :--- | :--- |
-| 과제 조회 | 코스 선택 → 주차/과제 목록 조회 → 공개된 과제 상세 확인 | [과제 공개 및 조회 흐름](./docs/api-flows/assignment-publish-flow.md) |
-| 관리자 과제 운영 | 관리자 인증 → 코스 선택 → 과제 생성/수정/삭제/복사 → 결과 확인 | [관리자 코스/과제 관리 흐름](./docs/api-flows/admin-course-assignment-flow.md) |
-| OJ 문제 동기화 | 테스트케이스 저장 → snapshot 생성 → SNS 이벤트 발행 | [테스트케이스 OJ 동기화 흐름](./docs/api-flows/testcase-oj-sync-flow.md) |
-| 채점 완료 반영 | OJ 이벤트 발행 → SQS 소비 → projection 저장 → 제출 현황 조회 | [Judge Completion 이벤트 소비 흐름](./docs/api-flows/judge-completion-consumer-flow.md) |
-| 인증/인가 | Bearer 토큰 전달 → JWT 검증 → role 기반 접근 제어 | [v2 인증 및 권한 흐름](./docs/api-flows/auth-flow.md) |
+| Assignment Operation | 관리자 과제 변경 -> 공개 상태 계산 -> 사용자 과제 조회 | [Assignment Lifecycle](./docs/api-flows/assignment-lifecycle.md) |
+| OJ Problem Sync | WEB -> SNS -> OJ 구독 SQS -> 문제/testcase 동기화 | [Problem Sync](./docs/api-flows/problem-sync.md) |
+| Judge Completed Event | OJ -> SNS FIFO -> SQS -> WEB consumer -> projection upsert | [Judge Completed](./docs/api-flows/judge-completed.md) |
+| Auth User Sync | AUTH -> SNS -> SQS -> WEB consumer -> report user upsert/delete | [Auth User Sync](./docs/api-flows/auth-user-sync.md) |
+| Structured Logging | v2 API -> stdout JSON -> CloudWatch Logs -> Discord alert | [Structured Logging](./docs/structured-logging.md) |
 
-## ✅ 테스트 및 검증 (Test & Verification)
+<a id="test-verification"></a>
+## 🧪 테스트 및 검증 (Test & Verification)
 
-- `.github/workflows/ci-test.yml`에서 `develop`, `main`, PR 기준 `./gradlew test --no-daemon` 실행이 확인됩니다.
-- `build.gradle.kts`에 `Jacoco` 리포트와 라인 커버리지 `0.70` 검증 설정이 있습니다.
-- Docker 이미지에는 `/actuator/health/readiness` 기반 `HEALTHCHECK`가 포함되어 있습니다.
-- 운영 배포 성공 여부와 현재 공개 API URL은 이 README 작성 시점에 직접 검증하지 못해 [확인 필요]입니다.
+2026년 06월 04일 KST 기준 로컬에서 지정 명령을 실행했습니다.
 
+| 항목 | 결과 |
+| :--- | :--- |
+| `./gradlew clean test` | 성공, 188 tests / 0 failures / 0 errors / 0 skipped |
+| `./gradlew jacocoTestReport` | 성공 |
+| `./gradlew jacocoTestCoverageVerification` | 성공 |
+| `./gradlew check` | 성공 |
+| JaCoCo line coverage | 2,289 / 2,932 = 78.07% |
+| JaCoCo branch coverage | 761 / 1,391 = 54.71% |
+| CI test task | `.github/workflows/ci-test.yml`에서 `./gradlew test --no-daemon` 실행 |
+
+자세한 결과와 주의사항은 [Test](./docs/test.md)에서 확인할 수 있습니다.
+
+<a id="troubleshooting-log"></a>
 ## 📚 개발 로그 및 트러블 슈팅 (Troubleshooting Log)
 
 | 문서 | 핵심 내용 |
 | :--- | :--- |
-| [V2 Structured Logging](./docs/logging-v2.md) | v2 API 로그 스키마, 마스킹 정책, 로컬/운영 확인 방법 |
-| [CloudWatch Report Server](./docs/cloudwatch-report-server.md) | Docker `awslogs` driver 기반 CloudWatch 수집과 Logs Insights 쿼리 |
-| [Discord Alerts From CloudWatch](./docs/discord-alert-from-cloudwatch.md) | CloudWatch subscription filter와 Discord 알림 전달 기준 |
-| [v2.0.8 Deploy](./docs/deploy-v2.0.8.md) | 태그 배포, EC2 확인, Gateway smoke test, rollback 절차 |
+| [SQS Envelope Format](./docs/troubleshooting/sqs-envelope-format.md) | direct JSON body와 SNS envelope body 처리 기준 |
+| [Assignment Copy](./docs/troubleshooting/assignment-copy.md) | origin/fingerprint 중복 방지와 복사 후 problem sync |
+| [Event Field Consistency](./docs/troubleshooting/event-field-consistency.md) | eventType, problemId/publicCode 등 이벤트 필드 일관성 기준 |
+| [Discord Alert From CloudWatch](./docs/discord-alert-from-cloudwatch.md) | CloudWatch subscription filter와 Discord alert payload 기준 |
 
+<a id="tech-stack"></a>
 ## 🛠️ 기술 스택 (Tech Stack)
 
 | 구분 | 기술 |
@@ -176,60 +204,77 @@ Online Judge Server가 채점 완료 이벤트를 보내면 서버는 SQS 메시
 | Security | `Spring Security`, `OAuth2 Resource Server`, `JWT HS256` |
 | Event | `AWS SNS`, `AWS SQS`, AWS SDK for Java v2 |
 | API Docs | `SpringDoc OpenAPI`, Swagger UI |
-| Build/Test | `Gradle Kotlin DSL`, `JUnit`, `Kotest`, `Jacoco` |
+| Build/Test | `Gradle Kotlin DSL`, `JUnit`, `Kotest`, `JaCoCo` |
 | Deploy/Ops | `Docker`, `Docker Compose`, `GitHub Actions`, `Amazon ECR`, `EC2`, `CloudWatch Logs` |
 
+<a id="getting-started"></a>
 ## ⚙️ 로컬 실행 방법 (Getting Started)
 
-### 1. 사전 준비
+### 사전 준비
 
 - JDK 21
 - Docker & Docker Compose
 - MongoDB는 Docker Compose로 실행 가능
 
-### 2. 환경 변수
+### 환경 변수
 
-로컬 기본값은 `src/main/resources/application.yml`에 정의되어 있습니다.
-필요하면 프로젝트 루트에 `.env` 파일을 만들고 값을 덮어씁니다.
+로컬 기본값은 `src/main/resources/application.yml`에 정의되어 있습니다. 필요한 값만 프로젝트 루트의 `.env`에서 덮어씁니다.
 
 ```properties
 MONGO_DB_URL=mongodb://localhost:27017/aandi
 SWAGGER_URL=http://localhost:8080
 AUTH_ISSUER_URI=http://localhost:9000
 AUTH_AUDIENCE=aandi-gateway
-AUTH_JWT_SECRET=local-dev-jwt-secret-must-be-at-least-32-bytes
+AUTH_JWT_SECRET=<LOCAL_DEV_JWT_SECRET_MIN_32_BYTES>
 ```
 
-### 3. 실행
+### 실행
 
 ```bash
 docker compose up -d mongodb
 ./gradlew bootRun
 ```
 
-또는 서버까지 Docker Compose로 실행합니다.
+서버까지 Docker Compose로 실행할 수도 있습니다.
 
 ```bash
 docker compose up -d
 ```
 
-### 4. 확인
+### 확인
 
 ```text
 http://localhost:8080/swagger-ui/index.html
 http://localhost:8080/actuator/health/readiness
 ```
 
-## 📎 상세 문서 (Docs)
+<a id="docs"></a>
+## 📖 상세 문서 (Docs)
 
 - [Docs Index](./docs/README.md)
-- [API/Event Flow Index](./docs/api-flows/README.md)
-- [Demo Assets Guide](./docs/assets/README.md)
-- [Legacy README](./docs/legacy-readme.md)
+- [Architecture](./docs/architecture.md)
+- [Event-driven Sync](./docs/event-driven-sync.md)
+- [Structured Logging](./docs/structured-logging.md)
+- [Deployment](./docs/deployment.md)
+- [Test](./docs/test.md)
+- [Performance Measurement](./docs/performance-measurement.md)
+- [Query Tuning](./docs/query-tuning.md)
+- [Resume Evidence](./docs/resume-evidence.md)
+- [Demo Capture](./docs/demo-capture.md)
 
-## 회고와 개선점 (Retrospective & Next Step)
+<a id="resume-highlights"></a>
+## 🎯 Resume Highlights
 
-이 서버는 과제 운영 데이터를 단순히 저장하는 데서 끝나지 않고, Online Judge Server와 운영 로그까지 이어지는 흐름을 다룹니다.
-문서 개편에서는 첫 화면의 정보를 줄이고, API/Event 상세를 `docs/`로 분리해 포트폴리오 README와 개발 문서의 역할을 나눴습니다.
+- A&I 과제 운영 백엔드에서 과제 공개, 테스트케이스 관리, Online Judge 동기화, 제출 결과 반영 흐름을 설계·운영했습니다.
+- Assignment 변경 이벤트를 SNS/SQS 기반 problem sync 흐름으로 분리해 WEB-SERVER와 ONLINE-JUDGE-SERVER 간 동기화 경로를 명확히 했습니다.
+- OJ의 `JUDGE_COMPLETED` 이벤트를 소비하고, 처리 대상 이벤트와 비대상 이벤트 처리 기준을 분리했습니다.
+- API 요청·오류 로그를 `traceId`, `requestId`, `statusCode`, `latencyMs` 중심으로 구조화했습니다.
 
-다음 개선점은 실제 화면 GIF 추가, 운영 배포 URL 검증, OJ 연동 smoke test 기록 보강입니다.
+근거와 이력서에 쓰면 안 되는 표현은 [Resume Evidence](./docs/resume-evidence.md)에 정리했습니다.
+
+<a id="retrospective-next-step"></a>
+## 🧭 회고와 개선점 (Retrospective & Next Step)
+
+이 서버는 과제 데이터를 저장하는 기능을 넘어, 과제 운영 이벤트와 외부 채점 시스템, 운영 로그를 연결합니다. 이번 문서 정리는 README를 3분 안에 읽히는 랜딩 페이지로 압축하고, 구현 근거와 검증 결과를 docs로 분리하는 데 집중했습니다.
+
+현재 before/after 성능 측정값과 기능별 데모 GIF는 없습니다. 이번 작업에서는 민감정보 없는 v2 Swagger/OpenAPI 이미지를 생성했고, 다음 개선은 실제 데모 데이터 기반 API 응답 또는 CloudWatch 로그 화면을 보강하는 것입니다.
