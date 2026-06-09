@@ -8,8 +8,8 @@
 
 | 기능 | 파일 | 생성 방식 | 상태 |
 | :--- | :--- | :--- | :--- |
-| 시스템 구조 | `docs/assets/diagrams/architecture.png` | draw.io 원본 기반 정적 PNG 생성 | 생성 |
-| MongoDB 데이터 모델 | `docs/assets/diagrams/data-model.png` | draw.io 원본 기반 정적 PNG 생성 | 생성 |
+| 시스템 구조 | `docs/assets/diagrams/architecture.png` | 첨부 PNG 원본 반영 | 생성 |
+| MongoDB 데이터 모델 | `docs/assets/diagrams/data-model.png` | 첨부 PNG 원본 반영 | 생성 |
 | 커버리지 요약 | `docs/assets/images/coverage-report.png` | JaCoCo XML 기준 summary 이미지 생성 | 생성 |
 | v2 Swagger/OpenAPI 문서 | `docs/assets/images/swagger-ui-v2.jpg` | 로컬 Swagger 화면 screenshot | 생성 |
 | Assignment Operation | `docs/assets/gifs/assignment-operation.gif` | [확인 필요] | 미생성 |
