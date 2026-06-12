@@ -1,5 +1,7 @@
 package com.example.aandi_post_web_server.common.error
 
+import com.example.aandi_post_web_server.common.error.v2.AssignmentDeactivatedException
+import com.example.aandi_post_web_server.common.error.v2.V2ErrorCode
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
@@ -21,6 +23,9 @@ import org.springframework.web.server.ServerWebInputException
 class ErrorResponseFactory {
 
     fun fromThrowable(exchange: ServerWebExchange, throwable: Throwable): ApiErrorResult {
+        if (throwable is AssignmentDeactivatedException) {
+            return assignmentDeactivated(exchange, throwable.message)
+        }
         if (throwable is WebExchangeBindException) {
             return fromValidation(exchange, throwable)
         }
@@ -81,6 +86,15 @@ class ErrorResponseFactory {
             status = HttpStatus.INTERNAL_SERVER_ERROR,
             code = ErrorCode.INTERNAL_ERROR,
             message = ErrorCode.INTERNAL_ERROR.defaultMessage,
+            fallbackMessage = detailMessage,
+        )
+
+    fun assignmentDeactivated(exchange: ServerWebExchange, detailMessage: String? = null): ApiErrorResult =
+        build(
+            exchange = exchange,
+            status = HttpStatus.SERVICE_UNAVAILABLE,
+            code = ErrorCode.ASSIGNMENT_DEACTIVATED,
+            message = V2ErrorCode.ASSIGNMENT_DEACTIVATED.messageTemplate,
             fallbackMessage = detailMessage,
         )
 

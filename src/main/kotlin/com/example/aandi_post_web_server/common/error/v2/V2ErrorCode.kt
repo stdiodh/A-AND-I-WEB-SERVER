@@ -72,4 +72,11 @@ enum class V2ErrorCode(
         messageTemplate = "예기치 못한 내부 오류가 발생했습니다.",
         alert = "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
     ),
+    ASSIGNMENT_DEACTIVATED(
+        httpStatus = HttpStatus.SERVICE_UNAVAILABLE,
+        code = 50301,
+        value = "ASSIGNMENT_DEACTIVATED",
+        messageTemplate = "현재 과제 기능이 비활성화되어 있습니다.",
+        alert = "지금은 과제 기간이 아닙니다.",
+    ),
 }

@@ -11,3 +11,7 @@ class V2ValidationException(
     message: String = errorCode.messageTemplate,
     cause: Throwable? = null,
 ) : V2Exception(errorCode, message, cause)
+
+class AssignmentDeactivatedException(
+    message: String = V2ErrorCode.ASSIGNMENT_DEACTIVATED.messageTemplate,
+) : V2Exception(V2ErrorCode.ASSIGNMENT_DEACTIVATED, message)

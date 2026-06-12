@@ -13,4 +13,5 @@ enum class ErrorCode(val defaultMessage: String) {
     UNPROCESSABLE_ENTITY("요청은 유효하지만 처리할 수 없습니다."),
     BAD_REQUEST("잘못된 요청입니다."),
     INTERNAL_ERROR("서버 내부 오류가 발생했습니다."),
+    ASSIGNMENT_DEACTIVATED("현재 과제 기능이 비활성화되어 있습니다."),
 }

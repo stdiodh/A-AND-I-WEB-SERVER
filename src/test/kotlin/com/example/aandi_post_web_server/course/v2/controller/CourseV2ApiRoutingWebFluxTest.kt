@@ -61,6 +61,7 @@ import com.example.aandi_post_web_server.support.TestJwtFactory
     ErrorResponseFactory::class,
     GlobalApiExceptionHandler::class,
     GlobalWebExceptionHandler::class,
+    com.example.aandi_post_web_server.assignment.application.activation.TestAssignmentActivationConfig::class,
 )
 class CourseV2ApiRoutingWebFluxTest : StringSpec() {
 

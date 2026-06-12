@@ -73,6 +73,7 @@ object V2ExceptionMapper {
             404 -> V2ErrorCode.RESOURCE_NOT_FOUND
             409 -> V2ErrorCode.CONFLICT
             422 -> V2ErrorCode.UNPROCESSABLE_ENTITY
+            503 -> V2ErrorCode.ASSIGNMENT_DEACTIVATED
             else -> V2ErrorCode.INTERNAL_ERROR
         }
         return V2ErrorResult(
