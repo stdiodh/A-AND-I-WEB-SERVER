@@ -7,7 +7,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | 프로젝트 성격 | 과제 운영, 수강생 과제 조회, 제출 현황 projection을 처리하는 백엔드 서버 |
-| 담당 역할 | 백엔드 API 설계·구현, MongoDB 모델링, SNS/SQS 이벤트 연동, 테스트/배포 구성 |
+| 주요 구현 범위 | 백엔드 API, MongoDB 모델, SNS/SQS 이벤트 연동, 테스트/배포 구성 |
 | 핵심 문제 | 공개 전 과제와 비공개 테스트케이스 노출 방지, Online Judge 문제 데이터 동기화, 채점 결과 반영 |
 | 주요 검증 | 188 tests 통과, JaCoCo line coverage 78.07%, branch coverage 54.71% |
 | 실행 환경 | Kotlin, Java 21, Spring Boot WebFlux, MongoDB, AWS SNS/SQS, Docker |
@@ -18,16 +18,16 @@ A&I 과제 운영에서는 단순 CRUD보다 운영 시점의 일관성이 중�
 
 이 프로젝트는 과제 운영 데이터를 MongoDB에 저장하고, AWS SNS/SQS 이벤트로 WEB, AUTH, Online Judge 서버의 동기화 경로를 분리하기 위해 만들었습니다. 운영 중 문제 추적을 위해 v2 API 요청과 오류는 `traceId`, `requestId`, `statusCode`, `latencyMs` 중심의 구조화 로그로 남깁니다.
 
-## 3. 내 역할과 핵심 기여
+## 3. 주요 구현 범위와 기여 영역
 
-| 영역 | 기여 |
+| 영역 | 구현 범위 |
 | :--- | :--- |
-| API 설계 | 코스, 수강, 과제, 과제 활성화, 제출 현황 v2 API 설계 및 Swagger 문서화 |
-| 도메인 모델링 | `assignments`, `testCases`, `requirements`, `submissionStatuses`, `reportUsers` 중심의 MongoDB collection 구조 설계 |
-| 이벤트 처리 | Assignment 변경 이벤트를 SNS로 발행하고, Online Judge/Auth 이벤트는 SQS consumer로 수신해 projection 갱신 |
-| 보안/노출 제어 | 공개 상태와 테스트케이스 visibility를 분리해 수강생 조회 범위를 제한 |
-| 운영 관측성 | v2 API 요청·오류 로그를 JSON 구조로 남기고 민감정보, private testcase, 제출 코드 원문은 로그에서 제외 |
-| 품질 관리 | JUnit/Kotest 기반 테스트 작성, JaCoCo coverage verification 적용, GitHub Actions CI 구성 |
+| API 레이어 | 코스, 수강, 과제, 과제 활성화, 제출 현황 v2 API와 Swagger 문서 구성 |
+| 데이터 모델 | `assignments`, `testCases`, `requirements`, `submissionStatuses`, `reportUsers` 중심의 MongoDB collection 구조 |
+| 이벤트 연동 | Assignment 변경 이벤트 SNS 발행, Online Judge/Auth 이벤트 SQS consumer 기반 projection 갱신 |
+| 노출 제어 | 공개 상태와 테스트케이스 visibility를 분리하고 수강생 조회 응답 범위를 제한 |
+| 운영 관측성 | v2 API 요청·오류 로그를 JSON 구조로 기록하고 민감정보, private testcase, 제출 코드 원문은 로그에서 제외 |
+| 품질/배포 | JUnit/Kotest 기반 테스트, JaCoCo coverage verification, GitHub Actions CI 구성 |
 
 ## 4. 한눈에 보는 구조
 
