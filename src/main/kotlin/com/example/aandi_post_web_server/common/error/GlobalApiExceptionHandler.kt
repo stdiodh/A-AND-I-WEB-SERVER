@@ -3,8 +3,11 @@ package com.example.aandi_post_web_server.common.error
 import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
 import com.example.aandi_post_web_server.common.api.envelope.V2ApiEnvelope
 import com.example.aandi_post_web_server.common.api.factory.V2ApiResponseFactory
+import com.example.aandi_post_web_server.common.error.v2.AssignmentDeactivatedException
+import com.example.aandi_post_web_server.common.error.v2.V2ErrorCode
 import com.example.aandi_post_web_server.common.error.v2.V2ExceptionMapper
 import com.example.aandi_post_web_server.common.security.v2.V2PathMatcher
+import org.springframework.http.HttpStatus
 import org.slf4j.LoggerFactory
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
@@ -97,6 +100,25 @@ class GlobalApiExceptionHandler(
             return toV2ResponseEntity(v2Result)
         }
         val result = errorResponseFactory.forbidden(exchange, ex.message)
+        logWarn(exchange, result, ex)
+        return toResponseEntity(result)
+    }
+
+    @ExceptionHandler(AssignmentDeactivatedException::class)
+    fun handleAssignmentDeactivatedException(
+        ex: AssignmentDeactivatedException,
+        exchange: ServerWebExchange,
+    ): ResponseEntity<*> {
+        if (V2PathMatcher.isV2Path(exchange.request.path.pathWithinApplication().value())) {
+            val v2Result = V2ExceptionMapper.fromThrowable(ex)
+            logV2ByStatus(exchange, v2Result, ex)
+            return toV2ResponseEntity(v2Result)
+        }
+        val body = ApiEnvelope.failure(
+            code = ErrorCode.ASSIGNMENT_DEACTIVATED.name,
+            message = ex.message ?: V2ErrorCode.ASSIGNMENT_DEACTIVATED.messageTemplate,
+        )
+        val result = ApiErrorResult(status = HttpStatus.SERVICE_UNAVAILABLE, body = body)
         logWarn(exchange, result, ex)
         return toResponseEntity(result)
     }

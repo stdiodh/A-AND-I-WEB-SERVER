@@ -3,6 +3,7 @@ package com.example.aandi_post_web_server.common.openapi
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
+import com.example.aandi_post_web_server.assignment.api.v2.dto.AssignmentActivationResponse
 import com.example.aandi_post_web_server.common.api.envelope.V2ApiError
 import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseOutlineResponse
@@ -166,6 +167,20 @@ data class V2AdminAssignmentSubmissionStatusesEnvelopeDoc(
     val error: V2ApiError? = null,
     @field:Schema(example = "2026-04-13T18:00:00+09:00")
     val timestamp: String = "2026-04-13T18:00:00+09:00",
+)
+
+@Schema(
+    description = "A&I v2 과제 활성화 상태 성공 응답",
+    example = """{"success":true,"data":{"active":true,"updatedAt":"2026-06-12T01:00:00Z","updatedBy":"1fd3abf7-5ea4-403f-bcf8-8b3f9d8df502"},"error":null,"timestamp":"2026-06-12T10:00:00+09:00"}""",
+)
+data class V2AssignmentActivationEnvelopeDoc(
+    @field:Schema(example = "true")
+    val success: Boolean = true,
+    val data: AssignmentActivationResponse? = null,
+    @field:Schema(nullable = true, example = "null")
+    val error: V2ApiError? = null,
+    @field:Schema(example = "2026-06-12T10:00:00+09:00")
+    val timestamp: String = "2026-06-12T10:00:00+09:00",
 )
 
 @Schema(

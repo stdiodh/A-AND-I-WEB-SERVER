@@ -66,6 +66,7 @@ import java.time.LocalDate
     GlobalWebExceptionHandler::class,
     RequestIdWebFilter::class,
     V2StructuredLoggingConfig::class,
+    com.example.aandi_post_web_server.assignment.application.activation.TestAssignmentActivationConfig::class,
 )
 @TestPropertySource(
     properties = [

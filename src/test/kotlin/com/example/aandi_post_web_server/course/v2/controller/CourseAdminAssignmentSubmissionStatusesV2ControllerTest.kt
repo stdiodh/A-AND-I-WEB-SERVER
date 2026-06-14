@@ -4,6 +4,7 @@ package com.example.aandi_post_web_server.course.api.v2.controller
 
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusItemResponse
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
+import com.example.aandi_post_web_server.assignment.application.activation.TestAssignmentActivationConfig
 import com.example.aandi_post_web_server.assignment.application.service.AdminAssignmentSubmissionStatusesV2Service
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
@@ -33,6 +34,7 @@ import java.time.Instant
     ErrorResponseFactory::class,
     GlobalApiExceptionHandler::class,
     GlobalWebExceptionHandler::class,
+    TestAssignmentActivationConfig::class,
 )
 class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
 

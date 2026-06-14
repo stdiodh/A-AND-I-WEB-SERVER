@@ -26,6 +26,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
     ErrorResponseFactory::class,
     GlobalApiExceptionHandler::class,
     GlobalWebExceptionHandler::class,
+    com.example.aandi_post_web_server.assignment.application.activation.TestAssignmentActivationConfig::class,
 )
 class ErrorHandlingWebFluxTest : StringSpec() {
 

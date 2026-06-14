@@ -11,6 +11,7 @@ import com.example.aandi_post_web_server.common.security.v2.V2HeaderValidationFi
 import com.example.aandi_post_web_server.common.security.v2.V2PathMatcher
 import com.example.aandi_post_web_server.common.security.v2.V2SecurityProperties
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -33,6 +34,7 @@ import org.springframework.security.config.web.server.SecurityWebFiltersOrder
 import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.server.ServerWebExchange
+import org.springframework.web.server.WebFilter
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets
 import java.time.Duration
@@ -51,6 +53,7 @@ class SecurityConfig {
         errorResponseFactory: ErrorResponseFactory,
         objectMapper: ObjectMapper,
         v2SecurityProperties: V2SecurityProperties,
+        @Qualifier("assignmentActivationGateFilter") assignmentActivationGateFilter: WebFilter,
     ): SecurityWebFilterChain =
         http
             .csrf { it.disable() }
@@ -69,8 +72,8 @@ class SecurityConfig {
                     "/swagger-ui/**",
                     "/swagger-ui/index.html",
                 ).permitAll()
-                it.pathMatchers("/v2/admin/report/**", "/v2/admin/courses/**").hasRole("ADMIN")
-                it.pathMatchers("/api/v2/admin/report/**", "/api/v2/admin/courses/**").hasRole("ADMIN")
+                it.pathMatchers("/v2/admin/report/**", "/v2/admin/courses/**", "/v2/admin/assignments/**").hasRole("ADMIN")
+                it.pathMatchers("/api/v2/admin/report/**", "/api/v2/admin/courses/**", "/api/v2/admin/assignments/**").hasRole("ADMIN")
                 it.pathMatchers("/v1/admin/**").hasRole("ADMIN")
                 it.pathMatchers("/v1/report/**", "/v1/courses/**")
                     .hasAnyRole("USER", "ORGANIZER", "ADMIN")
@@ -104,6 +107,10 @@ class SecurityConfig {
             .addFilterAfter(
                 V2HeaderValidationFilter(v2SecurityProperties.saltSecret),
                 SecurityWebFiltersOrder.AUTHENTICATION,
+            )
+            .addFilterAfter(
+                assignmentActivationGateFilter,
+                SecurityWebFiltersOrder.AUTHORIZATION,
             )
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->

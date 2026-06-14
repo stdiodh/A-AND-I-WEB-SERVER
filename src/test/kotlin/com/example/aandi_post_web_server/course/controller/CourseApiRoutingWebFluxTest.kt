@@ -44,7 +44,12 @@ import java.time.Instant
 import java.time.LocalDate
 
 @WebFluxTest(controllers = [CourseV1Controller::class, CourseQueryV1Controller::class])
-@Import(WebConfig::class, SecurityConfig::class, ErrorResponseFactory::class)
+@Import(
+    WebConfig::class,
+    SecurityConfig::class,
+    ErrorResponseFactory::class,
+    com.example.aandi_post_web_server.assignment.application.activation.TestAssignmentActivationConfig::class,
+)
 class CourseApiRoutingWebFluxTest : StringSpec() {
 
     override fun extensions() = listOf(SpringExtension)

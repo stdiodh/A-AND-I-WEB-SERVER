@@ -1,0 +1,6 @@
+package com.example.aandi_post_web_server.assignment.infrastructure.repository
+
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentActivation
+import org.springframework.data.mongodb.repository.ReactiveMongoRepository
+
+interface AssignmentActivationRepository : ReactiveMongoRepository<AssignmentActivation, String>
