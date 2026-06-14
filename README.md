@@ -1,28 +1,49 @@
 # A&I Assignment Platform
 
-> 본 프로젝트는 A&I 동아리의 과제 공개, 테스트케이스 관리, Online Judge 동기화, 제출 결과 반영을 담당하는 과제 운영 백엔드입니다.
+> A&I 동아리의 과제 공개, 테스트케이스 관리, Online Judge 동기화, 제출 결과 반영을 담당하는 과제 운영 백엔드입니다.
 
-## 1. 왜 만들었나
+## 1. 프로젝트 요약
+
+| 항목 | 내용 |
+| :--- | :--- |
+| 프로젝트 성격 | 과제 운영, 수강생 과제 조회, 제출 현황 projection을 처리하는 백엔드 서버 |
+| 담당 역할 | 백엔드 API 설계·구현, MongoDB 모델링, SNS/SQS 이벤트 연동, 테스트/배포 구성 |
+| 핵심 문제 | 공개 전 과제와 비공개 테스트케이스 노출 방지, Online Judge 문제 데이터 동기화, 채점 결과 반영 |
+| 주요 검증 | 188 tests 통과, JaCoCo line coverage 78.07%, branch coverage 54.71% |
+| 실행 환경 | Kotlin, Java 21, Spring Boot WebFlux, MongoDB, AWS SNS/SQS, Docker |
+
+## 2. 왜 만들었나
 
 A&I 과제 운영에서는 단순 CRUD보다 운영 시점의 일관성이 중요합니다. 공개 전 과제와 비공개 테스트케이스가 수강생에게 노출되면 안 되고, 과제 변경은 Online Judge 문제 데이터와 맞아야 하며, 채점 완료 결과는 관리자 제출 현황에 반영되어야 합니다.
 
-이 서버는 과제 운영 데이터를 `MongoDB`에 저장하고, `AWS SNS/SQS` 이벤트로 WEB, AUTH, Online Judge 서버의 동기화 경로를 분리합니다. 운영 중 문제를 추적하기 위해 v2 API 요청과 오류는 `traceId`, `requestId`, `statusCode`, `latencyMs` 중심의 구조화 로그로 남깁니다.
+이 프로젝트는 과제 운영 데이터를 MongoDB에 저장하고, AWS SNS/SQS 이벤트로 WEB, AUTH, Online Judge 서버의 동기화 경로를 분리하기 위해 만들었습니다. 운영 중 문제 추적을 위해 v2 API 요청과 오류는 `traceId`, `requestId`, `statusCode`, `latencyMs` 중심의 구조화 로그로 남깁니다.
 
-## 2. 한눈에 보는 구조
+## 3. 내 역할과 핵심 기여
+
+| 영역 | 기여 |
+| :--- | :--- |
+| API 설계 | 코스, 수강, 과제, 과제 활성화, 제출 현황 v2 API 설계 및 Swagger 문서화 |
+| 도메인 모델링 | `assignments`, `testCases`, `requirements`, `submissionStatuses`, `reportUsers` 중심의 MongoDB collection 구조 설계 |
+| 이벤트 처리 | Assignment 변경 이벤트를 SNS로 발행하고, Online Judge/Auth 이벤트는 SQS consumer로 수신해 projection 갱신 |
+| 보안/노출 제어 | 공개 상태와 테스트케이스 visibility를 분리해 수강생 조회 범위를 제한 |
+| 운영 관측성 | v2 API 요청·오류 로그를 JSON 구조로 남기고 민감정보, private testcase, 제출 코드 원문은 로그에서 제외 |
+| 품질 관리 | JUnit/Kotest 기반 테스트 작성, JaCoCo coverage verification 적용, GitHub Actions CI 구성 |
+
+## 4. 한눈에 보는 구조
 
 ![Architecture](./docs/assets/diagrams/architecture.png)
 
 - Client/Admin은 REST API와 Swagger UI로 서버에 접근합니다.
-- A&I WEB-SERVER는 과제, 코스, 수강, 테스트케이스, 제출 상태 projection을 처리합니다.
+- WEB-SERVER는 과제, 코스, 수강, 테스트케이스, 제출 상태 projection을 처리합니다.
 - Assignment 변경 이벤트는 SNS Topic으로 발행되고, Online Judge는 SQS Queue 메시지를 소비해 problem/testcase를 동기화합니다.
 - `JUDGE_COMPLETED`와 Auth user event는 SQS consumer가 받아 MongoDB projection과 report user 데이터를 갱신합니다.
-- stdout JSON 로그는 CloudWatch Logs로 수집되고, Discord Alert는 allowlist 필드만 전달하는 기준으로 설계했습니다.
+- stdout JSON 로그는 CloudWatch Logs로 수집되며, Discord Alert는 allowlist 필드만 전달하는 기준으로 설계했습니다.
 
-## 3. 데이터 모델
+## 5. 데이터 모델
 
 ![MongoDB Data Model](./docs/assets/diagrams/data-model.png)
 
-MongoDB 기반이라 정규화된 RDB ERD가 아니라 collection 간 참조와 이벤트 snapshot 흐름을 중심으로 정리했습니다.
+MongoDB 기반이라 정규화된 RDB ERD가 아니라 collection 간 참조와 이벤트 snapshot 흐름을 중심으로 설계했습니다.
 
 | 영역 | 핵심 데이터 | 역할 |
 | :--- | :--- | :--- |
@@ -30,34 +51,55 @@ MongoDB 기반이라 정규화된 RDB ERD가 아니라 collection 간 참조와 
 | Submission Projection | `submissionStatuses`, `reportUsers` | judge completed 결과와 사용자 표시 정보 반영 |
 | Event Message | problem sync snapshot, judge completed body | Online Judge 동기화와 제출 결과 반영 |
 
-## 4. 핵심 기능과 동작 증거
+## 6. 핵심 기능과 동작 증거
 
-### Assignment Operation
+### 6.1 Assignment Operation
 
-관리자는 과제를 생성하거나 공개 상태를 변경하고 테스트케이스를 연결합니다. 수강생 조회에서는 공개된 과제와 `PUBLIC` 테스트케이스만 응답합니다.
+관리자는 과제를 생성·수정·삭제하거나 전역 과제 활성화 상태를 변경할 수 있습니다. 수강생 조회에서는 접근 가능한 코스의 공개된 과제만 응답하도록 분리했습니다.
 
-> GIF 예정: `docs/assets/gifs/assignment-operation.gif`
-> 촬영 범위: API request/response로 과제 생성 또는 공개 상태 변경, 테스트케이스 연결 결과를 8초 내외로 캡처합니다.
+[Assignment Operation 데모 영상](./docs/assets/videos/assignment-operation.mov)
 
-### Online Judge Problem Sync
+대표 API:
 
-과제와 테스트케이스 snapshot 변경은 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED` 이벤트로 발행됩니다. SNS/SQS 경로로 Online Judge가 동기화할 payload를 분리합니다.
+| Method | Endpoint | 설명 |
+| :--- | :--- | :--- |
+| `GET` | `/v2/courses/{courseSlug}/assignments` | 수강생이 접근 가능한 과제 목록 조회 |
+| `GET` | `/v2/courses/{courseSlug}/assignments/{assignmentId}` | 과제 상세 조회 |
+| `POST` | `/v2/admin/courses/{courseSlug}/assignments` | 관리자 과제 생성 및 OJ sync 이벤트 발행 |
+| `PATCH` | `/v2/admin/courses/{courseSlug}/assignments/{assignmentId}` | 관리자 과제 수정 및 OJ sync 이벤트 발행 |
+| `GET/PUT` | `/v2/admin/assignments/activation` | 전역 과제 활성화 상태 조회/변경 |
 
-> GIF 예정: `docs/assets/gifs/problem-sync.gif`
-> 촬영 범위: Assignment 변경, SNS/SQS event 발행 로그, OJ 동기화 메시지를 8초 내외로 캡처합니다.
+### 6.2 Problem View & Submission Status
 
-### Judge Completed Event
+수강생은 과제 상세 화면에서 문제, 제출, 결과 흐름을 확인합니다. 관리자는 Online Judge의 `JUDGE_COMPLETED` 이벤트가 반영된 projection을 기준으로 코스 수강생별 제출 현황을 조회합니다.
 
-Online Judge의 `JUDGE_COMPLETED` 메시지는 SQS consumer가 소비하고 제출 상태 projection에 반영합니다. 비대상 이벤트와 파싱 실패는 reason 로그로 분리합니다.
+![Problem Judge Demo](./docs/assets/gifs/problem-judge.gif)
 
-> GIF 예정: `docs/assets/gifs/judge-completed.gif`
-> 촬영 범위: `JUDGE_COMPLETED` 메시지 입력, consumer 처리 로그, report 상태 반영 결과를 8초 내외로 캡처합니다.
+대표 API:
 
-### Structured Logging
+| Method | Endpoint | 설명 |
+| :--- | :--- | :--- |
+| `GET` | `/v2/admin/courses/{courseSlug}/assignments/{assignmentId}/submission-statuses` | 관리자용 과제 제출 현황 조회 |
 
-v2 API는 요청/응답과 오류를 JSON 로그로 남깁니다. 민감정보, private testcase, user submitted code 원문은 로그와 데모 화면에 노출하지 않는 기준으로 정리했습니다.
+### 6.3 Online Judge Problem Sync
 
-## 5. 테스트와 검증
+과제 생성·수정·삭제 시 problem/testcase snapshot을 이벤트 payload로 만들고 SNS/SQS 경로로 Online Judge 서버와 동기화합니다. WEB-SERVER의 과제 운영 로직과 Online Judge의 채점 문제 데이터를 직접 결합하지 않고 이벤트 경로로 분리했습니다.
+
+### 6.4 Structured Logging
+
+v2 API는 요청/응답과 오류를 JSON 로그로 남깁니다. 추적에 필요한 `traceId`, `requestId`, `statusCode`, `latencyMs`는 남기되, JWT, Authorization header, private testcase, user submitted code 원문은 로그와 데모 화면에 노출하지 않는 기준으로 정리했습니다.
+
+## 7. 기술적 고민과 해결
+
+| 고민 | 해결 |
+| :--- | :--- |
+| 공개 전 과제와 비공개 테스트케이스 노출 위험 | 과제 공개 상태와 testcase visibility를 분리하고, 수강생 API 응답 범위를 제한 |
+| WEB-SERVER와 Online Judge 간 데이터 불일치 | 과제 변경 시 problem sync snapshot 이벤트를 발행하고 OJ가 SQS로 소비하도록 분리 |
+| 제출 결과 조회 시 실시간 채점 서버 의존 증가 | `JUDGE_COMPLETED` 이벤트를 projection에 반영하고 관리자 조회 API는 projection을 읽도록 구성 |
+| v1/v2 API 혼재로 인한 구조 복잡도 | 버전 표기는 API 레이어에 두고 application/domain/infrastructure는 기능·계층 기준으로 정리 |
+| 운영 중 장애 원인 추적 어려움 | 요청/오류 로그를 구조화하고 request 단위 추적 필드를 표준화 |
+
+## 8. 테스트와 검증
 
 ![Coverage Report](./docs/assets/images/coverage-report.png)
 
@@ -71,21 +113,9 @@ v2 API는 요청/응답과 오류를 JSON 로그로 남깁니다. 민감정보, 
 | JaCoCo line coverage | 2,289 / 2,932 = 78.07% |
 | JaCoCo branch coverage | 761 / 1,391 = 54.71% |
 
-## 6. 성능/쿼리 측정
+확인되지 않은 latency, throughput, 성능 개선률은 작성하지 않습니다. 성능 수치는 대표 데이터셋과 MongoDB `executionStats`를 확보한 뒤 같은 조건에서 before/after를 비교합니다.
 
-현재 before/after 측정값은 없습니다.
-
-성능 개선률, latency 개선률, SQS 처리량 개선률은 아직 이력서 문장으로 쓰지 않습니다. 대표 데이터셋과 MongoDB `executionStats`가 확보되면 같은 조건에서 before/after를 비교합니다.
-
-상세 기준은 [MEASUREMENT](./docs/MEASUREMENT.md)에 기록했습니다.
-
-## 7. 이력서에 연결할 문장
-
-- A&I 과제 운영 백엔드에서 과제 공개, 테스트케이스 관리, Online Judge 동기화, 제출 결과 반영 흐름을 설계·운영했습니다.
-- Assignment 변경 이벤트를 SNS/SQS 기반 problem sync 흐름으로 분리해 WEB-SERVER와 ONLINE-JUDGE-SERVER 간 동기화 경로를 명확히 했습니다.
-- API 요청·오류 로그를 `traceId`, `requestId`, `statusCode`, `latencyMs` 중심으로 구조화해 운영 중 원인 추적이 가능하도록 정리했습니다.
-
-## 8. 실행과 확인
+## 9. 실행 방법
 
 ```bash
 docker compose up -d mongodb
@@ -97,4 +127,29 @@ http://localhost:8080/swagger-ui/index.html
 http://localhost:8080/actuator/health/readiness
 ```
 
-GIF 촬영 실패 사유와 수동 촬영 기준은 [DEMO_CAPTURE](./docs/DEMO_CAPTURE.md)에 기록했습니다.
+Docker로 전체 로컬 환경을 실행할 수도 있습니다.
+
+```bash
+docker compose up -d --build
+```
+
+## 10. 기술 스택
+
+| 구분 | 기술 |
+| :--- | :--- |
+| Language | Kotlin 1.9.25, Java 21 |
+| Backend | Spring Boot 3.4.3, WebFlux, Validation, Actuator |
+| Security | Spring Security, OAuth2 Resource Server |
+| Database | MongoDB Reactive |
+| Event | AWS SNS/SQS, AWS SDK |
+| API Docs | springdoc-openapi WebFlux UI |
+| Test | JUnit5, Kotest, Reactor Test, JaCoCo |
+| Infra/CI/CD | Docker, Docker Compose, GitHub Actions, AWS ECR/EC2, CloudWatch Logs |
+
+## 11. 관련 문서
+
+| 문서 | 설명 |
+| :--- | :--- |
+| [Measurement](./docs/MEASUREMENT.md) | 테스트, 커버리지, 성능 측정 기준 |
+| [Demo Capture](./docs/DEMO_CAPTURE.md) | README 이미지/GIF 촬영 기준과 민감정보 마스킹 규칙 |
+| [Package Structure Guide](./PACKAGE_STRUCTURE_GUIDE.md) | 기능·계층 기준 패키지 구조와 신규 코드 배치 규칙 |
