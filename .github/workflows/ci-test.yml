@@ -35,3 +35,59 @@ jobs:
 
       - name: Run tests
         run: ./gradlew test --no-daemon
+
+      - name: Run JaCoCo coverage verification
+        run: ./gradlew jacocoTestCoverageVerification --no-daemon
+
+      - name: Install k6
+        run: |
+          K6_VERSION="$(cat performance/k6/K6_VERSION)"
+          echo "K6_VERSION=${K6_VERSION}" >> "$GITHUB_ENV"
+          curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-amd64.tar.gz" -o /tmp/k6.tar.gz
+          tar -xzf /tmp/k6.tar.gz -C /tmp
+          sudo mv "/tmp/k6-v${K6_VERSION}-linux-amd64/k6" /usr/local/bin/k6
+          k6 version
+          test "$(k6 version | sed -n 's/.*v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')" = "$K6_VERSION"
+
+      - name: Validate performance shell syntax
+        run: |
+          sh -n performance/k6/run-local.sh
+          sh -n performance/k6/run-docker.sh
+          sh -n performance/fixtures/run-fixture.sh
+
+      - name: Validate performance JavaScript syntax
+        run: |
+          find performance/k6 -name '*.js' -print0 |
+            xargs -0 -n1 node --check
+          node --check performance/fixtures/seed.js
+          node --check performance/fixtures/verify.js
+          node --check performance/fixtures/cleanup.js
+
+      - name: Validate k6 inspect
+        run: |
+          k6 inspect performance/k6/preflight.js
+          k6 inspect performance/k6/warmup.js
+          k6 inspect performance/k6/smoke.js
+          k6 inspect performance/k6/assignment-read.js
+          k6 inspect performance/k6/submission-status-read.js
+
+      - name: Validate performance Python assets
+        run: |
+          python3 -m py_compile \
+            performance/compare/compare_results.py \
+            performance/compare/test_compare_results.py \
+            performance/k6/tools/generate_test_jwt.py \
+            performance/aggregate/summarize_runs.py \
+            performance/aggregate/test_summarize_runs.py
+          python3 -m unittest discover \
+            -s performance/compare \
+            -p 'test_*.py' \
+            -v
+          python3 -m unittest discover \
+            -s performance/aggregate \
+            -p 'test_*.py' \
+            -v
+
+      - name: Validate git whitespace
+        run: |
+          git diff --check

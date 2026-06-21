@@ -48,3 +48,11 @@ secret_docs/
 
 # Local profile override
 src/main/resources/application-local.yml
+
+# k6 result artifacts
+performance/k6/env.local
+performance/k6/*.local.env
+performance/k6/*token*
+performance/fixtures/*.generated.js
+performance/results/*
+!performance/results/.gitkeep
