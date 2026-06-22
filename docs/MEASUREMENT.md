@@ -24,7 +24,9 @@
 
 ![Coverage Report](./assets/images/coverage-report.png)
 
-Coverage는 `build.gradle.kts`의 제외 규칙을 적용한 결과입니다. entity, repository, DTO, OpenAPI/config 일부, controller 일부와 일부 legacy service가 제외되어 있으므로 전체 코드 기준 수치로 표현하지 않습니다.
+Coverage는 `build.gradle.kts`의 제외 규칙을 적용한 결과입니다.
+
+entity, repository, DTO, OpenAPI/config 일부, controller 일부와 일부 legacy service가 제외되어 있으므로 전체 코드 기준 수치로 표현하지 않습니다.
 
 숫자보다 다음 규칙을 우선적으로 테스트합니다.
 
@@ -38,7 +40,9 @@ Coverage는 `build.gradle.kts`의 제외 규칙을 적용한 결과입니다. en
 
 ### 목적
 
-과제 목록과 상세 조회의 현재 기준을 남겨 이후 query 개선 전후를 같은 조건으로 비교합니다. 운영 최대 처리량이나 전체 이벤트 파이프라인 성능을 주장하기 위한 결과가 아닙니다.
+과제 목록과 상세 조회의 현재 기준을 남겨 이후 query 개선 전후를 같은 조건으로 비교합니다.
+
+운영 최대 처리량이나 전체 이벤트 파이프라인 성능을 주장하기 위한 결과가 아닙니다.
 
 ### 환경
 
@@ -107,7 +111,9 @@ performance/k6/run-local.sh assignment-read performance/k6/env.local
 performance/k6/run-local.sh submission-status-read performance/k6/env.local
 ```
 
-production 대상 부하 테스트는 스크립트에서 차단합니다. 원격 실행은 HTTPS staging과 명시적인 host allowlist가 모두 설정된 경우에만 허용합니다.
+production 대상 부하 테스트는 스크립트에서 차단합니다.
+
+원격 실행은 HTTPS staging과 명시적인 host allowlist가 모두 설정된 경우에만 허용합니다.
 
 ## 비교 기준
 
