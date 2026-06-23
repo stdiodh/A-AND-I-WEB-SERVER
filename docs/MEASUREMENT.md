@@ -28,6 +28,28 @@ Coverage는 `build.gradle.kts`의 제외 규칙을 적용한 결과입니다.
 
 entity, repository, DTO, OpenAPI/config 일부, controller 일부와 일부 legacy service가 제외되어 있으므로 전체 코드 기준 수치로 표현하지 않습니다.
 
+### PR #58 이후 coverage gate와 블로그 정리
+
+PR #58 이후 테스트 커버리지는 일회성 결과 수치보다 CI에서 지속적으로 검증하는 기준으로 관리합니다.
+
+| 기준 | 테스트 수 | Line coverage | Branch coverage | CI gate |
+| :--- | ---: | ---: | ---: | :--- |
+| Historical baseline | 188 | 78.07% | 54.71% | Line 70% |
+| 1차 테스트 보강 | 220 | 81.57% | 59.35% | Line 70% |
+| PR #58 actual local report | 277 | 85.04% | 62.59% | Line 83%, Branch 61% |
+
+`PR #58 actual local report` 행은 2026-06-23 KST에 생성한 `build/reports/jacoco/test/jacocoTestReport.xml`과 `build/test-results/test/TEST-*.xml`에서 읽은 값입니다. 같은 XML 기준 instruction 82.89%, method 82.55%, class 80.80%입니다.
+
+PR #58의 최종 검증에서는 Gradle test, JaCoCo coverage verification, k6/performance asset validation이 모두 통과했습니다.
+
+![Coverage gate comparison](./assets/images/coverage-gate-comparison.png)
+
+![JaCoCo coverage gate summary](./assets/images/jacoco-report-before-after.png)
+
+JaCoCo HTML report는 `build/reports/jacoco/test/html/index.html`에서 확인합니다. 로컬 screenshot 도구가 없어 HTML screenshot asset은 추가하지 않았습니다.
+
+관련 블로그 정리: [테스트와 k6로 검증한 과제 목록 N+1 개선기](https://velog.io/@stdiodh/%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%99%80-k6%EB%A1%9C-%EA%B2%80%EC%A6%9D%ED%95%9C-%EA%B3%BC%EC%A0%9C-%EB%AA%A9%EB%A1%9D-N1-%EA%B0%9C%EC%84%A0%EA%B8%B0#%EC%A1%B0%ED%9A%8C-%ED%9A%9F%EC%88%98)
+
 숫자보다 다음 규칙을 우선적으로 테스트합니다.
 
 - 공개 전 과제와 private testcase 비노출
