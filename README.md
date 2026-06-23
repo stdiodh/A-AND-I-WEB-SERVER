@@ -104,50 +104,36 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 
 ### 자동화 테스트
 
-2026년 6월 4일 기준 Gradle 테스트와 JaCoCo 검증 결과입니다.
+테스트 결과는 일회성 수치가 아니라 CI에서 유지해야 하는 기준으로 관리합니다.
 
-| 검증 항목 | 결과 |
-| :--- | :--- |
-| 테스트 | **188 tests PASS** |
-| 실패·오류·건너뜀 | **0 failures · 0 errors · 0 skipped** |
-| JaCoCo line coverage | **78.07%** |
-| JaCoCo branch coverage | **54.71%** |
-| CI coverage 기준 | configured scope line **70% 이상** |
-| Private testcase 노출 검사 | **0건** |
+| 기준 | 테스트 | Line coverage | Branch coverage | CI 기준 |
+| :--- | ---: | ---: | ---: | :--- |
+| 초기 기준 | 188 | 78.07% | 54.71% | Line 70% |
+| 1차 보강 | 220 | 81.57% | 59.35% | Line 70% |
+| 현재 기준 | 277 | 85.04% | 62.59% | Line 83%, Branch 61% |
 
-![Coverage Report](./docs/assets/images/coverage-report.png)
+![JaCoCo coverage gate summary](./docs/assets/images/jacoco-report-before-after.png)
+
+Coverage는 JaCoCo 제외 규칙이 적용된 configured scope 기준입니다.
 
 ### 읽기 API 부하 테스트
 
-합성 fixture에서 과제 목록과 상세 조회를 60:40 비율로 호출했습니다.
+과제 목록 조회에서 assignment마다 requirement와 testcase를 따로 조회하던 구조를 batch 조회로 변경했습니다.
+
+| 항목 | Before | After |
+| :--- | ---: | ---: |
+| Child repository calls, 30 assignments | 60 | 2 |
+| 감소율 | - | 96.67% |
+| HTTP 실패율 | 0.00% | 0.00% |
+| Check 성공률 | 100.00% | 100.00% |
+| Dropped iterations | 0 | 0 |
+| Private testcase 노출 | 0건 | 0건 |
 
 ![k6 읽기 API 부하 테스트](./docs/assets/performance/web-k6-read-capacity.svg)
 
-최신 accepted 비교는 과제 목록의 requirement/testcase 조회를 assignment별 단건 조회에서 batch 조회로 바꾼 결과입니다.
+100 RPS, 2분, 3회 반복 조건에서 확인했습니다. 고정 부하 테스트 결과이므로 최대 처리량으로 해석하지 않습니다.
 
-| 항목 | Before | After | 변화 |
-| :--- | ---: | ---: | :--- |
-| Child document repository calls, 30 assignments | 60 | 2 | **96.67% 감소** |
-| 과제 목록 P95 중앙값 | 8.084 ms | 8.006 ms | 0.96% 낮음, range overlap으로 개선 주장 없음 |
-| 성공 처리량 | 99.999 req/s | 100.002 req/s | fixed-rate reference |
-| HTTP 실패율 | 0.00% | 0.00% | 유지 |
-| Check 성공률 | 100.00% | 100.00% | 유지 |
-| Dropped iterations | 0 | 0 | 유지 |
-| Private testcase 노출 | 0건 | 0건 | 유지 |
-
-초당 100건은 사용자 1명이 10초에 한 번 과제를 조회한다고 봤을 때 약 1,000명분의 읽기 트래픽이며, 실제 운영 용량은 배포 환경과 사용 패턴에 따라 달라집니다.
-
-k6 check는 상태 코드뿐 아니라 대상 과제 존재 여부, 상세 응답 식별자, `PUBLIC` 테스트케이스만 포함되는지도 함께 확인합니다.
-
-세부 조건, per-run 값, query evidence, 해석 기준은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 기록합니다.
-
-```bash
-./gradlew clean test
-./gradlew jacocoTestCoverageVerification
-
-performance/k6/run-local.sh preflight performance/k6/env.local
-performance/k6/run-local.sh assignment-read performance/k6/env.local
-```
+상세 측정 조건과 per-run 결과는 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 정리했습니다.
 
 ## 실행
 
@@ -177,4 +163,5 @@ http://localhost:8080/actuator/health/readiness
 ## 참고 문서
 
 - [테스트와 성능 측정](./docs/MEASUREMENT.md)
+- [N+1 개선기](https://velog.io/@stdiodh/%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%99%80-k6%EB%A1%9C-%EA%B2%80%EC%A6%9D%ED%95%9C-%EA%B3%BC%EC%A0%9C-%EB%AA%A9%EB%A1%9D-N1-%EA%B0%9C%EC%84%A0%EA%B8%B0#%EC%A1%B0%ED%9A%8C-%ED%9A%9F%EC%88%98)
 - [패키지 구조 원칙](./PACKAGE_STRUCTURE_GUIDE.md)
