@@ -1,0 +1,582 @@
+{
+  "context": {
+    "executedAt": "2026-06-22T17:36:06.142Z",
+    "timezone": "Asia/Seoul",
+    "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)",
+    "gitCommitSha": "d787f67",
+    "gitDirty": "false",
+    "scenario": "assignment-read",
+    "runLabel": "before-3",
+    "executed": true,
+    "skipped": false,
+    "skipReason": "",
+    "businessRequestCount": 12001,
+    "thresholdFailed": false,
+    "executor": "constant-arrival-rate",
+    "vus": "100 req/s",
+    "loadModel": "arrival-rate",
+    "targetRps": "100",
+    "preAllocatedVus": "30",
+    "maxVus": "200",
+    "duration": "2m",
+    "requestSleepSeconds": "1",
+    "assignmentListRatio": "60",
+    "assignmentDetailRatio": "40",
+    "baseUrlHost": "localhost",
+    "targetEnvironment": "local",
+    "dockerNetworkMode": "local-binary",
+    "jvmOptions": "unknown",
+    "cpu": "Apple M5 Pro",
+    "memory": "48.00 GiB",
+    "mongodbMode": "local-standalone",
+    "fixtureFingerprint": "005fc5cdb43a402413b263ae38b5565a73634b25bc7532cef346320ad295cf1a",
+    "fixtureCounts": {
+      "courses": "1",
+      "assignments": "30",
+      "enrollments": "100",
+      "submissionStatuses": "60"
+    },
+    "tokenSupplied": {
+      "user": true,
+      "admin": true
+    },
+    "tokenRoleExpected": "USER",
+    "warmupCompleted": "true",
+    "actualDuration": "120.00s"
+  },
+  "k6": {
+    "metrics": {
+      "private_testcase_guard_rate": {
+        "type": "rate",
+        "contains": "default",
+        "values": {
+          "passes": 12001,
+          "fails": 0,
+          "rate": 1
+        }
+      },
+      "iteration_duration": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "p(90)": 7.3493291,
+          "p(95)": 7.788314899999999,
+          "p(99)": 9.817773749999997,
+          "max": 170.033167,
+          "med": 6.335208
+        }
+      },
+      "api_success_rate": {
+        "type": "rate",
+        "contains": "default",
+        "values": {
+          "rate": 1,
+          "passes": 12001,
+          "fails": 0
+        }
+      },
+      "http_req_connecting": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "max": 0.213,
+          "med": 0,
+          "p(90)": 0,
+          "p(95)": 0,
+          "p(99)": 0
+        }
+      },
+      "vus_max": {
+        "type": "gauge",
+        "contains": "default",
+        "values": {
+          "max": 30,
+          "value": 30,
+          "min": 30
+        }
+      },
+      "http_req_duration{expected_response:true}": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 5.864,
+          "p(90)": 6.834,
+          "p(95)": 7.276,
+          "p(99)": 9.31,
+          "max": 169.39
+        }
+      },
+      "assignment_list_duration": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 6.238,
+          "p(90)": 7.1389000000000005,
+          "p(95)": 7.611949999999999,
+          "p(99)": 10.23381999999999,
+          "max": 169.39
+        }
+      },
+      "http_req_sending": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 0.009,
+          "p(90)": 0.013,
+          "p(95)": 0.014,
+          "p(99)": 0.019,
+          "max": 0.185
+        }
+      },
+      "http_req_tls_handshaking": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 0,
+          "p(90)": 0,
+          "p(95)": 0,
+          "p(99)": 0,
+          "max": 0
+        }
+      },
+      "data_received": {
+        "type": "counter",
+        "contains": "data",
+        "values": {
+          "count": 197143651,
+          "rate": 1642804.480471663
+        }
+      },
+      "iterations": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "count": 12001,
+          "rate": 100.00472482951241
+        }
+      },
+      "http_req_waiting": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 5.828,
+          "p(90)": 6.788,
+          "p(95)": 7.239,
+          "p(99)": 9.274,
+          "max": 169.324
+        }
+      },
+      "assignment_list_success_count": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "count": 7162,
+          "rate": 59.681179837427536
+        }
+      },
+      "http_req_receiving": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "max": 0.622,
+          "med": 0.021,
+          "p(90)": 0.035,
+          "p(95)": 0.04,
+          "p(99)": 0.055
+        }
+      },
+      "http_req_duration": {
+        "contains": "time",
+        "values": {
+          "p(90)": 6.834,
+          "p(95)": 7.276,
+          "p(99)": 9.31,
+          "max": 169.39,
+          "med": 5.864
+        },
+        "type": "trend"
+      },
+      "http_req_blocked": {
+        "values": {
+          "med": 0.002,
+          "p(90)": 0.002,
+          "p(95)": 0.003,
+          "p(99)": 0.006,
+          "max": 0.432
+        },
+        "type": "trend",
+        "contains": "time"
+      },
+      "business_success_count": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "rate": 100.00472482951241,
+          "count": 12001
+        }
+      },
+      "assignment_detail_success_rate": {
+        "contains": "default",
+        "values": {
+          "fails": 0,
+          "rate": 1,
+          "passes": 4839
+        },
+        "type": "rate"
+      },
+      "api_request_duration_ms": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "p(95)": 7.276,
+          "p(99)": 9.31,
+          "max": 169.39,
+          "med": 5.864,
+          "p(90)": 6.834
+        }
+      },
+      "http_reqs": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "count": 12001,
+          "rate": 100.00472482951241
+        }
+      },
+      "http_req_failed": {
+        "thresholds": {
+          "rate<0.01": {
+            "ok": true
+          }
+        },
+        "type": "rate",
+        "contains": "default",
+        "values": {
+          "fails": 12001,
+          "rate": 0,
+          "passes": 0
+        }
+      },
+      "checks": {
+        "type": "rate",
+        "contains": "default",
+        "values": {
+          "rate": 1,
+          "passes": 177692,
+          "fails": 0
+        },
+        "thresholds": {
+          "rate>0.99": {
+            "ok": true
+          }
+        }
+      },
+      "assignment_detail_duration": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 2.379,
+          "p(90)": 2.85,
+          "p(95)": 3.062,
+          "p(99)": 4.383619999999995,
+          "max": 126.985
+        }
+      },
+      "envelope_validation_rate": {
+        "type": "rate",
+        "contains": "default",
+        "values": {
+          "rate": 1,
+          "passes": 12001,
+          "fails": 0
+        }
+      },
+      "api_response_count": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "count": 12001,
+          "rate": 100.00472482951241
+        }
+      },
+      "vus": {
+        "type": "gauge",
+        "contains": "default",
+        "values": {
+          "value": 0,
+          "min": 0,
+          "max": 1
+        }
+      },
+      "assignment_list_success_rate": {
+        "type": "rate",
+        "contains": "default",
+        "values": {
+          "rate": 1,
+          "passes": 7162,
+          "fails": 0
+        }
+      },
+      "assignment_detail_success_count": {
+        "values": {
+          "count": 4839,
+          "rate": 40.32354499208487
+        },
+        "type": "counter",
+        "contains": "default"
+      },
+      "data_sent": {
+        "type": "counter",
+        "contains": "data",
+        "values": {
+          "count": 11821757,
+          "rate": 98511.08705827531
+        }
+      }
+    },
+    "setup_data": {
+      "assignmentId": "10000000-0000-4000-8000-000000000001",
+      "courseSlug": "perf-k6",
+      "weights": {
+        "detail": 40,
+        "list": 60,
+        "listCutoff": 0.6
+      },
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiYWFuZGktZ2F0ZXdheSJdLCJleHAiOjE3ODIxNjM3MDMsImlhdCI6MTc4MjE0OTMwMywiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo5MDAwIiwianRpIjoiNTk0ODkxMDBjNWFkNTM1MGY1NDRhYmU3NDc0MGEwMDciLCJyb2xlIjoiVVNFUiIsInN1YiI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMSIsInRva2VuX3R5cGUiOiJBQ0NFU1MifQ.dzgmkQ86a7S1NNuMvOOxKa5qIC_vnNCnmKsKBqIHJuA"
+    },
+    "root_group": {
+      "name": "",
+      "path": "",
+      "id": "d41d8cd98f00b204e9800998ecf8427e",
+      "groups": [],
+      "checks": [
+          {
+            "name": "assignment detail: http status is 200",
+            "path": "::assignment detail: http status is 200",
+            "id": "ac087d9e9a22f3db204cdf7c646e4ade",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: content-type is json",
+            "path": "::assignment detail: content-type is json",
+            "id": "3a247fd88380a0998a5f71880297783c",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: json parsing succeeds",
+            "path": "::assignment detail: json parsing succeeds",
+            "id": "2d615397b78d930c7d8e20478cffe752",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: envelope success is true",
+            "path": "::assignment detail: envelope success is true",
+            "id": "1787bb46a567cfd2c2d9b345dfc058f9",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: envelope error is null",
+            "path": "::assignment detail: envelope error is null",
+            "id": "ba865a89d2dbac38fdb53be76f9511d4",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: envelope timestamp exists",
+            "path": "::assignment detail: envelope timestamp exists",
+            "id": "68ef527580446b5f3b0ab061595d1eb0",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: envelope data exists",
+            "path": "::assignment detail: envelope data exists",
+            "id": "9bcbb79c4456812366bd3b1e7c33d4be",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "passes": 4839,
+            "fails": 0,
+            "name": "assignment detail: assignmentId matches request",
+            "path": "::assignment detail: assignmentId matches request",
+            "id": "3f376b741945ca6c25e15fb89bad3561"
+          },
+          {
+            "name": "assignment detail: courseSlug matches request",
+            "path": "::assignment detail: courseSlug matches request",
+            "id": "b89a52677e62f89d43b0e5e1e65c3628",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "id": "bc12bb8f156bd877cc139eb13f5e101b",
+            "passes": 4839,
+            "fails": 0,
+            "name": "assignment detail: status is PUBLISHED",
+            "path": "::assignment detail: status is PUBLISHED"
+          },
+          {
+            "name": "assignment detail: metadata.title exists",
+            "path": "::assignment detail: metadata.title exists",
+            "id": "497adf518ce4ba359b2aa325e9bd3e33",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: metadata.testCases is array",
+            "path": "::assignment detail: metadata.testCases is array",
+            "id": "c5d8c9e9d5198130711aa412a8efe2e0",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: metadata.testCases is non-empty",
+            "path": "::assignment detail: metadata.testCases is non-empty",
+            "id": "b7d76c26355d521312f29f88f1f75476",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: all testCases visibility is PUBLIC",
+            "path": "::assignment detail: all testCases visibility is PUBLIC",
+            "id": "1a87c94355b904a426fe31aafd352ae3",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "name": "assignment detail: private testcase seq is absent",
+            "path": "::assignment detail: private testcase seq is absent",
+            "id": "a03b3b87746555e96bc6f1087afea4e8",
+            "passes": 4839,
+            "fails": 0
+          },
+          {
+            "fails": 0,
+            "name": "assignment detail: private testcase marker is absent",
+            "path": "::assignment detail: private testcase marker is absent",
+            "id": "f7072191a03ca4fb96f42cca19e083f0",
+            "passes": 4839
+          },
+          {
+            "path": "::assignment list: http status is 200",
+            "id": "fa3685192335664fa1faf2fe553d69e9",
+            "passes": 7162,
+            "fails": 0,
+            "name": "assignment list: http status is 200"
+          },
+          {
+            "name": "assignment list: content-type is json",
+            "path": "::assignment list: content-type is json",
+            "id": "397fa46d4cff76c6bb0307671a9a790a",
+            "passes": 7162,
+            "fails": 0
+          },
+          {
+            "passes": 7162,
+            "fails": 0,
+            "name": "assignment list: json parsing succeeds",
+            "path": "::assignment list: json parsing succeeds",
+            "id": "6b6d1047d3386b7294cfe1a7086ec329"
+          },
+          {
+            "name": "assignment list: envelope success is true",
+            "path": "::assignment list: envelope success is true",
+            "id": "eb1b2a7847aaf9b78a9f4e9734e153d8",
+            "passes": 7162,
+            "fails": 0
+          },
+          {
+            "name": "assignment list: envelope error is null",
+            "path": "::assignment list: envelope error is null",
+            "id": "c6937945ff8f16794869fe7238b95fc4",
+            "passes": 7162,
+            "fails": 0
+          },
+          {
+            "passes": 7162,
+            "fails": 0,
+            "name": "assignment list: envelope timestamp exists",
+            "path": "::assignment list: envelope timestamp exists",
+            "id": "30b9ef537dc0ff2087492b64f22e93b7"
+          },
+          {
+            "passes": 7162,
+            "fails": 0,
+            "name": "assignment list: envelope data exists",
+            "path": "::assignment list: envelope data exists",
+            "id": "9f641c084c7c1a8d90731b99f8bed210"
+          },
+          {
+            "name": "assignment list: data is array",
+            "path": "::assignment list: data is array",
+            "id": "ac2d6bdcc5e88908800433acd68df9b2",
+            "passes": 7162,
+            "fails": 0
+          },
+          {
+            "name": "assignment list: data is non-empty",
+            "path": "::assignment list: data is non-empty",
+            "id": "dbbcb731fd54ff90f6280a11c3e47b1f",
+            "passes": 7162,
+            "fails": 0
+          },
+          {
+            "name": "assignment list: each assignmentId exists",
+            "path": "::assignment list: each assignmentId exists",
+            "id": "ea3d32dd583129dab28a437708d7b5ef",
+            "passes": 7162,
+            "fails": 0
+          },
+          {
+            "id": "47f0f2b2324459bf1055c0a1b85de167",
+            "passes": 7162,
+            "fails": 0,
+            "name": "assignment list: each status is PUBLISHED",
+            "path": "::assignment list: each status is PUBLISHED"
+          },
+          {
+            "name": "assignment list: expected assignmentId exists in list",
+            "path": "::assignment list: expected assignmentId exists in list",
+            "id": "a577c37ba3c07f4e75c1e8c9f5e9482a",
+            "passes": 7162,
+            "fails": 0
+          },
+          {
+            "passes": 7162,
+            "fails": 0,
+            "name": "assignment list: metadata.testCases are PUBLIC when present",
+            "path": "::assignment list: metadata.testCases are PUBLIC when present",
+            "id": "59c0a842bffa5c89a451a23f13df20b9"
+          },
+          {
+            "name": "assignment list: private testcase marker is absent",
+            "path": "::assignment list: private testcase marker is absent",
+            "id": "fe5ba1b28d99c92a86d58adc83c97549",
+            "passes": 7162,
+            "fails": 0
+          }
+        ]
+    },
+    "options": {
+      "summaryTrendStats": [
+        "med",
+        "p(90)",
+        "p(95)",
+        "p(99)",
+        "max"
+      ],
+      "summaryTimeUnit": "",
+      "noColor": true
+    },
+    "state": {
+      "testRunDurationMs": 120004.33,
+      "isStdOutTTY": false,
+      "isStdErrTTY": false
+    }
+  }
+}

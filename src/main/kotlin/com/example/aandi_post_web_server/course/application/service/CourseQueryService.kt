@@ -7,6 +7,8 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentRequiremen
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.entity.Assignment
+import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
+import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
@@ -135,7 +137,8 @@ class CourseQueryService(
             }
             .filter { assignment -> isVisibleToUser(assignment) }
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
-            .flatMapSequential { assignment -> loadAssignmentSummary(assignment, includeHidden = false) }
+            .collectList()
+            .flatMapMany { assignments -> loadAssignmentSummaries(assignments, includeHidden = false) }
     }
 
     fun getAdminAssignments(
@@ -152,7 +155,8 @@ class CourseQueryService(
             }
             .filter { assignment -> status == null || effectiveAssignmentStatus(assignment) == status }
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
-            .flatMapSequential { assignment -> loadAssignmentSummary(assignment, includeHidden = true) }
+            .collectList()
+            .flatMapMany { assignments -> loadAssignmentSummaries(assignments, includeHidden = true) }
     }
 
     fun getAssignmentDetail(
@@ -296,21 +300,49 @@ class CourseQueryService(
                 toAssignmentDetailResponse(courseSlug, assignment, effectiveAssignment(assignment), tuple.t1, tuple.t2)
             }
 
-    private fun loadAssignmentSummary(assignment: Assignment, includeHidden: Boolean): Mono<AssignmentSummaryResponse> {
-        val assignmentId = requireNotNull(assignment.id)
-        return assignmentRequirementRepository
-            .findAllByAssignmentIdOrderBySortOrder(assignmentId)
-            .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
+    private fun loadAssignmentSummaries(assignments: List<Assignment>, includeHidden: Boolean): Flux<AssignmentSummaryResponse> {
+        if (assignments.isEmpty()) {
+            return Flux.empty()
+        }
+
+        val assignmentIds = assignments.map { assignment -> requireNotNull(assignment.id) }
+        val requirementsByAssignment = assignmentRequirementRepository
+            .findAllByAssignmentIdIn(assignmentIds)
             .collectList()
-            .zipWith(
-                assignmentTestCaseRepository
-                    .findAllByAssignmentIdOrderBySeq(assignmentId)
-                    .filter { includeHidden || it.visibility == AssignmentTestCaseVisibility.PUBLIC }
-                    .map { AssignmentTestCaseResponse(it.seq, it.inputValues, it.outputText, it.visibility) }
-                    .collectList()
-            )
-            .map { tuple ->
-                toAssignmentSummaryResponse(assignment, effectiveAssignment(assignment), tuple.t1, tuple.t2)
+            .map { requirements ->
+                requirements
+                    .groupBy(AssignmentRequirement::assignmentId)
+                    .mapValues { (_, items) -> items.sortedBy(AssignmentRequirement::sortOrder) }
+            }
+        val testCasesByAssignment = assignmentTestCaseRepository
+            .findAllByAssignmentIdIn(assignmentIds)
+            .filter { testCase -> includeHidden || testCase.visibility == AssignmentTestCaseVisibility.PUBLIC }
+            .collectList()
+            .map { testCases ->
+                testCases
+                    .groupBy(AssignmentTestCase::assignmentId)
+                    .mapValues { (_, items) -> items.sortedBy(AssignmentTestCase::seq) }
+            }
+
+        return Mono.zip(requirementsByAssignment, testCasesByAssignment)
+            .flatMapMany { tuple ->
+                Flux.fromIterable(
+                    assignments.map { assignment ->
+                        val assignmentId = requireNotNull(assignment.id)
+                        val requirements = tuple.t1[assignmentId].orEmpty()
+                            .map { requirement -> AssignmentRequirementResponse(requirement.sortOrder, requirement.requirementText) }
+                        val testCases = tuple.t2[assignmentId].orEmpty()
+                            .map { testCase ->
+                                AssignmentTestCaseResponse(
+                                    testCase.seq,
+                                    testCase.inputValues,
+                                    testCase.outputText,
+                                    testCase.visibility,
+                                )
+                            }
+                        toAssignmentSummaryResponse(assignment, effectiveAssignment(assignment), requirements, testCases)
+                    }
+                )
             }
     }
 

@@ -131,6 +131,15 @@ private class Fixture {
     val assignmentTestCaseValidator = AssignmentTestCaseValidator()
     val assignmentCopyFingerprintCalculator = AssignmentCopyFingerprintCalculator()
     val assignmentMetadataPayloadTestCasePresenceTracker = AssignmentMetadataPayloadTestCasePresenceTracker()
+
+    init {
+        Mockito.`when`(assignmentRequirementRepository.findAllByAssignmentIdIn(Mockito.anyCollection()))
+            .thenReturn(Flux.empty())
+        Mockito.`when`(assignmentExampleRepository.findAllByAssignmentIdIn(Mockito.anyCollection()))
+            .thenReturn(Flux.empty())
+        Mockito.clearInvocations(assignmentRequirementRepository, assignmentExampleRepository)
+    }
+
     private val courseEnrollmentCommandService = CourseEnrollmentCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,

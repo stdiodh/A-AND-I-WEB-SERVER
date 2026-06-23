@@ -7,5 +7,6 @@ import reactor.core.publisher.Mono
 
 interface AssignmentTestCaseRepository : ReactiveMongoRepository<AssignmentTestCase, String> {
     fun findAllByAssignmentIdOrderBySeq(assignmentId: String): Flux<AssignmentTestCase>
+    fun findAllByAssignmentIdIn(assignmentIds: Collection<String>): Flux<AssignmentTestCase>
     fun deleteAllByAssignmentIdIn(assignmentIds: Collection<String>): Mono<Long>
 }

@@ -1,0 +1,267 @@
+{
+  "accepted": true,
+  "context": {
+    "scenario": "assignment-read",
+    "fixtureFingerprint": "005fc5cdb43a402413b263ae38b5565a73634b25bc7532cef346320ad295cf1a",
+    "fixtureCounts": {
+      "courses": "1",
+      "assignments": "30",
+      "enrollments": "100",
+      "submissionStatuses": "60"
+    },
+    "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)",
+    "executor": "constant-arrival-rate",
+    "targetRps": "100",
+    "duration": "2m",
+    "requestSleepSeconds": "1",
+    "assignmentListRatio": "60",
+    "assignmentDetailRatio": "40",
+    "jvmOptions": "unknown",
+    "mongodbMode": "local-standalone",
+    "cpu": "Apple M5 Pro",
+    "memory": "48.00 GiB",
+    "warmupCompleted": "true",
+    "loadModel": "arrival-rate",
+    "preAllocatedVus": "30",
+    "maxVus": "200"
+  },
+  "beforeGitCommitSha": "d787f67",
+  "afterGitCommitSha": "08a2a21",
+  "latency": {
+    "assignment_list_p50_ms": {
+      "metric": "assignment_list_p50_ms",
+      "label": "Assignment list P50",
+      "before": {
+        "median": 6.506,
+        "min": 6.238,
+        "max": 6.61
+      },
+      "after": {
+        "median": 6.558,
+        "min": 6.213,
+        "max": 6.609
+      },
+      "beforeRuns": [
+        {
+          "file": "assignment-read-2026-06-22T17-31-36-700Z-d787f67.summary.json",
+          "value": 6.506
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-33-54-832Z-d787f67.summary.json",
+          "value": 6.61
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-36-06-142Z-d787f67.summary.json",
+          "value": 6.238
+        }
+      ],
+      "afterRuns": [
+        {
+          "file": "assignment-read-2026-06-22T17-50-14-635Z-08a2a21.summary.json",
+          "value": 6.213
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-52-26-529Z-08a2a21.summary.json",
+          "value": 6.558
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-54-39-325Z-08a2a21.summary.json",
+          "value": 6.609
+        }
+      ],
+      "deltaMs": 0.0519999999999996,
+      "improvementPercent": -0.7992622194896958,
+      "rangeOverlap": true,
+      "interpretation": "regression"
+    },
+    "assignment_list_p95_ms": {
+      "metric": "assignment_list_p95_ms",
+      "label": "Assignment list P95",
+      "before": {
+        "median": 8.083649999999999,
+        "min": 7.611949999999999,
+        "max": 8.471599999999999
+      },
+      "after": {
+        "median": 8.006249999999998,
+        "min": 7.92335,
+        "max": 8.06355
+      },
+      "beforeRuns": [
+        {
+          "file": "assignment-read-2026-06-22T17-31-36-700Z-d787f67.summary.json",
+          "value": 8.083649999999999
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-33-54-832Z-d787f67.summary.json",
+          "value": 8.471599999999999
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-36-06-142Z-d787f67.summary.json",
+          "value": 7.611949999999999
+        }
+      ],
+      "afterRuns": [
+        {
+          "file": "assignment-read-2026-06-22T17-50-14-635Z-08a2a21.summary.json",
+          "value": 8.006249999999998
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-52-26-529Z-08a2a21.summary.json",
+          "value": 7.92335
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-54-39-325Z-08a2a21.summary.json",
+          "value": 8.06355
+        }
+      ],
+      "deltaMs": -0.0774000000000008,
+      "improvementPercent": 0.9574882633463945,
+      "rangeOverlap": true,
+      "interpretation": "inconclusive_range_overlap"
+    },
+    "assignment_list_p99_ms": {
+      "metric": "assignment_list_p99_ms",
+      "label": "Assignment list P99",
+      "before": {
+        "median": 10.23381999999999,
+        "min": 10.22172,
+        "max": 10.77112
+      },
+      "after": {
+        "median": 9.63811,
+        "min": 9.00041,
+        "max": 10.015649999999999
+      },
+      "beforeRuns": [
+        {
+          "file": "assignment-read-2026-06-22T17-31-36-700Z-d787f67.summary.json",
+          "value": 10.22172
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-33-54-832Z-d787f67.summary.json",
+          "value": 10.77112
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-36-06-142Z-d787f67.summary.json",
+          "value": 10.23381999999999
+        }
+      ],
+      "afterRuns": [
+        {
+          "file": "assignment-read-2026-06-22T17-50-14-635Z-08a2a21.summary.json",
+          "value": 10.015649999999999
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-52-26-529Z-08a2a21.summary.json",
+          "value": 9.00041
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-54-39-325Z-08a2a21.summary.json",
+          "value": 9.63811
+        }
+      ],
+      "deltaMs": -0.5957099999999915,
+      "improvementPercent": 5.820993529297878,
+      "rangeOverlap": false,
+      "interpretation": "improvement"
+    },
+    "assignment_detail_p95_ms": {
+      "metric": "assignment_detail_p95_ms",
+      "label": "Assignment detail P95",
+      "before": {
+        "median": 3.5699999999999994,
+        "min": 3.062,
+        "max": 3.82245
+      },
+      "after": {
+        "median": 3.9014999999999986,
+        "min": 3.81,
+        "max": 4.271799999999998
+      },
+      "beforeRuns": [
+        {
+          "file": "assignment-read-2026-06-22T17-31-36-700Z-d787f67.summary.json",
+          "value": 3.82245
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-33-54-832Z-d787f67.summary.json",
+          "value": 3.5699999999999994
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-36-06-142Z-d787f67.summary.json",
+          "value": 3.062
+        }
+      ],
+      "afterRuns": [
+        {
+          "file": "assignment-read-2026-06-22T17-50-14-635Z-08a2a21.summary.json",
+          "value": 4.271799999999998
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-52-26-529Z-08a2a21.summary.json",
+          "value": 3.81
+        },
+        {
+          "file": "assignment-read-2026-06-22T17-54-39-325Z-08a2a21.summary.json",
+          "value": 3.9014999999999986
+        }
+      ],
+      "deltaMs": 0.33149999999999924,
+      "improvementPercent": -9.285714285714267,
+      "rangeOverlap": true,
+      "interpretation": "regression"
+    }
+  },
+  "throughput": {
+    "metric": "business_success_throughput",
+    "before": {
+      "median": 99.99929500497022,
+      "min": 99.9991350074822,
+      "max": 100.00472482951241
+    },
+    "after": {
+      "median": 100.00163322390733,
+      "min": 99.9991883399213,
+      "max": 100.00441066032519
+    },
+    "beforeRuns": [
+      {
+        "file": "assignment-read-2026-06-22T17-31-36-700Z-d787f67.summary.json",
+        "value": 99.9991350074822
+      },
+      {
+        "file": "assignment-read-2026-06-22T17-33-54-832Z-d787f67.summary.json",
+        "value": 99.99929500497022
+      },
+      {
+        "file": "assignment-read-2026-06-22T17-36-06-142Z-d787f67.summary.json",
+        "value": 100.00472482951241
+      }
+    ],
+    "afterRuns": [
+      {
+        "file": "assignment-read-2026-06-22T17-50-14-635Z-08a2a21.summary.json",
+        "value": 99.9991883399213
+      },
+      {
+        "file": "assignment-read-2026-06-22T17-52-26-529Z-08a2a21.summary.json",
+        "value": 100.00163322390733
+      },
+      {
+        "file": "assignment-read-2026-06-22T17-54-39-325Z-08a2a21.summary.json",
+        "value": 100.00441066032519
+      }
+    ],
+    "delta": 0.0023382189371119466,
+    "improvementPercent": 0.0023382354215554534,
+    "interpretation": "fixed_rate_reference"
+  },
+  "queryReduction": {
+    "accepted": true,
+    "before": 60.0,
+    "after": 2.0,
+    "reductionPercent": 96.66666666666667
+  },
+  "markdown": "# Aggregate Comparison\n\naccepted: true\n\n## Latency and Throughput\n\n| Metric | Before median | After median | Delta | Improvement | Interpretation |\n| :--- | ---: | ---: | ---: | ---: | :--- |\n| Assignment list P50 | 6.506 ms | 6.558 ms | 0.052 ms | -0.80% | regression |\n| Assignment list P95 | 8.084 ms | 8.006 ms | -0.077 ms | 0.96% | inconclusive_range_overlap |\n| Assignment list P99 | 10.234 ms | 9.638 ms | -0.596 ms | 5.82% | improvement |\n| Assignment detail P95 | 3.570 ms | 3.901 ms | 0.331 ms | -9.29% | regression |\n| Business success throughput | 99.999 req/s | 100.002 req/s | 0.002 req/s | 0.00% | fixed-rate reference |\n\n## Query Reduction\n\n- 60 -> 2 (96.67% reduction)"
+}

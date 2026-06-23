@@ -1,0 +1,45 @@
+{
+  "scenario": "assignment-read",
+  "fixtureAssignments": 30,
+  "repositoryCallShape": {
+    "before": {
+      "description": "Expected previous service-level shape: one requirement lookup and one testcase lookup per assignment.",
+      "childDocumentQueries": 60,
+      "formula": "2N"
+    },
+    "after": {
+      "description": "Verified optimized service-level shape: one requirement batch lookup and one testcase batch lookup for the assignment list.",
+      "childDocumentQueries": 2,
+      "formula": "2"
+    },
+    "reductionPercent": 96.66666666666667,
+    "evidence": "CourseQueryServiceTest verifies 0, 1, and 30 assignment list behavior with Mockito repository interactions.",
+    "note": "This is service-level repository-call evidence, not a measured MongoDB command count."
+  },
+  "mongodbExplain": {
+    "assignmentList": {
+      "winningPlan": "FETCH",
+      "indexName": "ux_assignment_course_week_order",
+      "totalDocsExamined": 30,
+      "totalKeysExamined": 30,
+      "nReturned": 30,
+      "executionTimeMillis": 0
+    },
+    "requirementsBatch": {
+      "winningPlan": "FETCH",
+      "indexName": "ux_assignment_requirement_sort",
+      "totalDocsExamined": 30,
+      "totalKeysExamined": 30,
+      "nReturned": 30,
+      "executionTimeMillis": 0
+    },
+    "testcasesBatch": {
+      "winningPlan": "FETCH",
+      "indexName": "ux_assignment_test_case_seq",
+      "totalDocsExamined": 90,
+      "totalKeysExamined": 90,
+      "nReturned": 90,
+      "executionTimeMillis": 0
+    }
+  }
+}

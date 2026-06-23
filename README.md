@@ -123,27 +123,23 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 
 ![k6 읽기 API 부하 테스트](./docs/assets/performance/web-k6-read-capacity.svg)
 
-| 측정 조건 | 값 |
-| :--- | :--- |
-| Fixture | 과제 30개, 수강생 100명, 제출 projection 60개 |
-| 부하 모델 | constant-arrival-rate, 100 RPS |
-| 시간 | 2분 |
-| 반복 | 3회 |
-| k6 | v0.52.0 |
+최신 accepted 비교는 과제 목록의 requirement/testcase 조회를 assignment별 단건 조회에서 batch 조회로 바꾼 결과입니다.
 
-| 3회 중앙값 | 결과 |
-| :--- | ---: |
-| 과제 목록 P95 | **6.559 ms** |
-| 과제 상세 P95 | **3.088 ms** |
-| 성공 처리량 | **100.002 req/s** |
-| HTTP 실패율 | **0.00%** |
-| Check 성공률 | **100.00%** |
-| Dropped iterations | **0** |
-| Private testcase 노출 | **0건** |
+| 항목 | Before | After | 변화 |
+| :--- | ---: | ---: | :--- |
+| Child document repository calls, 30 assignments | 60 | 2 | **96.67% 감소** |
+| 과제 목록 P95 중앙값 | 8.084 ms | 8.006 ms | 0.96% 낮음, range overlap으로 개선 주장 없음 |
+| 성공 처리량 | 99.999 req/s | 100.002 req/s | fixed-rate reference |
+| HTTP 실패율 | 0.00% | 0.00% | 유지 |
+| Check 성공률 | 100.00% | 100.00% | 유지 |
+| Dropped iterations | 0 | 0 | 유지 |
+| Private testcase 노출 | 0건 | 0건 | 유지 |
 
 초당 100건은 사용자 1명이 10초에 한 번 과제를 조회한다고 봤을 때 약 1,000명분의 읽기 트래픽이며, 실제 운영 용량은 배포 환경과 사용 패턴에 따라 달라집니다.
 
 k6 check는 상태 코드뿐 아니라 대상 과제 존재 여부, 상세 응답 식별자, `PUBLIC` 테스트케이스만 포함되는지도 함께 확인합니다.
+
+세부 조건, per-run 값, query evidence, 해석 기준은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 기록합니다.
 
 ```bash
 ./gradlew clean test

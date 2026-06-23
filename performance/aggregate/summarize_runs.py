@@ -18,11 +18,20 @@ REQUIRED_CONTEXT_EQUAL = [
     "gitCommitSha",
     "k6Version",
     "executor",
+    "vus",
+    "loadModel",
     "targetRps",
+    "preAllocatedVus",
+    "maxVus",
     "duration",
     "requestSleepSeconds",
     "assignmentListRatio",
     "assignmentDetailRatio",
+    "jvmOptions",
+    "mongodbMode",
+    "cpu",
+    "memory",
+    "warmupCompleted",
 ]
 
 SUMMARY_METRICS = {
@@ -119,10 +128,21 @@ def context_subset(payload: dict[str, Any]) -> dict[str, Any]:
         "k6Version": context.get("k6Version"),
         "fixtureFingerprint": context.get("fixtureFingerprint"),
         "fixtureCounts": context.get("fixtureCounts"),
+        "executor": context.get("executor"),
+        "vus": context.get("vus"),
+        "loadModel": context.get("loadModel"),
         "targetRps": context.get("targetRps"),
+        "preAllocatedVus": context.get("preAllocatedVus"),
+        "maxVus": context.get("maxVus"),
         "duration": context.get("duration"),
+        "requestSleepSeconds": context.get("requestSleepSeconds"),
         "assignmentListRatio": context.get("assignmentListRatio"),
         "assignmentDetailRatio": context.get("assignmentDetailRatio"),
+        "jvmOptions": context.get("jvmOptions"),
+        "mongodbMode": context.get("mongodbMode"),
+        "cpu": context.get("cpu"),
+        "memory": context.get("memory"),
+        "warmupCompleted": context.get("warmupCompleted"),
     }
 
 
