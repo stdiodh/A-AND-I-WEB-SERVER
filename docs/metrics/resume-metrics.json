@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-28T16:51:17Z",
+  "sourcePolicy": {
+    "networkAccess": false,
+    "githubApiAccess": false,
+    "loadTestExecuted": false,
+    "workflowExecuted": false,
+    "productionAccess": false,
+    "allowedInputs": [
+      "JaCoCo XML",
+      "JUnit TEST XML",
+      "assignment scale result JSON",
+      "committed CI metrics JSON"
+    ]
+  },
+  "disclaimer": "이 수치는 운영 환경 최대 처리량이 아니라 로컬/고정 부하 회귀 검증 기준입니다.",
+  "metrics": {
+    "tests": {
+      "name": "junit",
+      "source": "build/test-results/test/TEST-*.xml",
+      "confidence": "확인 완료",
+      "reason": "Read from latest JUnit TEST XML per testsuite.",
+      "values": {
+        "tests": 277,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 46
+      },
+      "valueConfidences": {
+        "tests": "확인 완료",
+        "failures": "확인 완료",
+        "errors": "확인 완료",
+        "skipped": "확인 완료",
+        "suites": "확인 완료"
+      }
+    },
+    "coverage": {
+      "name": "jacoco",
+      "source": "build/reports/jacoco/test/jacocoTestReport.xml",
+      "confidence": "확인 완료",
+      "reason": "Read from JaCoCo XML report-level LINE and BRANCH counters.",
+      "values": {
+        "lineCoveragePercent": 85.04,
+        "branchCoveragePercent": 62.59,
+        "lineCovered": 2587,
+        "lineMissed": 455,
+        "branchCovered": 885,
+        "branchMissed": 529
+      },
+      "valueConfidences": {
+        "lineCoveragePercent": "확인 완료",
+        "branchCoveragePercent": "확인 완료",
+        "lineCovered": "확인 완료",
+        "lineMissed": "확인 완료",
+        "branchCovered": "확인 완료",
+        "branchMissed": "확인 완료"
+      }
+    },
+    "k6": {
+      "name": "assignment-scale",
+      "source": "docs/performance/results/2026-06-29-assignment-scale.json",
+      "confidence": "확인 완료",
+      "reason": "Read from completed local assignment scale result JSON.",
+      "values": {
+        "scenarioCount": 2,
+        "scenarios": {
+          "assignment-300": {
+            "assignments": 300,
+            "businessP95Ms": 129.0275,
+            "businessP99Ms": 136.78278999999998,
+            "assignmentListP95Ms": 131.643,
+            "assignmentListP99Ms": 140.33427999999998,
+            "assignmentDetailP95Ms": 13.9934,
+            "assignmentDetailP99Ms": 18.476399999999998,
+            "httpFailureRate": 0.0,
+            "checkSuccessRate": 1.0,
+            "throughputRps": 49.946020262237326,
+            "iterations": 6000.0,
+            "droppedIterations": 0.0,
+            "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee"
+          },
+          "assignment-1000": {
+            "assignments": 1000,
+            "businessP95Ms": 125.51265,
+            "businessP99Ms": 133.48082,
+            "assignmentListP95Ms": 127.878,
+            "assignmentListP99Ms": 135.60223,
+            "assignmentDetailP95Ms": 12.8936,
+            "assignmentDetailP99Ms": 17.67253,
+            "httpFailureRate": 0.0,
+            "checkSuccessRate": 1.0,
+            "throughputRps": 49.95786886392475,
+            "iterations": 6000.0,
+            "droppedIterations": 0.0,
+            "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a"
+          }
+        },
+        "targetRps": "50",
+        "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)",
+        "gitCommitSha": "697488c",
+        "gitDirty": "false",
+        "httpFailureRateMax": 0.0,
+        "checkSuccessRateMin": 1.0,
+        "droppedIterationsMax": 0.0,
+        "productionAccessAllowed": false
+      },
+      "valueConfidences": {
+        "scenarioCount": "확인 완료",
+        "scenarios": "확인 완료",
+        "targetRps": "확인 완료",
+        "k6Version": "확인 완료",
+        "gitCommitSha": "확인 완료",
+        "gitDirty": "확인 완료",
+        "httpFailureRateMax": "확인 완료",
+        "checkSuccessRateMin": "확인 완료",
+        "droppedIterationsMax": "확인 완료",
+        "productionAccessAllowed": "확인 완료"
+      }
+    },
+    "ci": {
+      "name": "ci",
+      "source": "docs/metrics/ci-summary.json",
+      "confidence": "측정 필요",
+      "reason": "CI metrics JSON artifact is missing.",
+      "values": {
+        "ciTotalSeconds": null,
+        "ciTestStepSeconds": null,
+        "ciBuildStepSeconds": null,
+        "dockerBuildPushSeconds": null,
+        "ciFailureRate": null,
+        "deployFailureRate": null,
+        "ciRunCount": null,
+        "deployRunCount": null
+      },
+      "valueConfidences": {
+        "ciTotalSeconds": "측정 필요",
+        "ciTestStepSeconds": "측정 필요",
+        "ciBuildStepSeconds": "측정 필요",
+        "dockerBuildPushSeconds": "측정 필요",
+        "ciFailureRate": "측정 필요",
+        "deployFailureRate": "측정 필요",
+        "ciRunCount": "측정 필요",
+        "deployRunCount": "측정 필요"
+      }
+    }
+  },
+  "resumeSentences": [
+    {
+      "confidence": "확인 완료",
+      "text": "테스트·커버리지·부하 테스트 지표를 docs/resume-metrics.md로 문서화해 이력서 수치의 재현 가능성을 관리"
+    },
+    {
+      "confidence": "확인 필요",
+      "text": "JaCoCo, JUnit XML, assignment scale report, GitHub Actions metrics를 기반으로 성능·품질 지표를 자동 집계"
+    },
+    {
+      "confidence": "확인 완료",
+      "text": "JUnit 277개 테스트와 JaCoCo line 85.04%, branch 62.59%를 로컬 리포트에서 자동 집계"
+    },
+    {
+      "confidence": "확인 완료",
+      "text": "로컬 고정 부하 회귀 기준에서 1000개 과제 fixture P95 125.51 ms, P99 133.48 ms / 300개 과제 fixture P95 129.03 ms, P99 136.78 ms, HTTP failure 0.00%, dropped iterations 0을 관리"
+    },
+    {
+      "confidence": "측정 필요",
+      "text": "GitHub Actions CI median [확인 필요] 기준으로 PR 검증 시간을 관리"
+    }
+  ]
+}

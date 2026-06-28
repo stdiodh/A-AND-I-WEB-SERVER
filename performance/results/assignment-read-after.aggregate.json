@@ -22,6 +22,9 @@
     "requestSleepSeconds": "1",
     "assignmentListRatio": "60",
     "assignmentDetailRatio": "40",
+    "baseUrlHost": "localhost",
+    "targetEnvironment": "local",
+    "dockerNetworkMode": "local-binary",
     "jvmOptions": "unknown",
     "mongodbMode": "local-standalone",
     "cpu": "Apple M5 Pro",
@@ -31,10 +34,16 @@
   "runs": [
     {
       "file": "assignment-read-2026-06-22T17-50-14-635Z-08a2a21.summary.json",
+      "business_p50_ms": 5.678,
+      "business_p90_ms": 6.996,
+      "business_p95_ms": 7.55105,
+      "business_p99_ms": 9.39904,
       "assignment_list_p50_ms": 6.213,
+      "assignment_list_p90_ms": 7.355,
       "assignment_list_p95_ms": 8.006249999999998,
       "assignment_list_p99_ms": 10.015649999999999,
       "assignment_detail_p50_ms": 2.932,
+      "assignment_detail_p90_ms": 3.670200000000001,
       "assignment_detail_p95_ms": 4.271799999999998,
       "assignment_detail_p99_ms": 6.382389999999998,
       "http_rps": 99.9991883399213,
@@ -43,14 +52,22 @@
       "assignment_detail_success_throughput": 40.44967168349817,
       "http_failure_rate": 0.0,
       "check_success_rate": 1.0,
+      "iterations": 12000.0,
+      "iterations_rate": 99.9991883399213,
       "dropped_iterations": 0.0
     },
     {
       "file": "assignment-read-2026-06-22T17-52-26-529Z-08a2a21.summary.json",
+      "business_p50_ms": 6.004,
+      "business_p90_ms": 7.269,
+      "business_p95_ms": 7.67,
+      "business_p99_ms": 8.644,
       "assignment_list_p50_ms": 6.558,
+      "assignment_list_p90_ms": 7.563,
       "assignment_list_p95_ms": 7.92335,
       "assignment_list_p99_ms": 9.00041,
       "assignment_detail_p50_ms": 2.945,
+      "assignment_detail_p90_ms": 3.5244,
       "assignment_detail_p95_ms": 3.81,
       "assignment_detail_p99_ms": 5.105859999999997,
       "http_rps": 100.00163322390733,
@@ -59,14 +76,22 @@
       "assignment_detail_success_throughput": 40.38896060630604,
       "http_failure_rate": 0.0,
       "check_success_rate": 1.0,
+      "iterations": 12001.0,
+      "iterations_rate": 100.00163322390733,
       "dropped_iterations": 0.0
     },
     {
       "file": "assignment-read-2026-06-22T17-54-39-325Z-08a2a21.summary.json",
+      "business_p50_ms": 6.078,
+      "business_p90_ms": 7.343,
+      "business_p95_ms": 7.769,
+      "business_p99_ms": 8.971,
       "assignment_list_p50_ms": 6.609,
+      "assignment_list_p90_ms": 7.6403,
       "assignment_list_p95_ms": 8.06355,
       "assignment_list_p99_ms": 9.63811,
       "assignment_detail_p50_ms": 2.972,
+      "assignment_detail_p90_ms": 3.585,
       "assignment_detail_p95_ms": 3.9014999999999986,
       "assignment_detail_p99_ms": 5.309399999999999,
       "http_rps": 100.00441066032519,
@@ -75,14 +100,41 @@
       "assignment_detail_success_throughput": 40.09009413272431,
       "http_failure_rate": 0.0,
       "check_success_rate": 1.0,
+      "iterations": 12001.0,
+      "iterations_rate": 100.00441066032519,
       "dropped_iterations": 0.0
     }
   ],
   "summary": {
+    "business_p50_ms": {
+      "median": 6.004,
+      "min": 5.678,
+      "max": 6.078
+    },
+    "business_p90_ms": {
+      "median": 7.269,
+      "min": 6.996,
+      "max": 7.343
+    },
+    "business_p95_ms": {
+      "median": 7.67,
+      "min": 7.55105,
+      "max": 7.769
+    },
+    "business_p99_ms": {
+      "median": 8.971,
+      "min": 8.644,
+      "max": 9.39904
+    },
     "assignment_list_p50_ms": {
       "median": 6.558,
       "min": 6.213,
       "max": 6.609
+    },
+    "assignment_list_p90_ms": {
+      "median": 7.563,
+      "min": 7.355,
+      "max": 7.6403
     },
     "assignment_list_p95_ms": {
       "median": 8.006249999999998,
@@ -98,6 +150,11 @@
       "median": 2.945,
       "min": 2.932,
       "max": 2.972
+    },
+    "assignment_detail_p90_ms": {
+      "median": 3.585,
+      "min": 3.5244,
+      "max": 3.670200000000001
     },
     "assignment_detail_p95_ms": {
       "median": 3.9014999999999986,
@@ -139,15 +196,20 @@
       "min": 1.0,
       "max": 1.0
     },
+    "iterations": {
+      "median": 12001.0,
+      "min": 12000.0,
+      "max": 12001.0
+    },
+    "iterations_rate": {
+      "median": 100.00163322390733,
+      "min": 99.9991883399213,
+      "max": 100.00441066032519
+    },
     "dropped_iterations": {
       "median": 0.0,
       "min": 0.0,
       "max": 0.0
     }
-  },
-  "queryCounts": {
-    "fixtureAssignments": 30,
-    "childDocumentQueries": 2,
-    "source": "service-level repository-call regression test; not MongoDB command count"
   }
 }

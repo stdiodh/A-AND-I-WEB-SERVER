@@ -1,0 +1,845 @@
+{
+  "repository": "Team-AnI/A-AND-I-WEB-SERVER",
+  "base_ref": "main",
+  "candidate_ref": "develop-web-cicd-same-scope-remeasure",
+  "measurement_status": "completed",
+  "measurement_profile": "official",
+  "github_run_id": "28313842657",
+  "created_at": "2026-06-28T06:36:40Z",
+  "official_measurement_policy": {
+    "rerun_for_better_numbers_forbidden": true,
+    "official_batch_count": 1,
+    "iterations_per_side": 5,
+    "median_is_primary": true,
+    "average_is_reference_only": true
+  },
+  "safety": {
+    "production_deploy_executed": false,
+    "tag_push_executed": false,
+    "docker_push_executed": false,
+    "aws_credentials_used": false,
+    "ecr_login_or_push_executed": false,
+    "ec2_ssh_executed": false,
+    "aws_ecr_ssh_executed": false,
+    "production_url_accessed": false
+  },
+  "smoke_check": {
+    "branch_is_candidate": true,
+    "workflow_file_exists": true,
+    "workflow_yaml_syntax_ok": true,
+    "cd_measurement_paths_use_push_false": true,
+    "measurement_workflow_has_aws_ecr_ssh_steps": false,
+    "workflow_dispatchable": true
+  },
+  "measurement_notes": [
+    "cd_image_build_only before uses the legacy Dockerfile image build path.",
+    "legacy image build path includes bootJar inside Docker.",
+    "cd_image_build_only after uses Dockerfile.runtime with a prebuilt JAR artifact.",
+    "same-scope CI after uses the backend-test/performance-assets critical path and excludes build-jar."
+  ],
+  "blockers": [],
+  "metrics": [
+    {
+      "name": "ci_same_scope_total",
+      "scope": "same-scope-ci",
+      "same_scope": true,
+      "before_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 144.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306304"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 139.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306272"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 139.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306315"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 140.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306283"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 144.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306275"
+        }
+      ],
+      "after_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 108.0,
+          "conclusion": "success",
+          "job_name": "same-scope-ci-after-critical-path (1)",
+          "html_url": null
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 93.0,
+          "conclusion": "success",
+          "job_name": "same-scope-ci-after-critical-path (2)",
+          "html_url": null
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 109.0,
+          "conclusion": "success",
+          "job_name": "same-scope-ci-after-critical-path (3)",
+          "html_url": null
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 115.0,
+          "conclusion": "success",
+          "job_name": "same-scope-ci-after-critical-path (4)",
+          "html_url": null
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 110.0,
+          "conclusion": "success",
+          "job_name": "same-scope-ci-after-critical-path (5)",
+          "html_url": null
+        }
+      ],
+      "before_success_count": 5,
+      "after_success_count": 5,
+      "before_failure_count": 0,
+      "after_failure_count": 0,
+      "before_cancelled_or_skipped_count": 0,
+      "after_cancelled_or_skipped_count": 0,
+      "before_median_seconds": 140.0,
+      "after_median_seconds": 109.0,
+      "before_average_seconds": 141.2,
+      "after_average_seconds": 107.0,
+      "improvement_percent": 22.143,
+      "outliers": [],
+      "buildkit_cache_configured": false,
+      "buildkit_cache_hit_observed": "workflow logs required",
+      "cache_evidence": "Use workflow logs and BuildKit output for cache-hit evidence.",
+      "confidence": "high",
+      "resume_usage": "사용 가능",
+      "resume_sentence_candidate": "",
+      "rejection_reason": ""
+    },
+    {
+      "name": "ci_full_gate_total",
+      "scope": "full-gate-ci",
+      "same_scope": false,
+      "before_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 144.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306304"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 139.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306272"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 139.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306315"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 140.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306283"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 144.0,
+          "conclusion": "success",
+          "job_name": "measure / same-scope-ci-before (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306275"
+        }
+      ],
+      "after_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 108.0,
+          "conclusion": "success",
+          "job_name": "full-gate-ci-after-critical-path (1)",
+          "html_url": null
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 93.0,
+          "conclusion": "success",
+          "job_name": "full-gate-ci-after-critical-path (2)",
+          "html_url": null
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 109.0,
+          "conclusion": "success",
+          "job_name": "full-gate-ci-after-critical-path (3)",
+          "html_url": null
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 115.0,
+          "conclusion": "success",
+          "job_name": "full-gate-ci-after-critical-path (4)",
+          "html_url": null
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 110.0,
+          "conclusion": "success",
+          "job_name": "full-gate-ci-after-critical-path (5)",
+          "html_url": null
+        }
+      ],
+      "before_success_count": 5,
+      "after_success_count": 5,
+      "before_failure_count": 0,
+      "after_failure_count": 0,
+      "before_cancelled_or_skipped_count": 0,
+      "after_cancelled_or_skipped_count": 0,
+      "before_median_seconds": 140.0,
+      "after_median_seconds": 109.0,
+      "before_average_seconds": 141.2,
+      "after_average_seconds": 107.0,
+      "improvement_percent": 22.143,
+      "outliers": [],
+      "buildkit_cache_configured": false,
+      "buildkit_cache_hit_observed": "workflow logs required",
+      "cache_evidence": "Use workflow logs and BuildKit output for cache-hit evidence.",
+      "confidence": "high",
+      "resume_usage": "사용 가능",
+      "resume_sentence_candidate": "",
+      "rejection_reason": ""
+    },
+    {
+      "name": "backend_test",
+      "scope": "same-scope-ci/backend-test",
+      "same_scope": true,
+      "before_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 124.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-before (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306204"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 126.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-before (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306207"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 120.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-before (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306205"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 121.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-before (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306208"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 119.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-before (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306214"
+        }
+      ],
+      "after_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 108.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-after (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306217"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 93.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-after (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306213"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 109.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-after (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306215"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 115.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-after (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306222"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 110.0,
+          "conclusion": "success",
+          "job_name": "measure / backend-test-after (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306238"
+        }
+      ],
+      "before_success_count": 5,
+      "after_success_count": 5,
+      "before_failure_count": 0,
+      "after_failure_count": 0,
+      "before_cancelled_or_skipped_count": 0,
+      "after_cancelled_or_skipped_count": 0,
+      "before_median_seconds": 121.0,
+      "after_median_seconds": 109.0,
+      "before_average_seconds": 122.0,
+      "after_average_seconds": 107.0,
+      "improvement_percent": 9.917,
+      "outliers": [],
+      "buildkit_cache_configured": false,
+      "buildkit_cache_hit_observed": "workflow logs required",
+      "cache_evidence": "Use workflow logs and BuildKit output for cache-hit evidence.",
+      "confidence": "high",
+      "resume_usage": "사용 가능",
+      "resume_sentence_candidate": "",
+      "rejection_reason": ""
+    },
+    {
+      "name": "performance_assets",
+      "scope": "same-scope-ci/performance-assets",
+      "same_scope": true,
+      "before_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 23.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-before (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306221"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 21.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-before (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306233"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 22.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-before (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306235"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 22.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-before (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306232"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 20.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-before (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306242"
+        }
+      ],
+      "after_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 19.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-after (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306286"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 22.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-after (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306278"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 20.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-after (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306276"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 18.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-after (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306299"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 22.0,
+          "conclusion": "success",
+          "job_name": "measure / performance-assets-after (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306302"
+        }
+      ],
+      "before_success_count": 5,
+      "after_success_count": 5,
+      "before_failure_count": 0,
+      "after_failure_count": 0,
+      "before_cancelled_or_skipped_count": 0,
+      "after_cancelled_or_skipped_count": 0,
+      "before_median_seconds": 22.0,
+      "after_median_seconds": 20.0,
+      "before_average_seconds": 21.6,
+      "after_average_seconds": 20.2,
+      "improvement_percent": 9.091,
+      "outliers": [],
+      "buildkit_cache_configured": false,
+      "buildkit_cache_hit_observed": "workflow logs required",
+      "cache_evidence": "Use workflow logs and BuildKit output for cache-hit evidence.",
+      "confidence": "high",
+      "resume_usage": "사용 가능",
+      "resume_sentence_candidate": "",
+      "rejection_reason": ""
+    },
+    {
+      "name": "build_jar",
+      "scope": "build-validation",
+      "same_scope": false,
+      "before_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 50.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-before (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306241"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 47.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-before (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306239"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 59.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-before (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306243"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 52.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-before (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306236"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 60.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-before (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306244"
+        }
+      ],
+      "after_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 64.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-after (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306298"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 47.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-after (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306295"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 63.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-after (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306311"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 55.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-after (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306294"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 64.0,
+          "conclusion": "success",
+          "job_name": "measure / build-jar-after (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306284"
+        }
+      ],
+      "before_success_count": 5,
+      "after_success_count": 5,
+      "before_failure_count": 0,
+      "after_failure_count": 0,
+      "before_cancelled_or_skipped_count": 0,
+      "after_cancelled_or_skipped_count": 0,
+      "before_median_seconds": 52.0,
+      "after_median_seconds": 63.0,
+      "before_average_seconds": 53.6,
+      "after_average_seconds": 58.6,
+      "improvement_percent": -21.154,
+      "outliers": [],
+      "buildkit_cache_configured": false,
+      "buildkit_cache_hit_observed": "workflow logs required",
+      "cache_evidence": "Use workflow logs and BuildKit output for cache-hit evidence.",
+      "confidence": "low",
+      "resume_usage": "사용 불가",
+      "resume_sentence_candidate": "",
+      "rejection_reason": "Metric did not produce a positive completed improvement."
+    },
+    {
+      "name": "cd_dry_run_full_path",
+      "scope": "cd-dry-run/full-path",
+      "same_scope": false,
+      "before_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 249.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-before (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306282"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 245.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-before (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306285"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 203.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-before (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306303"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 204.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-before (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306316"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 211.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-before (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306319"
+        }
+      ],
+      "after_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 87.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-after (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306301"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 82.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-after (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306324"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 81.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-after (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306312"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 79.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-after (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306321"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 87.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-dry-run-full-path-after (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306323"
+        }
+      ],
+      "before_success_count": 5,
+      "after_success_count": 5,
+      "before_failure_count": 0,
+      "after_failure_count": 0,
+      "before_cancelled_or_skipped_count": 0,
+      "after_cancelled_or_skipped_count": 0,
+      "before_median_seconds": 211.0,
+      "after_median_seconds": 82.0,
+      "before_average_seconds": 222.4,
+      "after_average_seconds": 83.2,
+      "improvement_percent": 61.137,
+      "outliers": [],
+      "buildkit_cache_configured": true,
+      "buildkit_cache_hit_observed": "workflow logs required",
+      "cache_evidence": "Use workflow logs and BuildKit output for cache-hit evidence.",
+      "confidence": "high",
+      "resume_usage": "사용 가능",
+      "resume_sentence_candidate": "",
+      "rejection_reason": ""
+    },
+    {
+      "name": "cd_image_build_only",
+      "scope": "cd-dry-run/image-build-only",
+      "same_scope": false,
+      "before_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 159.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-before (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306305"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 194.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-before (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306307"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 191.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-before (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306308"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 153.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-before (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306309"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 161.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-before (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883306314"
+        }
+      ],
+      "after_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": 25.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-after (1)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883598961"
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": 36.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-after (2)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883598952"
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": 36.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-after (3)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883598956"
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": 24.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-after (4)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883598963"
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": 29.0,
+          "conclusion": "success",
+          "job_name": "measure / cd-image-build-only-after (5)",
+          "html_url": "https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/28313842657/job/83883598955"
+        }
+      ],
+      "before_success_count": 5,
+      "after_success_count": 5,
+      "before_failure_count": 0,
+      "after_failure_count": 0,
+      "before_cancelled_or_skipped_count": 0,
+      "after_cancelled_or_skipped_count": 0,
+      "before_median_seconds": 161.0,
+      "after_median_seconds": 29.0,
+      "before_average_seconds": 171.6,
+      "after_average_seconds": 30.0,
+      "improvement_percent": 81.988,
+      "outliers": [],
+      "buildkit_cache_configured": true,
+      "buildkit_cache_hit_observed": "workflow logs required",
+      "cache_evidence": "Use workflow logs and BuildKit output for cache-hit evidence.",
+      "confidence": "high",
+      "resume_usage": "사용 가능",
+      "resume_sentence_candidate": "",
+      "rejection_reason": ""
+    },
+    {
+      "name": "cd_image_build_warm_cache",
+      "scope": "cd-dry-run/image-build-warm-cache",
+      "same_scope": false,
+      "before_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-before (1)",
+          "html_url": null
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-before (2)",
+          "html_url": null
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-before (3)",
+          "html_url": null
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-before (4)",
+          "html_url": null
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-before (5)",
+          "html_url": null
+        }
+      ],
+      "after_runs": [
+        {
+          "iteration": 1,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-after (1)",
+          "html_url": null
+        },
+        {
+          "iteration": 2,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-after (2)",
+          "html_url": null
+        },
+        {
+          "iteration": 3,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-after (3)",
+          "html_url": null
+        },
+        {
+          "iteration": 4,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-after (4)",
+          "html_url": null
+        },
+        {
+          "iteration": 5,
+          "duration_seconds": null,
+          "conclusion": "missing",
+          "job_name": "cd-image-build-warm-cache-after (5)",
+          "html_url": null
+        }
+      ],
+      "before_success_count": 0,
+      "after_success_count": 0,
+      "before_failure_count": 0,
+      "after_failure_count": 0,
+      "before_cancelled_or_skipped_count": 5,
+      "after_cancelled_or_skipped_count": 5,
+      "before_median_seconds": null,
+      "after_median_seconds": null,
+      "before_average_seconds": null,
+      "after_average_seconds": null,
+      "improvement_percent": null,
+      "outliers": [],
+      "buildkit_cache_configured": true,
+      "buildkit_cache_hit_observed": "workflow logs required",
+      "cache_evidence": "Use workflow logs and BuildKit output for cache-hit evidence.",
+      "confidence": "low",
+      "resume_usage": "사용 불가",
+      "resume_sentence_candidate": "",
+      "rejection_reason": "Metric did not produce a positive completed improvement."
+    }
+  ],
+  "superseded_measurement_attempts": [
+    {
+      "type": "workflow_dispatch_not_available",
+      "commit": "22643fa493ceac00e7e6fe0249afb44aee5a7cf3",
+      "command": "gh workflow run .github/workflows/measure-web-cicd.yml --ref develop-web-cicd-same-scope-remeasure -f baseline_ref=main -f candidate_ref=develop-web-cicd-same-scope-remeasure -f iterations=5 -f measurement_profile=official-cold",
+      "official_run_started": false,
+      "result": "HTTP 404: workflow .github/workflows/measure-web-cicd.yml not found on the default branch",
+      "superseded_by": "d24a4ba67dc0b56fd176506b5a87d25560209a49"
+    },
+    {
+      "type": "dispatch_probe_unexpected_inputs",
+      "commit": "3d97b55273a68a5542fed929e2b2ec2e1179419d",
+      "command": "gh workflow run ci-test.yml --ref develop-web-cicd-same-scope-remeasure -f baseline_ref=main",
+      "official_run_started": false,
+      "result": "HTTP 422: Unexpected inputs provided: [\"baseline_ref\"]",
+      "superseded_by": "d24a4ba67dc0b56fd176506b5a87d25560209a49"
+    }
+  ]
+}

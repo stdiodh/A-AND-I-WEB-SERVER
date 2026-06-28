@@ -27,7 +27,7 @@ seedUsersAndEnrollments(enrollmentCount);
 seedAssignments(assignmentCount);
 seedSubmissionStatuses(submittedCount);
 
-printjson({
+emitJson({
   status: "seeded",
   database: db.getName(),
   courseSlug: COURSE_SLUG,
@@ -145,8 +145,7 @@ function seedUsersAndEnrollments(count) {
 function seedAssignments(count) {
   for (let i = 1; i <= count; i += 1) {
     const assignmentId = assignmentIdAt(i);
-    const weekNo = Math.min(WEEK_COUNT, Math.floor((i - 1) / 10) + 1);
-    const orderInWeek = ((i - 1) % 10) + 1;
+    const order = assignmentOrderAt(i, count);
     db.assignments.replaceOne(
       { _id: assignmentId },
       {
@@ -155,8 +154,8 @@ function seedAssignments(count) {
         courseId: COURSE_ID,
         courseSlug: COURSE_SLUG,
         createdBy: ADMIN_USER_ID,
-        weekNo,
-        orderInWeek,
+        weekNo: order.weekNo,
+        orderInWeek: order.orderInWeek,
         startAt,
         endAt,
         metadata: {
@@ -239,6 +238,19 @@ function seedAssignments(count) {
       { upsert: true }
     );
   }
+}
+
+function assignmentOrderAt(index, totalCount) {
+  if (totalCount <= WEEK_COUNT * 10) {
+    return {
+      weekNo: Math.min(WEEK_COUNT, Math.floor((index - 1) / 10) + 1),
+      orderInWeek: ((index - 1) % 10) + 1,
+    };
+  }
+  return {
+    weekNo: ((index - 1) % WEEK_COUNT) + 1,
+    orderInWeek: Math.floor((index - 1) / WEEK_COUNT) + 1,
+  };
 }
 
 function seedSubmissionStatuses(count) {
@@ -330,4 +342,8 @@ function assertLocalFixtureDb() {
   if (["localhost", "127.0.0.1", "mongodb"].indexOf(mongoHost) < 0) {
     throw new Error(`Refusing to seed non-local MongoDB host: ${mongoHost || "unknown"}`);
   }
+}
+
+function emitJson(value) {
+  print(JSON.stringify(value, null, 2));
 }

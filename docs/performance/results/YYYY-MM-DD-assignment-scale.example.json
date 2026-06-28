@@ -1,0 +1,118 @@
+{
+  "generatedAt": "YYYY-MM-DDT00:00:00Z",
+  "resultDate": "YYYY-MM-DD",
+  "scope": "local-only assignment read scale fixture",
+  "safety": {
+    "baseUrl": "localhost or 127.0.0.1 only",
+    "mongoDatabase": "aandi_performance only",
+    "remoteTargetsAllowed": false,
+    "productionAccessAllowed": false
+  },
+  "comparison": {
+    "status": "[비교 불가]",
+    "reason": "before/after 조건을 완전히 동일하게 맞춘 비교 입력이 아니므로 latency 개선율을 계산하지 않습니다."
+  },
+  "javaVersion": "openjdk version \"21.x\"",
+  "scenarios": [
+    {
+      "name": "assignment-300",
+      "fixture": {
+        "status": "verified",
+        "database": "aandi_performance",
+        "fixtureFingerprint": "fixture-hash-300",
+        "counts": {
+          "courses": 1,
+          "assignments": 300,
+          "enrollments": 100,
+          "submissionStatuses": 60
+        }
+      },
+      "k6": {
+        "context": {
+          "scenario": "assignment-read",
+          "baseUrlHost": "localhost",
+          "targetEnvironment": "local",
+          "gitCommitSha": "abcdef1",
+          "k6Version": "k6 v0.52.0",
+          "fixtureFingerprint": "fixture-hash-300"
+        },
+        "summary": {
+          "business_p50_ms": { "median": 0, "min": 0, "max": 0 },
+          "business_p90_ms": { "median": 0, "min": 0, "max": 0 },
+          "business_p95_ms": { "median": 0, "min": 0, "max": 0 },
+          "business_p99_ms": { "median": 0, "min": 0, "max": 0 },
+          "http_failure_rate": { "median": 0, "min": 0, "max": 0 },
+          "check_success_rate": { "median": 1, "min": 1, "max": 1 },
+          "business_success_throughput": { "median": 100, "min": 100, "max": 100 },
+          "iterations": { "median": 12000, "min": 12000, "max": 12000 },
+          "dropped_iterations": { "median": 0, "min": 0, "max": 0 }
+        }
+      },
+      "mongo": {
+        "context": {
+          "database": "aandi_performance",
+          "mongoVersion": "7.x"
+        },
+        "summary": {
+          "commandCount": { "median": 0, "min": 0, "max": 0 },
+          "totalDocsExamined": { "median": 0, "min": 0, "max": 0 },
+          "totalKeysExamined": { "median": 0, "min": 0, "max": 0 },
+          "explainTotalDocsExamined": { "median": 0, "min": 0, "max": 0 },
+          "explainTotalKeysExamined": { "median": 0, "min": 0, "max": 0 }
+        }
+      }
+    },
+    {
+      "name": "assignment-1000",
+      "fixture": {
+        "status": "verified",
+        "database": "aandi_performance",
+        "fixtureFingerprint": "fixture-hash-1000",
+        "counts": {
+          "courses": 1,
+          "assignments": 1000,
+          "enrollments": 100,
+          "submissionStatuses": 60
+        }
+      },
+      "k6": {
+        "context": {
+          "scenario": "assignment-read",
+          "baseUrlHost": "localhost",
+          "targetEnvironment": "local",
+          "gitCommitSha": "abcdef1",
+          "k6Version": "k6 v0.52.0",
+          "fixtureFingerprint": "fixture-hash-1000"
+        },
+        "summary": {
+          "business_p50_ms": { "median": 0, "min": 0, "max": 0 },
+          "business_p90_ms": { "median": 0, "min": 0, "max": 0 },
+          "business_p95_ms": { "median": 0, "min": 0, "max": 0 },
+          "business_p99_ms": { "median": 0, "min": 0, "max": 0 },
+          "http_failure_rate": { "median": 0, "min": 0, "max": 0 },
+          "check_success_rate": { "median": 1, "min": 1, "max": 1 },
+          "business_success_throughput": { "median": 100, "min": 100, "max": 100 },
+          "iterations": { "median": 12000, "min": 12000, "max": 12000 },
+          "dropped_iterations": { "median": 0, "min": 0, "max": 0 }
+        }
+      },
+      "mongo": {
+        "context": {
+          "database": "aandi_performance",
+          "mongoVersion": "7.x"
+        },
+        "summary": {
+          "commandCount": { "median": 0, "min": 0, "max": 0 },
+          "totalDocsExamined": { "median": 0, "min": 0, "max": 0 },
+          "totalKeysExamined": { "median": 0, "min": 0, "max": 0 },
+          "explainTotalDocsExamined": { "median": 0, "min": 0, "max": 0 },
+          "explainTotalKeysExamined": { "median": 0, "min": 0, "max": 0 }
+        }
+      }
+    }
+  ],
+  "resumeSentence": {
+    "confirmed": "300/1000개 과제 fixture에서 k6 고정 부하와 MongoDB profile로 읽기 API P95/P99와 DB 접근 효율을 로컬 재현 환경에서 검증",
+    "beforeMeasurement": "과제 조회 API의 scale fixture 성능 측정 환경을 구축해 P95/P99와 DB 접근 패턴을 회귀 기준으로 관리"
+  }
+}

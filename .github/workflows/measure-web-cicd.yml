@@ -1,0 +1,861 @@
+name: Measure Web CI/CD Same Scope
+
+on:
+  workflow_call:
+    inputs:
+      baseline_ref:
+        required: true
+        type: string
+      candidate_ref:
+        required: true
+        type: string
+      iterations:
+        required: true
+        type: string
+      measurement_profile:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: Baseline ref to measure
+        required: true
+        default: main
+      candidate_ref:
+        description: Candidate ref to measure
+        required: true
+        default: develop-web-cicd-same-scope-remeasure
+      iterations:
+        description: Number of official runs per side
+        required: true
+        default: "5"
+      measurement_profile:
+        description: Official measurement profile
+        required: true
+        type: choice
+        options:
+          - official
+          - official-cold
+          - official-warm
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: measure-web-cicd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  K6_VERSION: "0.52.0"
+  IMAGE_NAME: aandi-web-server
+
+jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      iterations_matrix: ${{ steps.validate.outputs.iterations_matrix }}
+      cache_mode: ${{ steps.validate.outputs.cache_mode }}
+
+    steps:
+      - name: Validate measurement inputs
+        id: validate
+        run: |
+          iterations="${{ inputs.iterations }}"
+          case "$iterations" in
+            ''|*[!0-9]*)
+              echo "iterations must be a positive integer."
+              exit 2
+              ;;
+          esac
+          if [ "$iterations" -lt 1 ] || [ "$iterations" -gt 10 ]; then
+            echo "iterations must be between 1 and 10."
+            exit 2
+          fi
+          if [ "$iterations" -lt 5 ]; then
+            echo "official measurement requires at least 5 iterations per side."
+            exit 2
+          fi
+          profile="${{ inputs.measurement_profile }}"
+          case "$profile" in
+            official)
+              cache_mode="cold"
+              ;;
+            official-cold)
+              cache_mode="cold"
+              ;;
+            official-warm)
+              cache_mode="warm"
+              ;;
+            *)
+              echo "unsupported measurement_profile: $profile"
+              exit 2
+              ;;
+          esac
+          matrix="$(seq -s, 1 "$iterations")"
+          echo "iterations_matrix=[$matrix]" >> "$GITHUB_OUTPUT"
+          echo "cache_mode=$cache_mode" >> "$GITHUB_OUTPUT"
+
+  same-scope-ci-before:
+    name: same-scope-ci-before (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseline_ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Run baseline backend tests
+        run: ./gradlew test --no-daemon
+
+      - name: Run baseline JaCoCo coverage verification
+        run: ./gradlew jacocoTestCoverageVerification --no-daemon
+
+      - name: Install k6 without binary cache
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-amd64.tar.gz" -o /tmp/k6.tar.gz
+          tar -xzf /tmp/k6.tar.gz -C /tmp
+          mv "/tmp/k6-v${K6_VERSION}-linux-amd64/k6" "$HOME/.local/bin/k6"
+          chmod +x "$HOME/.local/bin/k6"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify baseline pinned k6 version
+        run: |
+          expected="$(tr -d '[:space:]' < performance/k6/K6_VERSION)"
+          test "$expected" = "$K6_VERSION"
+          actual_line="$(k6 version | head -n 1)"
+          actual="$(printf '%s\n' "$actual_line" | sed -n 's/.*v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')"
+          which k6
+          echo "$actual_line"
+          test "$actual" = "$K6_VERSION"
+
+      - name: Validate baseline performance assets
+        run: |
+          sh -n performance/k6/run-local.sh
+          sh -n performance/k6/run-docker.sh
+          sh -n performance/fixtures/run-fixture.sh
+          find performance/k6 -name '*.js' -print0 |
+            xargs -0 -n1 node --check
+          node --check performance/fixtures/seed.js
+          node --check performance/fixtures/verify.js
+          node --check performance/fixtures/cleanup.js
+          k6 inspect performance/k6/preflight.js
+          k6 inspect performance/k6/warmup.js
+          k6 inspect performance/k6/smoke.js
+          k6 inspect performance/k6/assignment-read.js
+          k6 inspect performance/k6/submission-status-read.js
+          python3 -m py_compile \
+            performance/compare/compare_results.py \
+            performance/compare/test_compare_results.py \
+            performance/k6/tools/generate_test_jwt.py \
+            performance/aggregate/summarize_runs.py \
+            performance/aggregate/test_summarize_runs.py
+          python3 -m unittest discover \
+            -s performance/compare \
+            -p 'test_*.py' \
+            -v
+          python3 -m unittest discover \
+            -s performance/aggregate \
+            -p 'test_*.py' \
+            -v
+          if [ -f scripts/validate-web-cicd-metrics.py ] && [ -f docs/metrics/web-cicd-remeasure.json ]; then
+            python3 scripts/validate-web-cicd-metrics.py --allow-pending docs/metrics/web-cicd-remeasure.json
+          else
+            echo "Resume metrics validator not present on this ref; skipping validate-only check."
+          fi
+          git diff --check
+
+  backend-test-before:
+    name: backend-test-before (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseline_ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Run backend-test-before
+        run: |
+          ./gradlew test --no-daemon
+          ./gradlew jacocoTestCoverageVerification --no-daemon
+
+  backend-test-after:
+    name: backend-test-after (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Run backend-test-after
+        run: ./gradlew test jacocoTestCoverageVerification --build-cache --no-daemon
+
+  performance-assets-before:
+    name: performance-assets-before (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseline_ref }}
+
+      - name: Install k6 without binary cache
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-amd64.tar.gz" -o /tmp/k6.tar.gz
+          tar -xzf /tmp/k6.tar.gz -C /tmp
+          mv "/tmp/k6-v${K6_VERSION}-linux-amd64/k6" "$HOME/.local/bin/k6"
+          chmod +x "$HOME/.local/bin/k6"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify baseline pinned k6 version
+        run: |
+          expected="$(tr -d '[:space:]' < performance/k6/K6_VERSION)"
+          test "$expected" = "$K6_VERSION"
+          actual_line="$(k6 version | head -n 1)"
+          actual="$(printf '%s\n' "$actual_line" | sed -n 's/.*v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')"
+          which k6
+          echo "$actual_line"
+          test "$actual" = "$K6_VERSION"
+
+      - name: Run performance-assets-before
+        run: |
+          sh -n performance/k6/run-local.sh
+          sh -n performance/k6/run-docker.sh
+          sh -n performance/fixtures/run-fixture.sh
+          find performance/k6 -name '*.js' -print0 |
+            xargs -0 -n1 node --check
+          node --check performance/fixtures/seed.js
+          node --check performance/fixtures/verify.js
+          node --check performance/fixtures/cleanup.js
+          k6 inspect performance/k6/preflight.js
+          k6 inspect performance/k6/warmup.js
+          k6 inspect performance/k6/smoke.js
+          k6 inspect performance/k6/assignment-read.js
+          k6 inspect performance/k6/submission-status-read.js
+          python3 -m py_compile \
+            performance/compare/compare_results.py \
+            performance/compare/test_compare_results.py \
+            performance/k6/tools/generate_test_jwt.py \
+            performance/aggregate/summarize_runs.py \
+            performance/aggregate/test_summarize_runs.py
+          python3 -m unittest discover \
+            -s performance/compare \
+            -p 'test_*.py' \
+            -v
+          python3 -m unittest discover \
+            -s performance/aggregate \
+            -p 'test_*.py' \
+            -v
+          if [ -f scripts/validate-web-cicd-metrics.py ] && [ -f docs/metrics/web-cicd-remeasure.json ]; then
+            python3 scripts/validate-web-cicd-metrics.py --allow-pending docs/metrics/web-cicd-remeasure.json
+          else
+            echo "Resume metrics validator not present on this ref; skipping validate-only check."
+          fi
+          git diff --check
+
+  performance-assets-after:
+    name: performance-assets-after (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_ref }}
+
+      - name: Cache k6 binary
+        id: cache-k6
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/k6
+          key: ${{ runner.os }}-k6-${{ env.K6_VERSION }}
+
+      - name: Log k6 cache state
+        run: |
+          echo "k6 cache hit: ${{ steps.cache-k6.outputs.cache-hit }}"
+
+      - name: Install k6
+        if: steps.cache-k6.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-amd64.tar.gz" -o /tmp/k6.tar.gz
+          tar -xzf /tmp/k6.tar.gz -C /tmp
+          mv "/tmp/k6-v${K6_VERSION}-linux-amd64/k6" "$HOME/.local/bin/k6"
+          chmod +x "$HOME/.local/bin/k6"
+
+      - name: Add k6 to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify candidate pinned k6 version
+        run: |
+          expected="$(tr -d '[:space:]' < performance/k6/K6_VERSION)"
+          test "$expected" = "$K6_VERSION"
+          actual_line="$(k6 version | head -n 1)"
+          actual="$(printf '%s\n' "$actual_line" | sed -n 's/.*v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')"
+          which k6
+          echo "$actual_line"
+          test "$actual" = "$K6_VERSION"
+
+      - name: Run performance-assets-after
+        run: |
+          sh -n performance/k6/run-local.sh
+          sh -n performance/k6/run-docker.sh
+          sh -n performance/fixtures/run-fixture.sh
+          find performance/k6 -name '*.js' -print0 |
+            xargs -0 -n1 node --check
+          node --check performance/fixtures/seed.js
+          node --check performance/fixtures/verify.js
+          node --check performance/fixtures/cleanup.js
+          k6 inspect performance/k6/preflight.js
+          k6 inspect performance/k6/warmup.js
+          k6 inspect performance/k6/smoke.js
+          k6 inspect performance/k6/assignment-read.js
+          k6 inspect performance/k6/submission-status-read.js
+          python3 -m py_compile \
+            performance/compare/compare_results.py \
+            performance/compare/test_compare_results.py \
+            performance/k6/tools/generate_test_jwt.py \
+            performance/aggregate/summarize_runs.py \
+            performance/aggregate/test_summarize_runs.py
+          python3 -m unittest discover \
+            -s performance/compare \
+            -p 'test_*.py' \
+            -v
+          python3 -m unittest discover \
+            -s performance/aggregate \
+            -p 'test_*.py' \
+            -v
+          if [ -f scripts/validate-web-cicd-metrics.py ] && [ -f docs/metrics/web-cicd-remeasure.json ]; then
+            python3 scripts/validate-web-cicd-metrics.py --allow-pending docs/metrics/web-cicd-remeasure.json
+          else
+            echo "Resume metrics validator not present on this ref; skipping validate-only check."
+          fi
+          git diff --check
+
+  same-scope-ci-after:
+    runs-on: ubuntu-latest
+    needs:
+      - backend-test-after
+      - performance-assets-after
+    if: always()
+
+    steps:
+      - name: same-scope-ci-after
+        run: |
+          test "${{ needs.backend-test-after.result }}" = "success"
+          test "${{ needs.performance-assets-after.result }}" = "success"
+          {
+            echo "## same-scope-ci-after"
+            echo
+            echo "Use the critical path of backend-test-after and performance-assets-after for same-scope after measurement."
+            echo "build-jar is not part of same-scope CI."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  full-gate-ci-before:
+    runs-on: ubuntu-latest
+    needs: same-scope-ci-before
+    if: always()
+
+    steps:
+      - name: full-gate-ci-before
+        run: |
+          test "${{ needs.same-scope-ci-before.result }}" = "success"
+          {
+            echo "## full-gate-ci-before"
+            echo
+            echo "The baseline full gate matches same-scope CI because build-jar is not a PR gate requirement."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  full-gate-ci-after:
+    runs-on: ubuntu-latest
+    needs: same-scope-ci-after
+    if: always()
+
+    steps:
+      - name: full-gate-ci-after
+        run: |
+          test "${{ needs.same-scope-ci-after.result }}" = "success"
+          {
+            echo "## full-gate-ci-after"
+            echo
+            echo "The candidate full gate keeps build-jar outside the PR gate; CD dry-run build and image paths are measured separately."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build-jar-before:
+    name: build-jar-before (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseline_ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: build-jar-before
+        run: ./gradlew clean bootJar --no-daemon
+
+  build-jar-after:
+    name: build-jar-after (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: build-jar-after
+        run: ./gradlew bootJar -x test --build-cache --no-daemon
+
+  cd-dry-run-full-path-before:
+    name: cd-dry-run-full-path-before (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseline_ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build baseline bootJar before legacy image
+        run: ./gradlew clean bootJar --no-daemon
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: cd-dry-run-full-path-before
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          load: false
+          tags: ${{ env.IMAGE_NAME }}:cd-full-before-${{ matrix.iteration }}
+          no-cache: ${{ needs.validate-inputs.outputs.cache_mode == 'cold' }}
+          cache-from: type=gha,scope=web-cd-full-before-${{ matrix.iteration }}
+          cache-to: type=gha,mode=max,scope=web-cd-full-before-${{ matrix.iteration }}
+
+  cd-dry-run-full-path-after:
+    name: cd-dry-run-full-path-after (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build candidate bootJar once
+        run: ./gradlew bootJar -x test --build-cache --no-daemon
+
+      - name: Prepare prebuilt JAR
+        run: |
+          boot_jar="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | head -n 1)"
+          test -n "$boot_jar"
+          cp "$boot_jar" build/libs/app.jar
+          test -s build/libs/app.jar
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: cd-dry-run-full-path-after
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          push: false
+          load: false
+          tags: ${{ env.IMAGE_NAME }}:cd-full-after-${{ matrix.iteration }}
+          build-args: |
+            JAR_FILE=build/libs/app.jar
+          no-cache: ${{ needs.validate-inputs.outputs.cache_mode == 'cold' }}
+          cache-from: type=gha,scope=web-cd-full-after-${{ matrix.iteration }}
+          cache-to: type=gha,mode=max,scope=web-cd-full-after-${{ matrix.iteration }}
+
+  cd-image-build-only-before:
+    name: cd-image-build-only-before (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseline_ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: cd-image-build-only-before
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          load: false
+          tags: ${{ env.IMAGE_NAME }}:image-only-before-${{ matrix.iteration }}
+          no-cache: ${{ needs.validate-inputs.outputs.cache_mode == 'cold' }}
+          cache-from: type=gha,scope=web-image-only-before-${{ matrix.iteration }}
+          cache-to: type=gha,mode=max,scope=web-image-only-before-${{ matrix.iteration }}
+
+  prepare-runtime-jar-after:
+    name: prepare-runtime-jar-after (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build prebuilt runtime JAR
+        run: |
+          ./gradlew bootJar -x test --build-cache --no-daemon
+          boot_jar="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | head -n 1)"
+          test -n "$boot_jar"
+          cp "$boot_jar" build/libs/app.jar
+          test -s build/libs/app.jar
+
+      - name: Upload prebuilt runtime JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-jar-after-${{ matrix.iteration }}
+          path: build/libs/app.jar
+          if-no-files-found: error
+          retention-days: 1
+
+  cd-image-build-only-after:
+    name: cd-image-build-only-after (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs:
+      - validate-inputs
+      - prepare-runtime-jar-after
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_ref }}
+
+      - name: Download prebuilt runtime JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: runtime-jar-after-${{ matrix.iteration }}
+          path: build/libs
+
+      - name: Verify prebuilt runtime JAR
+        run: test -s build/libs/app.jar
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: cd-image-build-only-after
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          push: false
+          load: false
+          tags: ${{ env.IMAGE_NAME }}:image-only-after-${{ matrix.iteration }}
+          build-args: |
+            JAR_FILE=build/libs/app.jar
+          no-cache: ${{ needs.validate-inputs.outputs.cache_mode == 'cold' }}
+          cache-from: type=gha,scope=web-image-only-after-${{ matrix.iteration }}
+          cache-to: type=gha,mode=max,scope=web-image-only-after-${{ matrix.iteration }}
+
+  cd-image-build-warm-cache-before:
+    name: cd-image-build-warm-cache-before (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    if: needs.validate-inputs.outputs.cache_mode == 'warm'
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseline_ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Seed baseline image BuildKit cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          load: false
+          tags: ${{ env.IMAGE_NAME }}:warm-before-seed-${{ matrix.iteration }}
+          cache-from: type=gha,scope=web-image-warm-before-${{ matrix.iteration }}
+          cache-to: type=gha,mode=max,scope=web-image-warm-before-${{ matrix.iteration }}
+
+      - name: cd-image-build-warm-cache-before
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          load: false
+          tags: ${{ env.IMAGE_NAME }}:warm-before-${{ matrix.iteration }}
+          cache-from: type=gha,scope=web-image-warm-before-${{ matrix.iteration }}
+          cache-to: type=gha,mode=max,scope=web-image-warm-before-${{ matrix.iteration }}
+
+  cd-image-build-warm-cache-after:
+    name: cd-image-build-warm-cache-after (${{ matrix.iteration }})
+    runs-on: ubuntu-latest
+    needs:
+      - validate-inputs
+      - prepare-runtime-jar-after
+    if: needs.validate-inputs.outputs.cache_mode == 'warm'
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJSON(needs.validate-inputs.outputs.iterations_matrix) }}
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_ref }}
+
+      - name: Download prebuilt runtime JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: runtime-jar-after-${{ matrix.iteration }}
+          path: build/libs
+
+      - name: Verify prebuilt runtime JAR
+        run: test -s build/libs/app.jar
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Seed runtime image BuildKit cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          push: false
+          load: false
+          tags: ${{ env.IMAGE_NAME }}:warm-after-seed-${{ matrix.iteration }}
+          build-args: |
+            JAR_FILE=build/libs/app.jar
+          cache-from: type=gha,scope=web-image-warm-after-${{ matrix.iteration }}
+          cache-to: type=gha,mode=max,scope=web-image-warm-after-${{ matrix.iteration }}
+
+      - name: cd-image-build-warm-cache-after
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          push: false
+          load: false
+          tags: ${{ env.IMAGE_NAME }}:warm-after-${{ matrix.iteration }}
+          build-args: |
+            JAR_FILE=build/libs/app.jar
+          cache-from: type=gha,scope=web-image-warm-after-${{ matrix.iteration }}
+          cache-to: type=gha,mode=max,scope=web-image-warm-after-${{ matrix.iteration }}
+
+  finalize-measurement:
+    runs-on: ubuntu-latest
+    needs:
+      - validate-inputs
+      - same-scope-ci-before
+      - backend-test-before
+      - backend-test-after
+      - performance-assets-before
+      - performance-assets-after
+      - same-scope-ci-after
+      - full-gate-ci-before
+      - full-gate-ci-after
+      - build-jar-before
+      - build-jar-after
+      - cd-dry-run-full-path-before
+      - cd-dry-run-full-path-after
+      - cd-image-build-only-before
+      - prepare-runtime-jar-after
+      - cd-image-build-only-after
+      - cd-image-build-warm-cache-before
+      - cd-image-build-warm-cache-after
+    if: always()
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_ref }}
+
+      - name: Collect measurement metrics
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/collect-web-cicd-metrics.py \
+            --github-token "$GITHUB_TOKEN" \
+            --repository "${{ github.repository }}" \
+            --run-id "${{ github.run_id }}" \
+            --base-ref "${{ inputs.baseline_ref }}" \
+            --candidate-ref "${{ inputs.candidate_ref }}" \
+            --iterations "${{ inputs.iterations }}" \
+            --measurement-profile "${{ inputs.measurement_profile }}" \
+            --output docs/metrics/web-cicd-remeasure.json
+
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-cicd-remeasure-metrics
+          path: docs/metrics/web-cicd-remeasure.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Require completed usable metrics
+        run: python3 scripts/validate-web-cicd-metrics.py docs/metrics/web-cicd-remeasure.json

@@ -163,5 +163,8 @@ http://localhost:8080/actuator/health/readiness
 ## 참고 문서
 
 - [테스트와 성능 측정](./docs/MEASUREMENT.md)
+- [CI/CD Optimization](docs/cicd-optimization.md)
+- [CI/CD Measurement Audit](docs/cicd-measurement-audit.md)
+- [Resume Metrics](docs/resume-metrics.md)
 - [N+1 개선기](https://velog.io/@stdiodh/%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%99%80-k6%EB%A1%9C-%EA%B2%80%EC%A6%9D%ED%95%9C-%EA%B3%BC%EC%A0%9C-%EB%AA%A9%EB%A1%9D-N1-%EA%B0%9C%EC%84%A0%EA%B8%B0#%EC%A1%B0%ED%9A%8C-%ED%9A%9F%EC%88%98)
 - [패키지 구조 원칙](./PACKAGE_STRUCTURE_GUIDE.md)

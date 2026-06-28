@@ -94,6 +94,10 @@ export function assertSafeBaseUrl() {
     throw new Error("[k6 safety] Refusing to run when TARGET_ENVIRONMENT is production/prod.");
   }
 
+  if (envVar("REQUIRE_LOCAL_BASE_URL") === "true" && !isStrictLocalHost(host)) {
+    throw new Error("[k6 safety] REQUIRE_LOCAL_BASE_URL=true allows only localhost or 127.0.0.1.");
+  }
+
   if (isLocalHost(host)) {
     return;
   }
@@ -181,6 +185,10 @@ export function parseBaseUrl(rawUrl) {
 
 function isLocalHost(host) {
   return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function isStrictLocalHost(host) {
+  return host === "localhost" || host === "127.0.0.1";
 }
 
 function normalizeHost(host) {

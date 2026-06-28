@@ -100,7 +100,7 @@ for (const status of statuses) {
 }
 
 if (errors.length > 0) {
-  printjson({ status: "invalid", database: db.getName(), errors });
+  emitJson({ status: "invalid", database: db.getName(), errors });
   quit(1);
 }
 
@@ -113,7 +113,7 @@ const counts = {
 };
 const fixtureFingerprint = sha256(`${COURSE_SLUG}${counts.assignments}${counts.enrollments}${counts.submissionStatuses}${TARGET_ASSIGNMENT_ID}`);
 
-printjson({
+emitJson({
   status: "verified",
   database: db.getName(),
   courseSlug: COURSE_SLUG,
@@ -276,4 +276,8 @@ function assertLocalFixtureDb() {
   if (["localhost", "127.0.0.1", "mongodb"].indexOf(mongoHost) < 0) {
     throw new Error(`Refusing to verify non-local MongoDB host: ${mongoHost || "unknown"}`);
   }
+}
+
+function emitJson(value) {
+  print(JSON.stringify(value, null, 2));
 }

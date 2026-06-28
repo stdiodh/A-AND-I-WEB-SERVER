@@ -11,12 +11,18 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-test-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  K6_VERSION: "0.52.0"
+
 jobs:
-  test:
+  backend-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,21 +39,48 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Run tests
-        run: ./gradlew test --no-daemon
+      - name: Run backend tests and coverage verification
+        run: ./gradlew test jacocoTestCoverageVerification --build-cache --no-daemon
 
-      - name: Run JaCoCo coverage verification
-        run: ./gradlew jacocoTestCoverageVerification --no-daemon
+  performance-assets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache k6 binary
+        id: cache-k6
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/k6
+          key: ${{ runner.os }}-k6-${{ env.K6_VERSION }}
+
+      - name: Log k6 cache state
+        run: |
+          echo "k6 cache hit: ${{ steps.cache-k6.outputs.cache-hit }}"
 
       - name: Install k6
+        if: steps.cache-k6.outputs.cache-hit != 'true'
         run: |
-          K6_VERSION="$(cat performance/k6/K6_VERSION)"
-          echo "K6_VERSION=${K6_VERSION}" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.local/bin"
           curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-amd64.tar.gz" -o /tmp/k6.tar.gz
           tar -xzf /tmp/k6.tar.gz -C /tmp
-          sudo mv "/tmp/k6-v${K6_VERSION}-linux-amd64/k6" /usr/local/bin/k6
-          k6 version
-          test "$(k6 version | sed -n 's/.*v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')" = "$K6_VERSION"
+          mv "/tmp/k6-v${K6_VERSION}-linux-amd64/k6" "$HOME/.local/bin/k6"
+          chmod +x "$HOME/.local/bin/k6"
+
+      - name: Add k6 to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify pinned k6 version
+        run: |
+          expected="$(tr -d '[:space:]' < performance/k6/K6_VERSION)"
+          test "$expected" = "$K6_VERSION"
+          actual_line="$(k6 version | head -n 1)"
+          actual="$(printf '%s\n' "$actual_line" | sed -n 's/.*v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')"
+          which k6
+          echo "$actual_line"
+          test "$actual" = "$K6_VERSION"
 
       - name: Validate performance shell syntax
         run: |
@@ -78,7 +111,8 @@ jobs:
             performance/compare/test_compare_results.py \
             performance/k6/tools/generate_test_jwt.py \
             performance/aggregate/summarize_runs.py \
-            performance/aggregate/test_summarize_runs.py
+            performance/aggregate/test_summarize_runs.py \
+            scripts/resume/generate_resume_metrics.py
           python3 -m unittest discover \
             -s performance/compare \
             -p 'test_*.py' \
@@ -87,7 +121,36 @@ jobs:
             -s performance/aggregate \
             -p 'test_*.py' \
             -v
+          python3 scripts/resume/generate_resume_metrics.py --validate-only
+
+      - name: Validate resume metrics state
+        run: python3 scripts/validate-web-cicd-metrics.py --allow-pending docs/metrics/web-cicd-remeasure.json
 
       - name: Validate git whitespace
+        run: git diff --check
+
+  full-gate-ci:
+    runs-on: ubuntu-latest
+    needs:
+      - backend-test
+      - performance-assets
+    if: always()
+
+    steps:
+      - name: Require same-scope CI jobs
         run: |
-          git diff --check
+          test "${{ needs.backend-test.result }}" = "success"
+          test "${{ needs.performance-assets.result }}" = "success"
+
+      - name: Write CI gate summary
+        run: |
+          {
+            echo "## CI gate summary"
+            echo
+            echo "| Job | Result | Scope |"
+            echo "| :--- | :--- | :--- |"
+            echo "| backend-test | ${{ needs.backend-test.result }} | same-scope |"
+            echo "| performance-assets | ${{ needs.performance-assets.result }} | same-scope |"
+            echo
+            echo "build-jar is intentionally excluded from the PR gate and measured in the CD dry-run path."
+          } >> "$GITHUB_STEP_SUMMARY"

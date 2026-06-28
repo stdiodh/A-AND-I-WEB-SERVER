@@ -1,0 +1,778 @@
+{
+  "generatedAt": "2026-06-28T16:40:50Z",
+  "resultDate": "2026-06-29",
+  "scope": "local-only assignment read scale fixture",
+  "safety": {
+    "baseUrl": "localhost or 127.0.0.1 only",
+    "mongoDatabase": "aandi_performance only",
+    "remoteTargetsAllowed": false,
+    "productionAccessAllowed": false
+  },
+  "comparison": {
+    "status": "[비교 불가]",
+    "reason": "before/after 조건을 완전히 동일하게 맞춘 비교 입력이 아니므로 latency 개선율을 계산하지 않습니다."
+  },
+  "javaVersion": "openjdk version \"21.0.6\" 2025-01-21",
+  "scenarios": [
+    {
+      "name": "assignment-300",
+      "files": {
+        "scenario": "assignment-300",
+        "scenarioDir": "performance/results/assignment-scale/2026-06-29/assignment-300",
+        "fixtureVerifyJson": "performance/results/assignment-scale/2026-06-29/assignment-300/fixture-verify.json",
+        "aggregateJson": "performance/results/assignment-scale/2026-06-29/assignment-300/assignment-300.aggregate.json",
+        "aggregateMarkdown": "performance/results/assignment-scale/2026-06-29/assignment-300/assignment-300.aggregate.md",
+        "mongoProfileJson": "performance/results/assignment-scale/2026-06-29/assignment-300/assignment-300.mongo-profile.json",
+        "mongoProfileMarkdown": "performance/results/assignment-scale/2026-06-29/assignment-300/assignment-300.mongo-profile.md"
+      },
+      "fixture": {
+        "status": "verified",
+        "database": "aandi_performance",
+        "courseSlug": "perf-k6",
+        "assignmentId": "10000000-0000-4000-8000-000000000001",
+        "userId": "00000000-0000-4000-8000-000000000001",
+        "adminUserId": "00000000-0000-4000-8000-999999999999",
+        "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+        "counts": {
+          "courses": 1,
+          "weeks": 3,
+          "assignments": 300,
+          "enrollments": 100,
+          "submissionStatuses": 60
+        }
+      },
+      "k6": {
+        "context": {
+          "scenario": "assignment-read",
+          "baseUrlHost": "localhost",
+          "targetEnvironment": "local",
+          "gitCommitSha": "697488c",
+          "gitDirty": "false",
+          "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)",
+          "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+          "fixtureCounts": {
+            "courses": "1",
+            "assignments": "300",
+            "enrollments": "100",
+            "submissionStatuses": "60"
+          },
+          "executor": "constant-arrival-rate",
+          "vus": "50 req/s",
+          "loadModel": "arrival-rate",
+          "targetRps": "50",
+          "preAllocatedVus": "100",
+          "maxVus": "300",
+          "duration": "2m",
+          "requestSleepSeconds": "1",
+          "assignmentListRatio": "60",
+          "assignmentDetailRatio": "40",
+          "jvmOptions": "unknown",
+          "mongodbMode": "local-docker-compose",
+          "cpu": "Apple M5 Pro",
+          "memory": "48.00 GiB",
+          "warmupCompleted": "true"
+        },
+        "summary": {
+          "business_p50_ms": {
+            "median": 107.38550000000001,
+            "min": 106.95400000000001,
+            "max": 107.474
+          },
+          "business_p90_ms": {
+            "median": 124.4735,
+            "min": 123.1015,
+            "max": 128.826
+          },
+          "business_p95_ms": {
+            "median": 129.0275,
+            "min": 127.56544999999998,
+            "max": 138.947
+          },
+          "business_p99_ms": {
+            "median": 136.78278999999998,
+            "min": 136.67412,
+            "max": 161.444
+          },
+          "assignment_list_p50_ms": {
+            "median": 114.793,
+            "min": 114.36,
+            "max": 116.526
+          },
+          "assignment_list_p90_ms": {
+            "median": 127.807,
+            "min": 126.6682,
+            "max": 136.5104
+          },
+          "assignment_list_p95_ms": {
+            "median": 131.643,
+            "min": 130.4995,
+            "max": 147.435
+          },
+          "assignment_list_p99_ms": {
+            "median": 140.33427999999998,
+            "min": 139.08479999999997,
+            "max": 166.73884
+          },
+          "assignment_detail_p50_ms": {
+            "median": 6.092,
+            "min": 5.979,
+            "max": 6.093
+          },
+          "assignment_detail_p90_ms": {
+            "median": 12.2512,
+            "min": 12.139199999999999,
+            "max": 12.9795
+          },
+          "assignment_detail_p95_ms": {
+            "median": 13.9934,
+            "min": 13.835199999999999,
+            "max": 15.576249999999996
+          },
+          "assignment_detail_p99_ms": {
+            "median": 18.476399999999998,
+            "min": 17.940239999999996,
+            "max": 20.430749999999996
+          },
+          "http_rps": {
+            "median": 49.946020262237326,
+            "min": 49.890539740055814,
+            "max": 49.95476346394523
+          },
+          "business_success_throughput": {
+            "median": 49.946020262237326,
+            "min": 49.890539740055814,
+            "max": 49.95476346394523
+          },
+          "assignment_list_success_throughput": {
+            "median": 29.50485616224485,
+            "min": 29.46036371650296,
+            "max": 29.897925933171216
+          },
+          "assignment_detail_success_throughput": {
+            "median": 20.430176023552857,
+            "min": 20.056837530774008,
+            "max": 20.44116409999248
+          },
+          "iterations": {
+            "median": 6000.0,
+            "min": 6000.0,
+            "max": 6001.0
+          },
+          "http_failure_rate": {
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "check_success_rate": {
+            "median": 1.0,
+            "min": 1.0,
+            "max": 1.0
+          },
+          "dropped_iterations": {
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        }
+      },
+      "mongo": {
+        "context": {
+          "database": "aandi_performance",
+          "mongoVersion": "7.0.16",
+          "fixture": {
+            "courses": 1,
+            "assignments": 300,
+            "enrollments": 100,
+            "submissionStatuses": 60,
+            "courseSlug": "perf-k6",
+            "assignmentId": "10000000-0000-4000-8000-000000000001"
+          }
+        },
+        "summary": {
+          "commandCount": {
+            "median": 7,
+            "min": 7,
+            "max": 7
+          },
+          "totalDocsExamined": {
+            "median": 1720,
+            "min": 1648,
+            "max": 1720
+          },
+          "totalKeysExamined": {
+            "median": 1720,
+            "min": 1648,
+            "max": 1720
+          },
+          "totalMillis": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "explainTotalDocsExamined": {
+            "median": 2203,
+            "min": 2203,
+            "max": 2203
+          },
+          "explainTotalKeysExamined": {
+            "median": 2205,
+            "min": 2205,
+            "max": 2205
+          },
+          "byNamespace": {
+            "aandi_performance.assignment_test_cases": {
+              "commandCount": {
+                "median": 7,
+                "min": 7,
+                "max": 7
+              },
+              "totalDocsExamined": {
+                "median": 1720,
+                "min": 1648,
+                "max": 1720
+              },
+              "totalKeysExamined": {
+                "median": 1720,
+                "min": 1648,
+                "max": 1720
+              },
+              "totalMillis": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              }
+            }
+          },
+          "explains": {
+            "assignment_detail_by_id_course": {
+              "totalDocsExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "totalKeysExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "nReturned": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "executionTimeMillis": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "indexName": "_id_",
+              "winningPlanStage": "FETCH"
+            },
+            "assignment_list_by_course": {
+              "totalDocsExamined": {
+                "median": 1000,
+                "min": 1000,
+                "max": 1000
+              },
+              "totalKeysExamined": {
+                "median": 1000,
+                "min": 1000,
+                "max": 1000
+              },
+              "nReturned": {
+                "median": 1000,
+                "min": 1000,
+                "max": 1000
+              },
+              "executionTimeMillis": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "indexName": "ux_assignment_course_week_order",
+              "winningPlanStage": "FETCH"
+            },
+            "course_by_slug": {
+              "totalDocsExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "totalKeysExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "nReturned": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "executionTimeMillis": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "indexName": "slug",
+              "winningPlanStage": "FETCH"
+            },
+            "enrollment_by_course_user": {
+              "totalDocsExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "totalKeysExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "nReturned": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "executionTimeMillis": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "indexName": "ux_course_enrollment",
+              "winningPlanStage": "FETCH"
+            },
+            "requirements_by_assignment_in": {
+              "totalDocsExamined": {
+                "median": 300,
+                "min": 300,
+                "max": 300
+              },
+              "totalKeysExamined": {
+                "median": 301,
+                "min": 301,
+                "max": 301
+              },
+              "nReturned": {
+                "median": 300,
+                "min": 300,
+                "max": 300
+              },
+              "executionTimeMillis": {
+                "median": 0,
+                "min": 0,
+                "max": 1
+              },
+              "indexName": "ux_assignment_requirement_sort",
+              "winningPlanStage": "FETCH"
+            },
+            "testcases_by_assignment_in": {
+              "totalDocsExamined": {
+                "median": 900,
+                "min": 900,
+                "max": 900
+              },
+              "totalKeysExamined": {
+                "median": 901,
+                "min": 901,
+                "max": 901
+              },
+              "nReturned": {
+                "median": 900,
+                "min": 900,
+                "max": 900
+              },
+              "executionTimeMillis": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "indexName": "ux_assignment_test_case_seq",
+              "winningPlanStage": "FETCH"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "assignment-1000",
+      "files": {
+        "scenario": "assignment-1000",
+        "scenarioDir": "performance/results/assignment-scale/2026-06-29/assignment-1000",
+        "fixtureVerifyJson": "performance/results/assignment-scale/2026-06-29/assignment-1000/fixture-verify.json",
+        "aggregateJson": "performance/results/assignment-scale/2026-06-29/assignment-1000/assignment-1000.aggregate.json",
+        "aggregateMarkdown": "performance/results/assignment-scale/2026-06-29/assignment-1000/assignment-1000.aggregate.md",
+        "mongoProfileJson": "performance/results/assignment-scale/2026-06-29/assignment-1000/assignment-1000.mongo-profile.json",
+        "mongoProfileMarkdown": "performance/results/assignment-scale/2026-06-29/assignment-1000/assignment-1000.mongo-profile.md"
+      },
+      "fixture": {
+        "status": "verified",
+        "database": "aandi_performance",
+        "courseSlug": "perf-k6",
+        "assignmentId": "10000000-0000-4000-8000-000000000001",
+        "userId": "00000000-0000-4000-8000-000000000001",
+        "adminUserId": "00000000-0000-4000-8000-999999999999",
+        "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+        "counts": {
+          "courses": 1,
+          "weeks": 3,
+          "assignments": 1000,
+          "enrollments": 100,
+          "submissionStatuses": 60
+        }
+      },
+      "k6": {
+        "context": {
+          "scenario": "assignment-read",
+          "baseUrlHost": "localhost",
+          "targetEnvironment": "local",
+          "gitCommitSha": "697488c",
+          "gitDirty": "false",
+          "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)",
+          "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+          "fixtureCounts": {
+            "courses": "1",
+            "assignments": "1000",
+            "enrollments": "100",
+            "submissionStatuses": "60"
+          },
+          "executor": "constant-arrival-rate",
+          "vus": "50 req/s",
+          "loadModel": "arrival-rate",
+          "targetRps": "50",
+          "preAllocatedVus": "100",
+          "maxVus": "300",
+          "duration": "2m",
+          "requestSleepSeconds": "1",
+          "assignmentListRatio": "60",
+          "assignmentDetailRatio": "40",
+          "jvmOptions": "unknown",
+          "mongodbMode": "local-docker-compose",
+          "cpu": "Apple M5 Pro",
+          "memory": "48.00 GiB",
+          "warmupCompleted": "true"
+        },
+        "summary": {
+          "business_p50_ms": {
+            "median": 105.9765,
+            "min": 105.148,
+            "max": 106.377
+          },
+          "business_p90_ms": {
+            "median": 121.7116,
+            "min": 120.7458,
+            "max": 122.808
+          },
+          "business_p95_ms": {
+            "median": 125.51265,
+            "min": 124.86139999999999,
+            "max": 126.632
+          },
+          "business_p99_ms": {
+            "median": 133.48082,
+            "min": 133.39306,
+            "max": 134.344
+          },
+          "assignment_list_p50_ms": {
+            "median": 112.918,
+            "min": 112.493,
+            "max": 113.71
+          },
+          "assignment_list_p90_ms": {
+            "median": 124.629,
+            "min": 123.86160000000001,
+            "max": 125.754
+          },
+          "assignment_list_p95_ms": {
+            "median": 127.878,
+            "min": 127.56325,
+            "max": 128.8892
+          },
+          "assignment_list_p99_ms": {
+            "median": 135.60223,
+            "min": 135.437,
+            "max": 136.44224
+          },
+          "assignment_detail_p50_ms": {
+            "median": 5.382,
+            "min": 5.2165,
+            "max": 5.516
+          },
+          "assignment_detail_p90_ms": {
+            "median": 11.4231,
+            "min": 11.394,
+            "max": 11.608800000000002
+          },
+          "assignment_detail_p95_ms": {
+            "median": 12.8936,
+            "min": 12.666649999999999,
+            "max": 13.110599999999993
+          },
+          "assignment_detail_p99_ms": {
+            "median": 17.67253,
+            "min": 17.579819999999998,
+            "max": 18.05634
+          },
+          "http_rps": {
+            "median": 49.95786886392475,
+            "min": 49.957487011178266,
+            "max": 49.966293359643636
+          },
+          "business_success_throughput": {
+            "median": 49.95786886392475,
+            "min": 49.957487011178266,
+            "max": 49.966293359643636
+          },
+          "assignment_list_success_throughput": {
+            "median": 29.983047629832175,
+            "min": 29.375002362572822,
+            "max": 30.03306451395344
+          },
+          "assignment_detail_success_throughput": {
+            "median": 19.97482123409258,
+            "min": 19.9332288456902,
+            "max": 20.582484648605448
+          },
+          "iterations": {
+            "median": 6000.0,
+            "min": 6000.0,
+            "max": 6001.0
+          },
+          "http_failure_rate": {
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "check_success_rate": {
+            "median": 1.0,
+            "min": 1.0,
+            "max": 1.0
+          },
+          "dropped_iterations": {
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        }
+      },
+      "mongo": {
+        "context": {
+          "database": "aandi_performance",
+          "mongoVersion": "7.0.16",
+          "fixture": {
+            "courses": 1,
+            "assignments": 1000,
+            "enrollments": 100,
+            "submissionStatuses": 60,
+            "courseSlug": "perf-k6",
+            "assignmentId": "10000000-0000-4000-8000-000000000001"
+          }
+        },
+        "summary": {
+          "commandCount": {
+            "median": 7,
+            "min": 7,
+            "max": 7
+          },
+          "totalDocsExamined": {
+            "median": 1720,
+            "min": 1648,
+            "max": 1720
+          },
+          "totalKeysExamined": {
+            "median": 1720,
+            "min": 1648,
+            "max": 1720
+          },
+          "totalMillis": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "explainTotalDocsExamined": {
+            "median": 5003,
+            "min": 5003,
+            "max": 5003
+          },
+          "explainTotalKeysExamined": {
+            "median": 5003,
+            "min": 5003,
+            "max": 5003
+          },
+          "byNamespace": {
+            "aandi_performance.assignment_test_cases": {
+              "commandCount": {
+                "median": 7,
+                "min": 7,
+                "max": 7
+              },
+              "totalDocsExamined": {
+                "median": 1720,
+                "min": 1648,
+                "max": 1720
+              },
+              "totalKeysExamined": {
+                "median": 1720,
+                "min": 1648,
+                "max": 1720
+              },
+              "totalMillis": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              }
+            }
+          },
+          "explains": {
+            "assignment_detail_by_id_course": {
+              "totalDocsExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "totalKeysExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "nReturned": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "executionTimeMillis": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "indexName": "_id_",
+              "winningPlanStage": "FETCH"
+            },
+            "assignment_list_by_course": {
+              "totalDocsExamined": {
+                "median": 1000,
+                "min": 1000,
+                "max": 1000
+              },
+              "totalKeysExamined": {
+                "median": 1000,
+                "min": 1000,
+                "max": 1000
+              },
+              "nReturned": {
+                "median": 1000,
+                "min": 1000,
+                "max": 1000
+              },
+              "executionTimeMillis": {
+                "median": 1,
+                "min": 1,
+                "max": 2
+              },
+              "indexName": "ux_assignment_course_week_order",
+              "winningPlanStage": "FETCH"
+            },
+            "course_by_slug": {
+              "totalDocsExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "totalKeysExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "nReturned": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "executionTimeMillis": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "indexName": "slug",
+              "winningPlanStage": "FETCH"
+            },
+            "enrollment_by_course_user": {
+              "totalDocsExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "totalKeysExamined": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "nReturned": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "executionTimeMillis": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "indexName": "ux_course_enrollment",
+              "winningPlanStage": "FETCH"
+            },
+            "requirements_by_assignment_in": {
+              "totalDocsExamined": {
+                "median": 1000,
+                "min": 1000,
+                "max": 1000
+              },
+              "totalKeysExamined": {
+                "median": 1000,
+                "min": 1000,
+                "max": 1000
+              },
+              "nReturned": {
+                "median": 1000,
+                "min": 1000,
+                "max": 1000
+              },
+              "executionTimeMillis": {
+                "median": 3,
+                "min": 2,
+                "max": 3
+              },
+              "indexName": "ux_assignment_requirement_sort",
+              "winningPlanStage": "FETCH"
+            },
+            "testcases_by_assignment_in": {
+              "totalDocsExamined": {
+                "median": 3000,
+                "min": 3000,
+                "max": 3000
+              },
+              "totalKeysExamined": {
+                "median": 3000,
+                "min": 3000,
+                "max": 3000
+              },
+              "nReturned": {
+                "median": 3000,
+                "min": 3000,
+                "max": 3000
+              },
+              "executionTimeMillis": {
+                "median": 6,
+                "min": 5,
+                "max": 7
+              },
+              "indexName": "ux_assignment_test_case_seq",
+              "winningPlanStage": "FETCH"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "resumeSentence": {
+    "confirmed": "300/1000개 과제 fixture에서 k6 고정 부하와 MongoDB profile로 읽기 API P95/P99와 DB 접근 효율을 로컬 재현 환경에서 검증",
+    "beforeMeasurement": "과제 조회 API의 scale fixture 성능 측정 환경을 구축해 P95/P99와 DB 접근 패턴을 회귀 기준으로 관리"
+  }
+}

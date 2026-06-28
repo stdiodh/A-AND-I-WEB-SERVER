@@ -4,6 +4,8 @@
 
 [README로 돌아가기](../README.md)
 
+이력서용 수치 근거는 [Resume Metrics](./resume-metrics.md)에 별도로 모읍니다.
+
 ## 테스트
 
 2026-06-04 KST 기준으로 다음 명령을 실행했습니다.

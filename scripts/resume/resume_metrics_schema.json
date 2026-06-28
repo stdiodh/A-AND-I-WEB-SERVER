@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "A&I Resume Metrics",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "sourcePolicy", "disclaimer", "metrics", "resumeSentences"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "generatedAt": { "type": "string" },
+    "sourcePolicy": {
+      "type": "object",
+      "required": ["networkAccess", "githubApiAccess", "loadTestExecuted", "workflowExecuted", "productionAccess", "allowedInputs"],
+      "properties": {
+        "networkAccess": { "type": "boolean", "const": false },
+        "githubApiAccess": { "type": "boolean", "const": false },
+        "loadTestExecuted": { "type": "boolean", "const": false },
+        "workflowExecuted": { "type": "boolean", "const": false },
+        "productionAccess": { "type": "boolean", "const": false },
+        "allowedInputs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "disclaimer": { "type": "string" },
+    "metrics": {
+      "type": "object",
+      "required": ["tests", "coverage", "k6", "ci"],
+      "properties": {
+        "tests": { "$ref": "#/$defs/metric" },
+        "coverage": { "$ref": "#/$defs/metric" },
+        "k6": { "$ref": "#/$defs/metric" },
+        "ci": { "$ref": "#/$defs/metric" }
+      }
+    },
+    "resumeSentences": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["confidence", "text"],
+        "properties": {
+          "confidence": {
+            "type": "string",
+            "enum": ["확인 완료", "측정 필요", "확인 필요", "사용 비추천"]
+          },
+          "text": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": ["확인 완료", "측정 필요", "확인 필요", "사용 비추천"]
+    },
+    "metric": {
+      "type": "object",
+      "required": ["name", "source", "confidence", "reason", "values", "valueConfidences"],
+      "properties": {
+        "name": { "type": "string" },
+        "source": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "reason": { "type": "string" },
+        "values": { "type": "object" },
+        "valueConfidences": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/confidence" }
+        }
+      }
+    }
+  }
+}

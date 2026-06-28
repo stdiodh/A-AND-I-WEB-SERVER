@@ -1,1 +1,10 @@
-secret_docs/
+.git
+.github
+.gradle
+build/*
+!build/libs/
+!build/libs/*.jar
+docs
+performance
+secret_docs
+src/test

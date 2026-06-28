@@ -1,0 +1,41 @@
+name: Measure Web CI/CD Same Scope
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: Baseline ref to measure
+        required: true
+        default: main
+      candidate_ref:
+        description: Candidate ref to measure
+        required: true
+        default: develop-web-cicd-same-scope-remeasure
+      iterations:
+        description: Number of official runs per side
+        required: true
+        default: "5"
+      measurement_profile:
+        description: Official measurement profile
+        required: true
+        type: choice
+        options:
+          - official
+          - official-cold
+          - official-warm
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  measure:
+    uses: ./.github/workflows/measure-web-cicd.yml
+    permissions:
+      contents: read
+      actions: read
+    with:
+      baseline_ref: ${{ inputs.baseline_ref }}
+      candidate_ref: ${{ inputs.candidate_ref }}
+      iterations: ${{ inputs.iterations }}
+      measurement_profile: ${{ inputs.measurement_profile }}

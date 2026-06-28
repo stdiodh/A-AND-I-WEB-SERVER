@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-28T00:00:00Z",
+  "sourcePolicy": {
+    "networkAccess": false,
+    "githubApiAccess": false,
+    "loadTestExecuted": false,
+    "workflowExecuted": false,
+    "productionAccess": false,
+    "allowedInputs": [
+      "JaCoCo XML",
+      "JUnit TEST XML",
+      "k6 aggregate JSON",
+      "committed CI metrics JSON"
+    ]
+  },
+  "disclaimer": "이 수치는 운영 환경 최대 처리량이 아니라 로컬/고정 부하 회귀 검증 기준입니다.",
+  "metrics": {
+    "tests": {
+      "name": "junit",
+      "source": "build/test-results/test/TEST-*.xml",
+      "confidence": "측정 필요",
+      "reason": "Example placeholder.",
+      "values": {
+        "tests": null,
+        "failures": null,
+        "errors": null,
+        "skipped": null,
+        "suites": 0
+      },
+      "valueConfidences": {
+        "tests": "측정 필요",
+        "failures": "측정 필요",
+        "errors": "측정 필요",
+        "skipped": "측정 필요",
+        "suites": "측정 필요"
+      }
+    },
+    "coverage": {
+      "name": "jacoco",
+      "source": "build/reports/jacoco/test/jacocoTestReport.xml",
+      "confidence": "측정 필요",
+      "reason": "Example placeholder.",
+      "values": {
+        "lineCoveragePercent": null,
+        "branchCoveragePercent": null
+      },
+      "valueConfidences": {
+        "lineCoveragePercent": "측정 필요",
+        "branchCoveragePercent": "측정 필요"
+      }
+    },
+    "k6": {
+      "name": "k6",
+      "source": "performance/results/assignment-read-after.aggregate.json",
+      "confidence": "측정 필요",
+      "reason": "Example placeholder.",
+      "values": {
+        "businessP50Ms": null,
+        "businessP90Ms": null,
+        "businessP95Ms": null,
+        "businessP99Ms": null,
+        "httpFailureRate": null,
+        "checkSuccessRate": null,
+        "throughputRps": null,
+        "droppedIterations": null
+      },
+      "valueConfidences": {
+        "businessP50Ms": "측정 필요",
+        "businessP90Ms": "측정 필요",
+        "businessP95Ms": "측정 필요",
+        "businessP99Ms": "측정 필요",
+        "httpFailureRate": "측정 필요",
+        "checkSuccessRate": "측정 필요",
+        "throughputRps": "측정 필요",
+        "droppedIterations": "측정 필요"
+      }
+    },
+    "ci": {
+      "name": "ci",
+      "source": "docs/metrics/ci-summary.json",
+      "confidence": "측정 필요",
+      "reason": "Example placeholder.",
+      "values": {
+        "ciTotalSeconds": null,
+        "ciTestStepSeconds": null,
+        "ciBuildStepSeconds": null,
+        "dockerBuildPushSeconds": null,
+        "ciFailureRate": null
+      },
+      "valueConfidences": {
+        "ciTotalSeconds": "측정 필요",
+        "ciTestStepSeconds": "측정 필요",
+        "ciBuildStepSeconds": "측정 필요",
+        "dockerBuildPushSeconds": "측정 필요",
+        "ciFailureRate": "측정 필요"
+      }
+    }
+  },
+  "resumeSentences": [
+    {
+      "confidence": "확인 완료",
+      "text": "테스트·커버리지 지표를 docs/resume-metrics.md로 문서화해 이력서 수치의 재현 가능성을 관리"
+    },
+    {
+      "confidence": "확인 필요",
+      "text": "JaCoCo, JUnit XML, k6 aggregate, GitHub Actions metrics를 기반으로 성능·품질 지표를 자동 집계"
+    }
+  ]
+}

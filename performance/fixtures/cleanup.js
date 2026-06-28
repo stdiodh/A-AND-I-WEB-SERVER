@@ -44,7 +44,7 @@ const result = {
   courses: db.courses.deleteMany({ _id: COURSE_ID, slug: COURSE_SLUG }).deletedCount,
 };
 
-printjson({
+emitJson({
   status: "cleaned",
   database: db.getName(),
   deleted: result,
@@ -97,4 +97,8 @@ function assertLocalFixtureDb() {
   if (["localhost", "127.0.0.1", "mongodb"].indexOf(mongoHost) < 0) {
     throw new Error(`Refusing to cleanup non-local MongoDB host: ${mongoHost || "unknown"}`);
   }
+}
+
+function emitJson(value) {
+  print(JSON.stringify(value, null, 2));
 }
