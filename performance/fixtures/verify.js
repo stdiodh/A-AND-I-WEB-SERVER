@@ -10,7 +10,7 @@ const PRIVATE_SEQ = intEnv("PRIVATE_TESTCASE_SEQ", 9001, 1);
 
 assertLocalFixtureDb();
 
-const expectedAssignments = intEnv("FIXTURE_ASSIGNMENTS", 30, 10);
+const expectedAssignments = intEnv("FIXTURE_ASSIGNMENTS", 30, 1);
 const expectedEnrollments = intEnv("FIXTURE_ENROLLMENTS", 100, 1);
 const expectedSubmissionStatuses = Math.min(intEnv("FIXTURE_SUBMISSION_STATUSES", 60, 0), expectedEnrollments);
 if (expectedEnrollments > 999) {

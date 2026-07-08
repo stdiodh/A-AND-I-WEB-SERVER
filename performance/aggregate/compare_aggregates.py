@@ -31,10 +31,13 @@ REQUIRED_EQUAL_CONTEXT = [
     "maxVus",
 ]
 
-LATENCY_METRICS = {
+ASSIGNMENT_LIST_LATENCY_METRICS = {
     "assignment_list_p50_ms": "Assignment list P50",
     "assignment_list_p95_ms": "Assignment list P95",
     "assignment_list_p99_ms": "Assignment list P99",
+}
+
+ASSIGNMENT_DETAIL_LATENCY_METRICS = {
     "assignment_detail_p95_ms": "Assignment detail P95",
 }
 
@@ -80,6 +83,7 @@ def compare(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
             "reasons": reasons,
         }
 
+    latency_metrics = latency_metrics_for_context(before.get("context", {}))
     latency = {
         key: latency_comparison(
             key=key,
@@ -89,7 +93,7 @@ def compare(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
             before_runs=run_values(before, key),
             after_runs=run_values(after, key),
         )
-        for key, label in LATENCY_METRICS.items()
+        for key, label in latency_metrics.items()
     }
     throughput = throughput_comparison(
         before=metric_summary(before, THROUGHPUT_METRIC),
@@ -122,13 +126,17 @@ def validation_errors(before: dict[str, Any], after: dict[str, Any]) -> list[str
         if before_context.get(key) != after_context.get(key):
             reasons.append(f"context mismatch: {key}")
 
+    latency_metrics = latency_metrics_for_context(before_context)
+    if not latency_metrics:
+        reasons.append("no endpoint ratio greater than zero")
+
     for label, aggregate in (("before", before), ("after", after)):
         context = aggregate.get("context", {})
         if context.get("gitDirty") != "false":
             reasons.append(f"{label} gitDirty must be false")
         if context.get("warmupCompleted") != "true":
             reasons.append(f"{label} warm-up must be completed")
-        for metric_name in list(LATENCY_METRICS.keys()) + [THROUGHPUT_METRIC]:
+        for metric_name in list(latency_metrics.keys()) + [THROUGHPUT_METRIC]:
             summary = aggregate.get("summary", {}).get(metric_name)
             if not isinstance(summary, dict):
                 reasons.append(f"{label} missing metric: {metric_name}")
@@ -256,6 +264,22 @@ def ranges_overlap(before: dict[str, float], after: dict[str, float]) -> bool:
 def comparable_context(aggregate: dict[str, Any]) -> dict[str, Any]:
     context = aggregate.get("context", {})
     return {key: context.get(key) for key in REQUIRED_EQUAL_CONTEXT}
+
+
+def latency_metrics_for_context(context: dict[str, Any]) -> dict[str, str]:
+    metrics: dict[str, str] = {}
+    if ratio_value(context.get("assignmentListRatio")) > 0:
+        metrics.update(ASSIGNMENT_LIST_LATENCY_METRICS)
+    if ratio_value(context.get("assignmentDetailRatio")) > 0:
+        metrics.update(ASSIGNMENT_DETAIL_LATENCY_METRICS)
+    return metrics
+
+
+def ratio_value(raw: Any) -> float:
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def render_markdown(result: dict[str, Any]) -> str:

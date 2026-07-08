@@ -103,6 +103,16 @@ class CompareAggregatesTest(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("before zero baseline guard failed: assignment_list_p95_ms", result.stdout)
 
+    def test_accepts_list_only_aggregate_without_detail_metric(self):
+        before = aggregate(assignment_detail_ratio="0", include_detail_metric=False)
+        after = aggregate(assignment_detail_ratio="0", include_detail_metric=False, git_sha="def456")
+
+        result = run_compare(before, after)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["accepted"])
+        self.assertNotIn("assignment_detail_p95_ms", payload["latency"])
 
 def run_compare(before, after):
     with tempfile.TemporaryDirectory() as tmp:
@@ -131,26 +141,30 @@ def aggregate(
     warmup_completed="true",
     list_p95=(10.0, 10.0, 10.0),
     query_count=None,
+    assignment_list_ratio="60",
+    assignment_detail_ratio="40",
+    include_detail_metric=True,
 ):
     summary = {
         "assignment_list_p50_ms": stats([value - 2.0 for value in list_p95]),
         "assignment_list_p95_ms": stats(list_p95),
         "assignment_list_p99_ms": stats([value + 2.0 for value in list_p95]),
-        "assignment_detail_p95_ms": stats([4.0, 4.0, 4.0]),
         "business_success_throughput": stats([100.0, 100.0, 100.0]),
     }
+    if include_detail_metric:
+        summary["assignment_detail_p95_ms"] = stats([4.0, 4.0, 4.0])
     runs = []
     for index, value in enumerate(list_p95, start=1):
-        runs.append(
-            {
-                "file": f"run{index}.json",
-                "assignment_list_p50_ms": value - 2.0,
-                "assignment_list_p95_ms": value,
-                "assignment_list_p99_ms": value + 2.0,
-                "assignment_detail_p95_ms": 4.0,
-                "business_success_throughput": 100.0,
-            }
-        )
+        run = {
+            "file": f"run{index}.json",
+            "assignment_list_p50_ms": value - 2.0,
+            "assignment_list_p95_ms": value,
+            "assignment_list_p99_ms": value + 2.0,
+            "business_success_throughput": 100.0,
+        }
+        if include_detail_metric:
+            run["assignment_detail_p95_ms"] = 4.0
+        runs.append(run)
     payload = {
         "accepted": True,
         "context": {
@@ -169,8 +183,8 @@ def aggregate(
             "targetRps": "100",
             "duration": "2m",
             "requestSleepSeconds": "1",
-            "assignmentListRatio": "60",
-            "assignmentDetailRatio": "40",
+            "assignmentListRatio": assignment_list_ratio,
+            "assignmentDetailRatio": assignment_detail_ratio,
             "jvmOptions": "unknown",
             "mongodbMode": "local-standalone",
             "cpu": "Apple M5 Pro",

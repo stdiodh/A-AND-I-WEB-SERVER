@@ -37,29 +37,34 @@ REQUIRED_CONTEXT_EQUAL = [
     "warmupCompleted",
 ]
 
-SUMMARY_METRICS = {
+COMMON_SUMMARY_METRICS = {
     "business_p50_ms": ("api_request_duration_ms", "med"),
     "business_p90_ms": ("api_request_duration_ms", "p(90)"),
     "business_p95_ms": ("api_request_duration_ms", "p(95)"),
     "business_p99_ms": ("api_request_duration_ms", "p(99)"),
+    "http_rps": ("http_reqs", "rate"),
+    "business_success_throughput": ("business_success_count", "rate"),
+    "iterations": ("iterations", "count"),
+    "iterations_rate": ("iterations", "rate"),
+    "http_failure_rate": ("http_req_failed", "rate"),
+    "check_success_rate": ("checks", "rate"),
+    "dropped_iterations": ("dropped_iterations", "count"),
+}
+
+ASSIGNMENT_LIST_METRICS = {
     "assignment_list_p50_ms": ("assignment_list_duration", "med"),
     "assignment_list_p90_ms": ("assignment_list_duration", "p(90)"),
     "assignment_list_p95_ms": ("assignment_list_duration", "p(95)"),
     "assignment_list_p99_ms": ("assignment_list_duration", "p(99)"),
+    "assignment_list_success_throughput": ("assignment_list_success_count", "rate"),
+}
+
+ASSIGNMENT_DETAIL_METRICS = {
     "assignment_detail_p50_ms": ("assignment_detail_duration", "med"),
     "assignment_detail_p90_ms": ("assignment_detail_duration", "p(90)"),
     "assignment_detail_p95_ms": ("assignment_detail_duration", "p(95)"),
     "assignment_detail_p99_ms": ("assignment_detail_duration", "p(99)"),
-    "http_rps": ("http_reqs", "rate"),
-    "business_success_throughput": ("business_success_count", "rate"),
-    "assignment_list_success_throughput": ("assignment_list_success_count", "rate"),
     "assignment_detail_success_throughput": ("assignment_detail_success_count", "rate"),
-    "iterations": ("iterations", "count"),
-    "http_failure_rate": ("http_req_failed", "rate"),
-    "check_success_rate": ("checks", "rate"),
-    "iterations": ("iterations", "count"),
-    "iterations_rate": ("iterations", "rate"),
-    "dropped_iterations": ("dropped_iterations", "count"),
 }
 
 LOCAL_BASE_URL_HOSTS = {"localhost", "127.0.0.1", "::1"}
@@ -150,11 +155,13 @@ def validation_errors(payloads: list[dict[str, Any]]) -> list[str]:
             reasons.append(f"run {index} has auth errors")
         if metric(payload, "server_error_count", "count", 0.0) != 0.0:
             reasons.append(f"run {index} has server errors")
-        for label, (metric_name, value_name) in SUMMARY_METRICS.items():
+        if not endpoint_metrics_for_context(context):
+            reasons.append(f"run {index} has no endpoint ratio greater than zero")
+        for label, (metric_name, value_name) in summary_metrics_for_context(context).items():
             value = metric(payload, metric_name, value_name, default_for_metric(label))
             if value is None:
                 reasons.append(f"run {index} missing metric: {label}")
-            elif label not in ("http_failure_rate", "dropped_iterations") and value <= 0:
+            elif requires_positive_value(label) and value <= 0:
                 reasons.append(f"run {index} non-positive metric: {label}")
     return reasons
 
@@ -193,14 +200,14 @@ def context_subset(payload: dict[str, Any]) -> dict[str, Any]:
 
 def run_values(file_name: str, payload: dict[str, Any]) -> dict[str, Any]:
     values = {"file": file_name}
-    for label, (metric_name, value_name) in SUMMARY_METRICS.items():
+    for label, (metric_name, value_name) in summary_metrics_for_context(payload.get("context", {})).items():
         values[label] = metric(payload, metric_name, value_name, default_for_metric(label))
     return values
 
 
 def summarize(payloads: list[dict[str, Any]]) -> dict[str, Any]:
     result = {}
-    for label, (metric_name, value_name) in SUMMARY_METRICS.items():
+    for label, (metric_name, value_name) in summary_metrics_for_context(payloads[0].get("context", {})).items():
         values = [metric(payload, metric_name, value_name, default_for_metric(label)) for payload in payloads]
         clean_values = [float(value) for value in values if value is not None]
         result[label] = {
@@ -296,6 +303,33 @@ def default_for_metric(label: str) -> float | None:
 
 def normalize_host(value: Any) -> str:
     return str(value or "").strip().lower().replace("[", "").replace("]", "")
+
+
+def summary_metrics_for_context(context: dict[str, Any]) -> dict[str, tuple[str, str]]:
+    metrics: dict[str, tuple[str, str]] = {}
+    metrics.update(endpoint_metrics_for_context(context))
+    metrics.update(COMMON_SUMMARY_METRICS)
+    return metrics
+
+
+def endpoint_metrics_for_context(context: dict[str, Any]) -> dict[str, tuple[str, str]]:
+    metrics: dict[str, tuple[str, str]] = {}
+    if ratio_value(context.get("assignmentListRatio")) > 0:
+        metrics.update(ASSIGNMENT_LIST_METRICS)
+    if ratio_value(context.get("assignmentDetailRatio")) > 0:
+        metrics.update(ASSIGNMENT_DETAIL_METRICS)
+    return metrics
+
+
+def ratio_value(raw: Any) -> float:
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def requires_positive_value(label: str) -> bool:
+    return label not in {"http_failure_rate", "dropped_iterations"}
 
 
 if __name__ == "__main__":

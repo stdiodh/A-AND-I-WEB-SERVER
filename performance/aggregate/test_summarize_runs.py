@@ -80,6 +80,7 @@ class SummarizeRunsTest(unittest.TestCase):
 
     def test_accepts_more_than_three_runs(self):
         summaries = [summary(list_p95=value) for value in (6.0, 7.0, 8.0, 9.0)]
+
         with tempfile.TemporaryDirectory() as tmp:
             paths = [write_json(tmp, f"run{i}.json", payload) for i, payload in enumerate(summaries, start=1)]
             result = subprocess.run(
@@ -93,6 +94,24 @@ class SummarizeRunsTest(unittest.TestCase):
         self.assertTrue(payload["accepted"])
         self.assertEqual(payload["summary"]["assignment_list_p95_ms"]["median"], 7.5)
 
+    def test_accepts_list_only_runs_without_detail_metrics(self):
+        summaries = [
+            summary(list_p95=9.0, assignment_detail_ratio="0", include_detail_metrics=False),
+            summary(list_p95=7.0, assignment_detail_ratio="0", include_detail_metrics=False),
+            summary(list_p95=8.0, assignment_detail_ratio="0", include_detail_metrics=False),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = [write_json(tmp, f"run{i}.json", payload) for i, payload in enumerate(summaries, start=1)]
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), *map(str, paths)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["summary"]["assignment_list_p95_ms"]["median"], 8.0)
+        self.assertNotIn("assignment_detail_p95_ms", payload["summary"])
 
 def write_json(directory, name, payload):
     path = Path(directory) / name
@@ -115,6 +134,9 @@ def summary(
     include_dropped=True,
     base_url_host="localhost",
     target_environment="local",
+    assignment_list_ratio="60",
+    assignment_detail_ratio="40",
+    include_detail_metrics=True,
 ):
     context = {
         "scenario": "assignment-read",
@@ -127,8 +149,8 @@ def summary(
         "targetRps": "100",
         "duration": "2m",
         "requestSleepSeconds": "0",
-        "assignmentListRatio": "60",
-        "assignmentDetailRatio": "40",
+        "assignmentListRatio": assignment_list_ratio,
+        "assignmentDetailRatio": assignment_detail_ratio,
         "baseUrlHost": base_url_host,
         "targetEnvironment": target_environment,
         "dockerNetworkMode": "local-binary",
@@ -143,11 +165,9 @@ def summary(
             "values": {"med": business_p50, "p(90)": business_p90, "p(95)": business_p95, "p(99)": business_p99}
         },
         "assignment_list_duration": {"values": {"med": 4.0, "p(90)": list_p90, "p(95)": list_p95, "p(99)": list_p95 + 2.0}},
-        "assignment_detail_duration": {"values": {"med": 2.0, "p(90)": detail_p90, "p(95)": detail_p95, "p(99)": detail_p95 + 1.0}},
         "http_reqs": {"values": {"rate": 100.0}},
         "business_success_count": {"values": {"rate": throughput}},
         "assignment_list_success_count": {"values": {"rate": 60.0}},
-        "assignment_detail_success_count": {"values": {"rate": 40.0}},
         "http_req_failed": {"values": {"rate": 0.0}},
         "iterations": {"values": {"count": iterations, "rate": throughput}},
         "checks": {"values": {"rate": 1.0, "fails": 0}},
@@ -155,6 +175,11 @@ def summary(
         "auth_error_count": {"values": {"count": 0}},
         "server_error_count": {"values": {"count": 0}},
     }
+    if include_detail_metrics:
+        metrics["assignment_detail_duration"] = {
+            "values": {"med": 2.0, "p(90)": detail_p90, "p(95)": detail_p95, "p(99)": detail_p95 + 1.0}
+        }
+        metrics["assignment_detail_success_count"] = {"values": {"rate": 40.0}}
     if include_dropped:
         metrics["dropped_iterations"] = {"values": {"count": 0}}
     return {

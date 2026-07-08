@@ -10,7 +10,7 @@ const PRIVATE_SEQ = intEnv("PRIVATE_TESTCASE_SEQ", 9001, 1);
 
 assertLocalFixtureDb();
 
-const assignmentCount = intEnv("FIXTURE_ASSIGNMENTS", 30, 10);
+const assignmentCount = intEnv("FIXTURE_ASSIGNMENTS", 30, 1);
 const enrollmentCount = intEnv("FIXTURE_ENROLLMENTS", 100, 1);
 const submittedCount = Math.min(intEnv("FIXTURE_SUBMISSION_STATUSES", 60, 0), enrollmentCount);
 if (enrollmentCount > 999) {
