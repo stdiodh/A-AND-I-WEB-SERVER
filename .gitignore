@@ -56,3 +56,4 @@ performance/k6/*token*
 performance/fixtures/*.generated.js
 performance/results/*
 !performance/results/.gitkeep
+!performance/results/README.md

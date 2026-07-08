@@ -49,3 +49,38 @@ Do not use:
 - Assignment scale 결과를 운영 최대 처리량이나 production 성능으로 표현하지 않습니다.
 - before/after 조건이 동일하지 않으므로 assignment scale latency 개선율을 계산하지 않습니다.
 - `측정 필요`, `확인 필요`, `사용 비추천`으로 표시된 generator 항목은 이력서 수치로 사용하지 않습니다.
+
+## Event-driven Structure
+
+Web Server와 Online Judge Server 사이의 이벤트 구조는 현재 repo에서 다음 범위까지 확인했습니다.
+
+| 흐름 | 확인된 동작 | 근거 | 사용 여부 |
+| :--- | :--- | :--- | :--- |
+| Assignment problem sync publish | assignment 생성/수정/삭제 후 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED` snapshot을 SNS로 발행 | `AssignmentReportTestCaseEvent.kt`, `AssignmentReportTestCaseEventMapper.kt`, `SnsAssignmentReportTestCaseEventPublisher.kt`, `CourseCommandService.kt` | 사용 가능 |
+| Problem sync schema | `eventType`, `problemId`, `testCases[]`, `caseId`, `input`, `output` | `AssignmentReportTestCaseEvent.kt` | 사용 가능 |
+| Judge completed consume | raw JSON 또는 SNS envelope의 `JUDGE_COMPLETED`를 파싱해 projection upsert 후 SQS message 삭제 | `JudgeCompletedEventParser.kt`, `SqsJudgeSubmissionEventConsumer.kt`, `SqsJudgeSubmissionEventConsumerTest` | 사용 가능 |
+| Submission projection | `assignmentId + publicCode` unique index 기반으로 projection 저장, 최고 점수 기준 필드 갱신 | `AssignmentSubmissionStatusProjection.kt`, `AssignmentSubmissionStatusProjectionService.kt`, `AssignmentSubmissionStatusProjectionServiceTest` | 사용 가능 |
+| Admin read path | 관리자 제출 현황은 Online Judge 동기 호출 대신 MongoDB projection과 enrollment를 join | `AdminAssignmentSubmissionStatusesV2Service.kt`, `CourseAdminAssignmentSubmissionStatusesV2Controller.kt`, `README.md` | 사용 가능 |
+
+Approved sentence candidates:
+
+- 과제 변경 시 Online Judge problem snapshot을 SNS event로 발행하고, `JUDGE_COMPLETED` SQS event를 MongoDB submission projection으로 upsert하는 구조를 구현
+- 관리자 제출 현황 조회를 Online Judge 동기 호출 대신 `assignmentId + publicCode` projection read path로 분리
+
+Do not use:
+
+- Event-driven 구조를 고가용성 보장, exactly-once 처리, 장애 무손실 처리로 표현하지 않습니다.
+- SNS/SQS DLQ redrive policy는 애플리케이션 코드가 아니라 실제 AWS Queue 속성에서 확인해야 하므로 현재 repo 기준으로 성과 수치로 쓰지 않습니다.
+- Assignment problem sync가 Online Judge API 동기 호출을 제거한 구조라는 점은 말할 수 있지만, SNS publish 자체는 command path에서 완료를 기다리므로 전체 요청이 완전 비동기라고 표현하지 않습니다.
+
+## 확인 필요
+
+| 항목 | 현재 상태 | 확인 방법 | README 포함 |
+| :--- | :--- | :--- | :--- |
+| MongoDB command count 감소 | 확인 필요 | command listener 또는 profiler 기반 before/after 측정 | 제외 |
+| Assignment list latency 개선 | 확인 필요 | `docs/ASSIGNMENT_LIST_LATENCY_PLAN.md` 절차로 list-only 재측정 | 제외 |
+| SNS/SQS DLQ redrive policy | 확인 필요 | AWS console/IaC/queue attribute 확인 | 제외 |
+| Outbox 기반 no-lost-event | 미구현 | outbox table/collection 및 publisher relay 구현 확인 | 제외 |
+| eventId deduplication/exactly-once | 미구현 | eventId, processed-event store, dedup test 확인 | 제외 |
+| Online Judge consumer | 확인 필요 | Online Judge Server repo에서 SQS consumer 확인 | 제외 |
+| CloudWatch 운영 지표 | 확인 필요 | log group, alarm, metric filter, sample logs 확인 | 제외 |

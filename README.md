@@ -135,6 +135,18 @@ Coverage는 JaCoCo 제외 규칙이 적용된 configured scope 기준입니다.
 
 상세 측정 조건과 per-run 결과는 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 정리했습니다.
 
+Resume 문장과 근거 상태는 [Resume Metrics](./docs/resume-metrics.md)에 따로 정리했습니다.
+
+### 측정 지표 근거
+
+| 지표 | 측정 조건 | 근거 |
+| :--- | :--- | :--- |
+| 자동화 테스트 277개, Line 85.04%, Branch 62.59% | 2026-06-23 KST, JaCoCo configured scope | `docs/MEASUREMENT.md`, `build/reports/jacoco/test/jacocoTestReport.xml`, `build.gradle.kts` |
+| Child repository calls 60 → 2 | 30 assignments, service-level repository interaction 기준 | `performance/results/assignment-read-query-evidence.json`, `CourseQueryServiceTest` |
+| HTTP 실패율 0.00%, Check 성공률 100.00%, Dropped iterations 0 | local fixed-load, 100 RPS, 2분 × 3회, 목록 60%·상세 40% | `performance/results/assignment-read-before.aggregate.json`, `performance/results/assignment-read-after.aggregate.json` |
+
+이 수치는 특정 commit / local fixed-load / documented measurement 기준이며 최대 처리량을 의미하지 않습니다.
+
 ## 실행
 
 ```bash
@@ -166,5 +178,6 @@ http://localhost:8080/actuator/health/readiness
 - [CI/CD Optimization](docs/cicd-optimization.md)
 - [CI/CD Measurement Audit](docs/cicd-measurement-audit.md)
 - [Resume Metrics](docs/resume-metrics.md)
+- [성능 결과 재현](./docs/performance/results/README.md)
 - [N+1 개선기](https://velog.io/@stdiodh/%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%99%80-k6%EB%A1%9C-%EA%B2%80%EC%A6%9D%ED%95%9C-%EA%B3%BC%EC%A0%9C-%EB%AA%A9%EB%A1%9D-N1-%EA%B0%9C%EC%84%A0%EA%B8%B0#%EC%A1%B0%ED%9A%8C-%ED%9A%9F%EC%88%98)
 - [패키지 구조 원칙](./PACKAGE_STRUCTURE_GUIDE.md)

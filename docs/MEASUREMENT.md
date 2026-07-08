@@ -214,7 +214,7 @@ strict aggregate comparison은 context 일치를 확인했고 accepted=true입�
 
 Assignment list P95 중앙값은 0.96% 낮아졌지만 before/after run range가 겹치므로 latency 개선으로 단정하지 않습니다.
 
-Assignment list P99는 낮아졌고 child repository call은 60에서 2로 줄었습니다. 이 PR의 주 근거는 query 효율 개선과 N+1 제거입니다.
+Assignment list P99는 낮아졌고 child repository call은 60에서 2로 줄었습니다. 이 PR의 주 근거는 반복 child 조회를 batch 조회로 변경한 query 효율 개선입니다.
 
 Assignment detail 경로는 이번 변경 대상이 아니며 P95 중앙값은 상승했습니다. fixed-rate 100 RPS 결과만으로 최대 처리량 증가를 주장하지 않습니다.
 
@@ -262,16 +262,18 @@ before/after 비교는 다음 조건이 같을 때만 유효합니다.
 
 ## 다음 측정
 
-30 assignment fixture에서는 latency range가 겹쳤으므로 scale fixture에서 N+1 제거 효과를 더 분명히 확인합니다.
+30 assignment fixture에서는 latency range가 겹쳤으므로 scale fixture에서 반복 child 조회 batch화 효과를 더 분명히 확인합니다.
+
+구체적인 list-only 재측정 절차는 [과제 목록 API 응답 시간 측정 계획](./ASSIGNMENT_LIST_LATENCY_PLAN.md)에 정리합니다.
 
 1. 과제 300, 1,000개 fixture를 준비합니다.
 2. 각 fixture 크기에서 before/after를 같은 조건으로 다시 측정합니다.
 3. P95/P99, child command count, `totalDocsExamined`, `totalKeysExamined`를 함께 기록합니다.
 4. 최대 처리량 주장이 필요하면 fixed 100 RPS가 아닌 별도 capacity scenario를 정의합니다.
 
-그다음에는 event pipeline을 별도로 측정합니다.
+그다음에는 event pipeline을 별도로 측정합니다. 아래 항목은 아직 README 또는 resume 성과로 사용하지 않습니다.
 
-- Outbox 도입 후 SNS 장애 상황의 유실 이벤트 0건
-- event publish lag P95
-- duplicate event 재전달 시 projection 중복 0건
-- SQS oldest message age와 DLQ 유입 건수
+- [미구현] Outbox 도입 후 SNS 장애 상황의 유실 이벤트 건수
+- [확인 필요] event publish lag P95
+- [확인 필요] duplicate event 재전달 시 projection 중복 건수
+- [확인 필요] SQS oldest message age와 DLQ 유입 건수
