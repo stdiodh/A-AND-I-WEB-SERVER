@@ -7,7 +7,9 @@
 - Web CI/CD: `docs/metrics/web-cicd-remeasure.json`
 - Assignment scale: `docs/performance/results/2026-06-29-assignment-scale.json`
 - Assignment list before/after: `docs/performance/results/2026-07-09-assignment-list-before-after.json`
-- Resume metrics generator output: `docs/metrics/resume-metrics.json`
+- Resume metrics generator snapshot: `docs/metrics/resume-metrics.json` (`generatedAt=2026-06-28T16:51:17Z`)
+
+`docs/metrics/resume-metrics.json`은 2026-06-28 기준 generator snapshot입니다. 2026-07-09 list-only before/after latency 근거는 이 Markdown 문서와 `docs/performance/results/2026-07-09-assignment-list-before-after.json`을 기준으로 봅니다.
 
 ## Web CI/CD
 
