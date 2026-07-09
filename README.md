@@ -144,6 +144,7 @@ Resume 문장과 근거 상태는 [Resume Metrics](./docs/resume-metrics.md)에 
 | 자동화 테스트 277개, Line 85.04%, Branch 62.59% | 2026-06-23 KST, JaCoCo configured scope | `docs/MEASUREMENT.md`, `build/reports/jacoco/test/jacocoTestReport.xml`, `build.gradle.kts` |
 | Child repository calls 60 → 2 | 30 assignments, service-level repository interaction 기준 | `performance/results/assignment-read-query-evidence.json`, `CourseQueryServiceTest` |
 | HTTP 실패율 0.00%, Check 성공률 100.00%, Dropped iterations 0 | local fixed-load, 100 RPS, 2분 × 3회, 목록 60%·상세 40% | `performance/results/assignment-read-before.aggregate.json`, `performance/results/assignment-read-after.aggregate.json` |
+| Assignment list P95 9.297 ms → 7.565 ms | local fixed-load, 30 assignments, 목록 100%, 100 RPS, 2분 × 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.md` |
 
 이 수치는 특정 commit / local fixed-load / documented measurement 기준이며 최대 처리량을 의미하지 않습니다.
 

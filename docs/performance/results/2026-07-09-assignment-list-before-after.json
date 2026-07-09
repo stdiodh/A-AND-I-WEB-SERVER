@@ -1,0 +1,98 @@
+{
+  "title": "Assignment list before/after fixed-load latency",
+  "documentedAt": "2026-07-09 KST",
+  "status": "resume-safe with local fixed-load caveat",
+  "targetApi": "GET /v2/courses/{courseSlug}/assignments?status=PUBLISHED",
+  "targetSource": "performance/k6/config.js",
+  "measurementScope": "local-only assignment list API, 30 assignments, list-only traffic",
+  "serverCommits": {
+    "before": {
+      "sha": "9b678b6",
+      "description": "assignment list loads requirements/testcases per assignment"
+    },
+    "after": {
+      "sha": "642cfd3",
+      "description": "assignment list batches requirements/testcases by assignmentId collection"
+    }
+  },
+  "tooling": {
+    "runnerCommit": "6682802",
+    "runnerDirty": false,
+    "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)",
+    "javaVersion": "openjdk version \"21.0.6\" 2025-01-21",
+    "mongoVersion": "7.0.16",
+    "machine": "Apple M5 Pro / 48.00 GiB"
+  },
+  "fixture": {
+    "fingerprint": "005fc5cdb43a402413b263ae38b5565a73634b25bc7532cef346320ad295cf1a",
+    "courseSlug": "perf-k6",
+    "courses": 1,
+    "weeks": 3,
+    "assignments": 30,
+    "enrollments": 100,
+    "submissionStatuses": 60
+  },
+  "load": {
+    "model": "constant-arrival-rate",
+    "targetRps": 100,
+    "duration": "2m",
+    "runs": 3,
+    "preAllocatedVus": 30,
+    "maxVus": 200,
+    "assignmentListRatio": 100,
+    "assignmentDetailRatio": 0,
+    "requestSleepSeconds": 0
+  },
+  "results": {
+    "before": {
+      "serverCommit": "9b678b6",
+      "generatedAt": "2026-07-09T04:26:50Z",
+      "sourceResult": "/tmp/aandi-web-metrics/docs/assignment-list-before-9b678b6.json",
+      "p50Ms": { "median": 7.28, "min": 7.111, "max": 7.49 },
+      "p90Ms": { "median": 8.606, "min": 8.52, "max": 8.634 },
+      "p95Ms": { "median": 9.297, "min": 9.168, "max": 9.419 },
+      "p99Ms": { "median": 11.512, "min": 11.27, "max": 13.025 },
+      "httpFailureRate": { "median": 0.0, "min": 0.0, "max": 0.0 },
+      "checkSuccessRate": { "median": 1.0, "min": 1.0, "max": 1.0 },
+      "droppedIterations": { "median": 0.0, "min": 0.0, "max": 0.0 },
+      "businessSuccessThroughputRps": { "median": 100.0016832213991, "min": 100.00145240006277, "max": 100.00260235086361 },
+      "iterations": { "median": 12001.0, "min": 12001.0, "max": 12001.0 }
+    },
+    "after": {
+      "serverCommit": "642cfd3",
+      "generatedAt": "2026-07-09T04:34:14Z",
+      "sourceResult": "/tmp/aandi-web-metrics/docs/assignment-list-after-642cfd3.json",
+      "p50Ms": { "median": 6.273, "min": 6.144, "max": 6.376 },
+      "p90Ms": { "median": 7.1421, "min": 6.997, "max": 7.174 },
+      "p95Ms": { "median": 7.56515, "min": 7.422, "max": 7.73015 },
+      "p99Ms": { "median": 9.54603, "min": 9.34, "max": 9.58101 },
+      "httpFailureRate": { "median": 0.0, "min": 0.0, "max": 0.0 },
+      "checkSuccessRate": { "median": 1.0, "min": 1.0, "max": 1.0 },
+      "droppedIterations": { "median": 0.0, "min": 0.0, "max": 0.0 },
+      "businessSuccessThroughputRps": { "median": 100.00049250242557, "min": 100.00029666754678, "max": 100.00325566802678 },
+      "iterations": { "median": 12000.0, "min": 12000.0, "max": 12001.0 }
+    },
+    "comparison": {
+      "p50LowerPercent": 13.83,
+      "p90LowerPercent": 17.01,
+      "p95LowerPercent": 18.63,
+      "p99LowerPercent": 17.08,
+      "httpFailureRate": "0.00% -> 0.00%",
+      "checkSuccessRate": "100.00% -> 100.00%",
+      "droppedIterations": "0 -> 0"
+    }
+  },
+  "reproduction": {
+    "beforeServer": "git worktree add --detach /tmp/aandi-before-9b678b6 9b678b6 && cd /tmp/aandi-before-9b678b6 && MONGO_DB_URL=mongodb://localhost:27017/aandi_performance APP_V2_LOG_EXCLUDE_PATH_PREFIXES=/actuator,/swagger-ui,/v3/api-docs,/favicon.ico,/static,/assets,/webjars,/v2 ./gradlew bootRun",
+    "afterServer": "git worktree add --detach /tmp/aandi-after-642cfd3 642cfd3 && cd /tmp/aandi-after-642cfd3 && MONGO_DB_URL=mongodb://localhost:27017/aandi_performance APP_V2_LOG_EXCLUDE_PATH_PREFIXES=/actuator,/swagger-ui,/v3/api-docs,/favicon.ico,/static,/assets,/webjars,/v2 ./gradlew bootRun",
+    "beforeK6": "PATH=\"/tmp/aandi-k6-0.52.0:$PATH\" RESULT_DATE=2026-07-09-before-9b678b6-list-only-30 SCENARIO_FILES=\"/tmp/aandi-assignment-30-before-after-list-only.env\" RUNS=3 LOCAL_RESULT_ROOT=/tmp/aandi-web-metrics/before-after/before DOC_RESULT_DIR=/tmp/aandi-web-metrics/docs DOC_BASENAME=assignment-list-before-9b678b6 CLEANUP_AFTER=true performance/scripts/run-assignment-scale-local.sh",
+    "afterK6": "PATH=\"/tmp/aandi-k6-0.52.0:$PATH\" RESULT_DATE=2026-07-09-after-642cfd3-list-only-30 SCENARIO_FILES=\"/tmp/aandi-assignment-30-before-after-list-only.env\" RUNS=3 LOCAL_RESULT_ROOT=/tmp/aandi-web-metrics/before-after/after DOC_RESULT_DIR=/tmp/aandi-web-metrics/docs DOC_BASENAME=assignment-list-after-642cfd3 CLEANUP_AFTER=true performance/scripts/run-assignment-scale-local.sh",
+    "targetedTest": "./gradlew test --tests 'com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTest'"
+  },
+  "cautions": [
+    "This is a local fixed-load regression measurement, not maximum throughput or production capacity.",
+    "The k6 report gitCommitSha is the runner repository commit; server commits are recorded separately above.",
+    "MongoDB system.profile commandCount was excluded because capped profile retention made it unsuitable as a resume-safe database command metric.",
+    "Repository call reduction remains service-level repository interaction evidence, not MongoDB command count evidence."
+  ]
+}

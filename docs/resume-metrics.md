@@ -6,6 +6,7 @@
 
 - Web CI/CD: `docs/metrics/web-cicd-remeasure.json`
 - Assignment scale: `docs/performance/results/2026-06-29-assignment-scale.json`
+- Assignment list before/after: `docs/performance/results/2026-07-09-assignment-list-before-after.json`
 - Resume metrics generator output: `docs/metrics/resume-metrics.json`
 
 ## Web CI/CD
@@ -50,6 +51,26 @@ Do not use:
 - before/after 조건이 동일하지 않으므로 assignment scale latency 개선율을 계산하지 않습니다.
 - `측정 필요`, `확인 필요`, `사용 비추천`으로 표시된 generator 항목은 이력서 수치로 사용하지 않습니다.
 
+## Assignment List Before/After
+
+이 수치는 과제 목록 조회만 대상으로 한 local fixed-load before/after 측정입니다. 운영 최대 처리량이나 MongoDB command count 감소로 표현하지 않습니다.
+
+| Metric | Before | After | Condition | Source |
+| :--- | ---: | ---: | :--- | :--- |
+| Assignment list P95 | 9.297 ms | 7.565 ms | 30 assignments, list-only, 100 RPS, 2분 x 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.json` |
+| Assignment list P99 | 11.512 ms | 9.546 ms | 30 assignments, list-only, 100 RPS, 2분 x 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.json` |
+| HTTP failure / checks / dropped | 0.00% / 100.00% / 0 | 0.00% / 100.00% / 0 | same local fixed-load run | `docs/performance/results/2026-07-09-assignment-list-before-after.json` |
+
+Approved sentence candidates:
+
+- 30개 과제 list-only local fixed-load 조건에서 과제 목록 API P95를 9.297 ms에서 7.565 ms로 측정하고, HTTP failure 0.00%, checks 100.00%, dropped iterations 0을 확인
+- 과제 목록 조회의 반복 child repository 조회를 batch 조회로 변경하고, 30개 과제 기준 service-level child repository call을 60회에서 2회로 감소
+
+Do not use:
+
+- 이 결과를 운영 최대 처리량, production latency, MongoDB command count 감소로 표현하지 않습니다.
+- k6 report의 `gitCommitSha=6682802`는 runner repo 기준이므로 서버 commit `9b678b6 -> 642cfd3`와 분리해서 설명합니다.
+
 ## Event-driven Structure
 
 Web Server와 Online Judge Server 사이의 이벤트 구조는 현재 repo에서 다음 범위까지 확인했습니다.
@@ -78,7 +99,7 @@ Do not use:
 | 항목 | 현재 상태 | 확인 방법 | README 포함 |
 | :--- | :--- | :--- | :--- |
 | MongoDB command count 감소 | 확인 필요 | command listener 또는 profiler 기반 before/after 측정 | 제외 |
-| Assignment list latency 개선 | 확인 필요 | `docs/ASSIGNMENT_LIST_LATENCY_PLAN.md` 절차로 list-only 재측정 | 제외 |
+| 300/1000 assignment list-only before/after latency | 확인 필요 | 30개 fixture 외에 큰 fixture에서 같은 commit pair로 재측정 | 제외 |
 | SNS/SQS DLQ redrive policy | 확인 필요 | AWS console/IaC/queue attribute 확인 | 제외 |
 | Outbox 기반 no-lost-event | 미구현 | outbox table/collection 및 publisher relay 구현 확인 | 제외 |
 | eventId deduplication/exactly-once | 미구현 | eventId, processed-event store, dedup test 확인 | 제외 |

@@ -11,16 +11,17 @@
 | 분류 | 파일 |
 | :--- | :--- |
 | Repository call evidence | `assignment-read-query-evidence.json` |
-| Before aggregate | `assignment-read-before.aggregate.json` |
-| After aggregate | `assignment-read-after.aggregate.json` |
-| Strict comparison | `assignment-read-comparison.json`, `assignment-read-comparison.md` |
+| Historical mixed workload before aggregate | `assignment-read-before.aggregate.json` |
+| Historical mixed workload after aggregate | `assignment-read-after.aggregate.json` |
+| Historical mixed workload strict comparison | `assignment-read-comparison.json`, `assignment-read-comparison.md` |
 | Before raw summaries | `assignment-read-2026-06-22T17-31-36-700Z-d787f67.summary.json`, `assignment-read-2026-06-22T17-33-54-832Z-d787f67.summary.json`, `assignment-read-2026-06-22T17-36-06-142Z-d787f67.summary.json` |
 | After raw summaries | `assignment-read-2026-06-22T17-50-14-635Z-08a2a21.summary.json`, `assignment-read-2026-06-22T17-52-26-529Z-08a2a21.summary.json`, `assignment-read-2026-06-22T17-54-39-325Z-08a2a21.summary.json` |
 
 ## 해석 기준
 
 - `assignment-read-query-evidence.json`의 `60 -> 2`는 service-level repository interaction 기준입니다. MongoDB command count로 표현하지 않습니다.
-- aggregate와 comparison 파일은 local fixed-load, 100 RPS, 2분, 3회 조건의 결과입니다. 최대 처리량이나 운영 capacity로 해석하지 않습니다.
+- aggregate와 comparison 파일은 2026-06-23 local fixed-load, 100 RPS, 2분, 3회, 목록 60%/상세 40% historical mixed workload 결과입니다. 최대 처리량이나 운영 capacity로 해석하지 않습니다.
+- 과제 목록만 분리한 최신 before/after latency 근거는 `docs/performance/results/2026-07-09-assignment-list-before-after.md`를 사용합니다.
 - raw summary JSON은 aggregate를 재계산하기 위한 근거입니다. README에는 aggregate나 comparison에 정리된 값만 인용합니다.
 - `gitDirty=false`인 결과만 resume/README 근거로 사용합니다.
 

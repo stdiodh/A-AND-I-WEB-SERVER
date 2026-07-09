@@ -4,6 +4,12 @@
 
 [README로 돌아가기](../README.md)
 
+## Status
+
+30개 assignment list-only before/after 측정은 `docs/performance/results/2026-07-09-assignment-list-before-after.md`에 기록했습니다.
+
+남은 작업은 같은 절차를 300/1000개 fixture before/after로 확장하거나, 최대 처리량이 필요할 때 별도 capacity scenario를 정의하는 것입니다.
+
 ## Target API
 
 | 항목 | 값 |
@@ -23,7 +29,7 @@ local fixture database만 사용합니다. 스크립트는 `aandi_performance` �
 | Fixture | 목적 | Feasible 여부 |
 | :--- | :--- | :--- |
 | 1 assignment | 작은 응답에서 기본 overhead 확인 | 가능 |
-| 30 assignments | 기존 repository call metric과 같은 데이터 크기 | 가능 |
+| 30 assignments | 기존 repository call metric과 같은 데이터 크기 | 완료, `docs/performance/results/2026-07-09-assignment-list-before-after.md` |
 | 300 assignments | 응답 payload와 child lookup 규모 증가 시 latency 확인 | 가능, local machine 상태 기록 필요 |
 
 각 assignment는 requirement 1개, PUBLIC testcase 2개, HIDDEN testcase 1개를 생성합니다. 300 assignments fixture는 testcase 900개를 생성합니다.

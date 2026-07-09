@@ -119,6 +119,8 @@ k6 check는 상태 코드뿐 아니라 다음 계약도 확인합니다.
 
 ## 과제 목록 child lookup batching 비교
 
+> 이 섹션은 2026-06-23의 historical 60:40 혼합 부하 측정입니다. 과제 목록만 분리한 최신 before/after latency 근거는 `docs/performance/results/2026-07-09-assignment-list-before-after.md`에 고정합니다.
+
 ### 목적
 
 과제 목록 조회가 assignment마다 requirement와 testcase를 따로 조회하던 구조를 batch 조회로 바꿨을 때의 query 효율과 fixed-rate latency 변화를 같은 로컬 환경에서 비교합니다.
@@ -262,13 +264,13 @@ before/after 비교는 다음 조건이 같을 때만 유효합니다.
 
 ## 다음 측정
 
-30 assignment fixture에서는 latency range가 겹쳤으므로 scale fixture에서 반복 child 조회 batch화 효과를 더 분명히 확인합니다.
+30 assignment list-only before/after 측정은 `docs/performance/results/2026-07-09-assignment-list-before-after.md`에 정리했습니다.
 
-구체적인 list-only 재측정 절차는 [과제 목록 API 응답 시간 측정 계획](./ASSIGNMENT_LIST_LATENCY_PLAN.md)에 정리합니다.
+남은 확장 측정은 scale fixture에서 반복 child 조회 batch화 효과를 더 분명히 확인하는 작업입니다. 구체적인 list-only 재측정 절차는 [과제 목록 API 응답 시간 측정 계획](./ASSIGNMENT_LIST_LATENCY_PLAN.md)에 정리합니다.
 
-1. 과제 300, 1,000개 fixture를 준비합니다.
+1. 과제 300, 1,000개 fixture를 같은 before/after commit pair로 준비합니다.
 2. 각 fixture 크기에서 before/after를 같은 조건으로 다시 측정합니다.
-3. P95/P99, child command count, `totalDocsExamined`, `totalKeysExamined`를 함께 기록합니다.
+3. P95/P99와 explain 기반 `totalDocsExamined`, `totalKeysExamined`를 함께 기록합니다.
 4. 최대 처리량 주장이 필요하면 fixed 100 RPS가 아닌 별도 capacity scenario를 정의합니다.
 
 그다음에는 event pipeline을 별도로 측정합니다. 아래 항목은 아직 README 또는 resume 성과로 사용하지 않습니다.

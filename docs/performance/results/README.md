@@ -28,6 +28,13 @@ PATH="$K6_BIN_DIR:$PATH" performance/scripts/run-assignment-scale-local.sh
 - `docs/performance/results/YYYY-MM-DD-assignment-scale.json`: 문서 링크용 통합 JSON
 - `docs/performance/results/YYYY-MM-DD-assignment-scale.md`: 문서 링크용 통합 Markdown
 
+## Assignment list before/after
+
+30개 assignment fixture에서 과제 목록 조회만 대상으로 한 before/after latency 측정은 아래 파일에 고정합니다.
+
+- `docs/performance/results/2026-07-09-assignment-list-before-after.json`
+- `docs/performance/results/2026-07-09-assignment-list-before-after.md`
+
 ## Safety rules
 
 - `BASE_URL`은 `localhost` 또는 `127.0.0.1`만 허용합니다.
@@ -40,3 +47,5 @@ PATH="$K6_BIN_DIR:$PATH" performance/scripts/run-assignment-scale-local.sh
 이 결과는 운영 최대 처리량이 아니라 고정 부하 조건에서의 회귀 검증 기준입니다.
 
 latency 개선율은 before/after fixture, commit, JVM, MongoDB, k6, machine, load model이 모두 같을 때만 계산합니다. 조건이 다르면 `[비교 불가]`로 표시합니다.
+
+MongoDB `system.profile` command count는 profile cap/retention 영향을 받을 수 있으므로, 별도 재현 기준이 없으면 resume-safe DB command count로 사용하지 않습니다.
