@@ -243,7 +243,7 @@ class AssignmentCopyServiceTest : StringSpec({
 
     "existing assignment with the same originAssignmentId returns CONFLICT without saving" {
         val fixture = AssignmentCopyFixture()
-        fixture.stubCopyPath()
+        fixture.stubCopyPath(targetWeekExists = false)
         Mockito.`when`(
             fixture.assignmentRepository.findByCourseIdAndOriginAssignmentId(
                 TARGET_COURSE_ID,
@@ -266,6 +266,8 @@ class AssignmentCopyServiceTest : StringSpec({
 
         Mockito.verify(fixture.assignmentRepository, Mockito.never())
             .save(ArgumentMatchers.any(Assignment::class.java))
+        Mockito.verify(fixture.courseWeekRepository, Mockito.never())
+            .save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 
     "existing direct assignment with the same origin id fallback returns CONFLICT without saving" {
@@ -294,7 +296,7 @@ class AssignmentCopyServiceTest : StringSpec({
 
     "existing assignment with the same copy fingerprint returns CONFLICT without saving" {
         val fixture = AssignmentCopyFixture()
-        fixture.stubCopyPath()
+        fixture.stubCopyPath(targetWeekExists = false)
         Mockito.`when`(
             fixture.assignmentRepository.findByCourseIdAndCopyFingerprint(
                 ArgumentMatchers.anyString(),
@@ -317,11 +319,13 @@ class AssignmentCopyServiceTest : StringSpec({
 
         Mockito.verify(fixture.assignmentRepository, Mockito.never())
             .save(ArgumentMatchers.any(Assignment::class.java))
+        Mockito.verify(fixture.courseWeekRepository, Mockito.never())
+            .save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 
     "existing assignment in the same course week order slot returns CONFLICT without saving" {
         val fixture = AssignmentCopyFixture()
-        fixture.stubCopyPath()
+        fixture.stubCopyPath(targetWeekExists = false)
         Mockito.`when`(fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(TARGET_COURSE_ID, 1, 1))
             .thenReturn(Mono.just(existingTargetAssignment()))
 
@@ -340,6 +344,8 @@ class AssignmentCopyServiceTest : StringSpec({
 
         Mockito.verify(fixture.assignmentRepository, Mockito.never())
             .save(ArgumentMatchers.any(Assignment::class.java))
+        Mockito.verify(fixture.courseWeekRepository, Mockito.never())
+            .save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 
     "DuplicateKeyException while saving the assignment maps to copy CONFLICT" {
@@ -407,9 +413,13 @@ class AssignmentCopyServiceTest : StringSpec({
                 response.endAt shouldBe OVERRIDE_END_AT
                 response.status shouldBe AssignmentStatus.DRAFT
                 response.publishedAt.shouldBeNull()
+                response.metadata.title shouldBe sourceAssignment.metadata.title
+                response.metadata.difficulty shouldBe sourceAssignment.metadata.difficulty
+                response.metadata.description shouldBe sourceAssignment.metadata.description
                 response.metadata.requirements.map { it.sortOrder } shouldContainExactly listOf(1, 2)
                 response.metadata.requirements.map { it.requirementText } shouldContainExactly listOf("함수 분리", "예외 처리")
                 response.metadata.testCases.map { it.seq } shouldContainExactly listOf(1, 2, 3)
+                response.metadata.testCases.map { it.outputText } shouldContainExactly listOf("3", "5", "skip")
                 response.metadata.testCases.map { it.visibility } shouldContainExactly listOf(
                     AssignmentTestCaseVisibility.PUBLIC,
                     AssignmentTestCaseVisibility.HIDDEN,
@@ -443,6 +453,32 @@ class AssignmentCopyServiceTest : StringSpec({
         event.eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_CREATED
         event.problemId shouldBe savedId
         event.testCases.map { it.caseId } shouldContainExactly listOf(1, 2)
+    }
+
+    "copying an already-copied assignment preserves the first origin assignment and course" {
+        val firstOriginAssignmentId = "5e67701e-7671-4f71-92ce-a9a6ce12fbb3"
+        val firstOriginCourseSlug = "first-origin-course"
+        val copiedSource = sourceAssignment(
+            originAssignmentId = firstOriginAssignmentId,
+            originCourseSlug = firstOriginCourseSlug,
+        )
+        val fixture = AssignmentCopyFixture()
+        fixture.stubCopyPath(sourceAssignment = copiedSource)
+
+        StepVerifier.create(
+            fixture.service.copyAssignment(
+                targetCourseSlug = TARGET_COURSE_SLUG,
+                request = CopyAssignmentRequest(sourceAssignmentId = SOURCE_ASSIGNMENT_ID),
+                createdBy = CREATED_BY,
+            )
+        )
+            .expectNextCount(1)
+            .verifyComplete()
+
+        val saved = fixture.savedAssignment.shouldNotBeNull()
+        saved.originAssignmentId shouldBe firstOriginAssignmentId
+        saved.originAssignmentId shouldNotBe SOURCE_ASSIGNMENT_ID
+        saved.originCourseSlug shouldBe firstOriginCourseSlug
     }
 
     "no override values use source week order and schedule" {
