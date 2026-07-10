@@ -1,16 +1,12 @@
 package com.example.aandi_post_web_server.assignment.application.service
 
-import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailMetadataResponse
-import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResponse
-import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionCourseQueryPort
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionEnrollment
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserQueryPort
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserReference
 import com.example.aandi_post_web_server.assignment.infrastructure.submission.repository.AssignmentSubmissionStatusProjectionRepository
-import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
-import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
-import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
+import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
-import com.example.aandi_post_web_server.course.application.service.CourseV1Service
-import com.example.aandi_post_web_server.user.entity.ReportUser
-import com.example.aandi_post_web_server.user.infrastructure.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.mockito.Mockito
@@ -22,22 +18,22 @@ import reactor.test.StepVerifier
 import java.time.Instant
 
 class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
-    val courseV1Service = Mockito.mock(CourseV1Service::class.java)
+    val courseQueryPort = Mockito.mock(AdminAssignmentSubmissionCourseQueryPort::class.java)
     val projectionRepository = Mockito.mock(AssignmentSubmissionStatusProjectionRepository::class.java)
-    val reportUserRepository = Mockito.mock(ReportUserRepository::class.java)
-    val service = AdminAssignmentSubmissionStatusesV2Service(courseV1Service, projectionRepository, reportUserRepository)
+    val userQueryPort = Mockito.mock(AdminAssignmentSubmissionUserQueryPort::class.java)
+    val service = AdminAssignmentSubmissionStatusesV2Service(courseQueryPort, projectionRepository, userQueryPort)
 
     val courseSlug = "back-basic"
     val assignmentId = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001"
 
     beforeTest {
-        Mockito.reset(courseV1Service, projectionRepository, reportUserRepository)
+        Mockito.reset(courseQueryPort, projectionRepository, userQueryPort)
     }
 
     "코스 수강생 전체 기준으로 제출/미제출 현황을 조합한다" {
-        Mockito.`when`(courseV1Service.getAdminAssignmentDetail(courseSlug, assignmentId))
-            .thenReturn(Mono.just(sampleAssignmentDetailResponse(courseSlug, assignmentId)))
-        Mockito.`when`(courseV1Service.getEnrollments(courseSlug))
+        Mockito.`when`(courseQueryPort.ensureAssignmentBelongsToCourse(courseSlug, assignmentId))
+            .thenReturn(Mono.empty())
+        Mockito.`when`(courseQueryPort.findEnrollments(courseSlug))
             .thenReturn(
                 Flux.just(
                     sampleEnrollment("user-1", "#BE301", "alice"),
@@ -61,11 +57,11 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
                     )
                 )
             )
-        Mockito.`when`(reportUserRepository.findAllById(listOf("user-1", "user-2")))
+        Mockito.`when`(userQueryPort.findAllByIds(listOf("user-1", "user-2")))
             .thenReturn(
                 Flux.just(
-                    sampleReportUser("user-1", "#BE301", "alice-id", "앨리스"),
-                    sampleReportUser("user-2", "#BE302", "bob-id", null),
+                    sampleUser("user-1", "앨리스"),
+                    sampleUser("user-2", null),
                 )
             )
 
@@ -91,13 +87,13 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
     }
 
     "projection 이 전혀 없어도 전체 수강생이 미제출로 반환된다" {
-        Mockito.`when`(courseV1Service.getAdminAssignmentDetail(courseSlug, assignmentId))
-            .thenReturn(Mono.just(sampleAssignmentDetailResponse(courseSlug, assignmentId)))
-        Mockito.`when`(courseV1Service.getEnrollments(courseSlug))
+        Mockito.`when`(courseQueryPort.ensureAssignmentBelongsToCourse(courseSlug, assignmentId))
+            .thenReturn(Mono.empty())
+        Mockito.`when`(courseQueryPort.findEnrollments(courseSlug))
             .thenReturn(Flux.just(sampleEnrollment("user-1", "#BE301", "alice")))
         Mockito.`when`(projectionRepository.findAllByAssignmentId(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(reportUserRepository.findAllById(listOf("user-1")))
+        Mockito.`when`(userQueryPort.findAllByIds(listOf("user-1")))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(service.getSubmissionStatuses(courseSlug, assignmentId))
@@ -112,7 +108,7 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
     }
 
     "courseSlug 가 없으면 404를 그대로 전달한다" {
-        Mockito.`when`(courseV1Service.getAdminAssignmentDetail(courseSlug, assignmentId))
+        Mockito.`when`(courseQueryPort.ensureAssignmentBelongsToCourse(courseSlug, assignmentId))
             .thenReturn(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다.")))
 
         StepVerifier.create(service.getSubmissionStatuses(courseSlug, assignmentId))
@@ -121,10 +117,13 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
                 exception.statusCode shouldBe HttpStatus.NOT_FOUND
             }
             .verify()
+
+        Mockito.verify(courseQueryPort, Mockito.never()).findEnrollments(Mockito.anyString())
+        Mockito.verifyNoInteractions(projectionRepository, userQueryPort)
     }
 
     "assignment 가 다른 course 소속이면 404를 그대로 전달한다" {
-        Mockito.`when`(courseV1Service.getAdminAssignmentDetail(courseSlug, assignmentId))
+        Mockito.`when`(courseQueryPort.ensureAssignmentBelongsToCourse(courseSlug, assignmentId))
             .thenReturn(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다.")))
 
         StepVerifier.create(service.getSubmissionStatuses(courseSlug, assignmentId))
@@ -133,57 +132,29 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
                 exception.statusCode shouldBe HttpStatus.NOT_FOUND
             }
             .verify()
+
+        Mockito.verify(courseQueryPort, Mockito.never()).findEnrollments(Mockito.anyString())
+        Mockito.verifyNoInteractions(projectionRepository, userQueryPort)
     }
 })
-
-private fun sampleAssignmentDetailResponse(
-    courseSlug: String,
-    assignmentId: String,
-): AssignmentDetailResponse =
-    AssignmentDetailResponse(
-        id = assignmentId,
-        courseSlug = courseSlug,
-        weekNo = 1,
-        orderInWeek = 1,
-        startAt = Instant.parse("2026-03-03T00:00:00Z"),
-        endAt = Instant.parse("2026-03-11T00:00:00Z"),
-        status = AssignmentStatus.PUBLISHED,
-        publishedAt = Instant.parse("2026-03-03T00:00:00Z"),
-        metadata = AssignmentDetailMetadataResponse(
-            title = "터미널 계산기",
-            difficulty = AssignmentDifficulty.MID,
-            description = "# 문제 설명",
-        ),
-    )
 
 private fun sampleEnrollment(
     userId: String,
     publicCode: String,
     username: String,
-): CourseEnrollmentResponse =
-    CourseEnrollmentResponse(
-        courseId = "course-1",
-        courseSlug = "back-basic",
+): AdminAssignmentSubmissionEnrollment =
+    AdminAssignmentSubmissionEnrollment(
         userId = userId,
         publicCode = publicCode,
         username = username,
         status = EnrollmentStatus.ENABLED,
-        joinedAt = Instant.parse("2026-03-05T09:20:18Z"),
-        bannedAt = null,
-        banReason = null,
-        updatedAt = Instant.parse("2026-03-05T09:20:18Z"),
     )
 
-private fun sampleReportUser(
+private fun sampleUser(
     userId: String,
-    publicCode: String,
-    username: String,
     nickname: String?,
-): ReportUser =
-    ReportUser(
+): AdminAssignmentSubmissionUserReference =
+    AdminAssignmentSubmissionUserReference(
         id = userId,
-        publicCode = publicCode,
-        username = username,
-        role = "USER",
         nickname = nickname,
     )

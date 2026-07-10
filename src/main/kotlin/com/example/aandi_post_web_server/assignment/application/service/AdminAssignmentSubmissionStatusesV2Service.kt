@@ -1,39 +1,42 @@
 package com.example.aandi_post_web_server.assignment.application.service
 
-import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
-import com.example.aandi_post_web_server.assignment.infrastructure.submission.repository.AssignmentSubmissionStatusProjectionRepository
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusItemResponse
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
-import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
-import com.example.aandi_post_web_server.course.application.service.CourseV1Service
-import com.example.aandi_post_web_server.user.entity.ReportUser
-import com.example.aandi_post_web_server.user.infrastructure.repository.ReportUserRepository
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionCourseQueryPort
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionEnrollment
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserQueryPort
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserReference
+import com.example.aandi_post_web_server.assignment.infrastructure.submission.repository.AssignmentSubmissionStatusProjectionRepository
+import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
 @Service
 class AdminAssignmentSubmissionStatusesV2Service(
-    private val courseV1Service: CourseV1Service,
+    private val courseQueryPort: AdminAssignmentSubmissionCourseQueryPort,
     private val projectionRepository: AssignmentSubmissionStatusProjectionRepository,
-    private val reportUserRepository: ReportUserRepository,
+    private val userQueryPort: AdminAssignmentSubmissionUserQueryPort,
 ) {
 
     fun getSubmissionStatuses(
         courseSlug: String,
         assignmentId: String,
     ): Mono<AdminAssignmentSubmissionStatusesResponse> =
-        courseV1Service.getAdminAssignmentDetail(courseSlug, assignmentId)
-            .flatMap {
-                courseV1Service.getEnrollments(courseSlug).collectList()
-                    .flatMap { enrollments ->
-                        Mono.zip(
-                            Mono.just(enrollments),
-                            projectionRepository.findAllByAssignmentId(assignmentId).collectList(),
-                            reportUserRepository.findAllById(enrollments.map(CourseEnrollmentResponse::userId).distinct())
-                                .collectMap(ReportUser::id),
-                        )
-                    }
-            }
+        courseQueryPort.ensureAssignmentBelongsToCourse(courseSlug, assignmentId)
+            .then(
+                Mono.defer {
+                    courseQueryPort.findEnrollments(courseSlug).collectList()
+                        .flatMap { enrollments ->
+                            val userIds = enrollments.map(AdminAssignmentSubmissionEnrollment::userId).distinct()
+                            Mono.zip(
+                                Mono.just(enrollments),
+                                projectionRepository.findAllByAssignmentId(assignmentId).collectList(),
+                                userQueryPort.findAllByIds(userIds)
+                                    .collectMap(AdminAssignmentSubmissionUserReference::id),
+                            )
+                        }
+                }
+            )
             .map { tuple ->
                 val enrollments = tuple.t1
                 val projectionsByPublicCode = tuple.t2.associateBy(AssignmentSubmissionStatusProjection::publicCode)
@@ -55,9 +58,9 @@ class AdminAssignmentSubmissionStatusesV2Service(
             }
 
     private fun toItemResponse(
-        enrollment: CourseEnrollmentResponse,
+        enrollment: AdminAssignmentSubmissionEnrollment,
         projection: AssignmentSubmissionStatusProjection?,
-        reportUser: ReportUser?,
+        reportUser: AdminAssignmentSubmissionUserReference?,
     ): AdminAssignmentSubmissionStatusItemResponse =
         AdminAssignmentSubmissionStatusItemResponse(
             userId = enrollment.userId,
