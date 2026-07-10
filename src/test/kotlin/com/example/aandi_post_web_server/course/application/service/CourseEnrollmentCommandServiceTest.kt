@@ -2,6 +2,8 @@ package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.course.api.dto.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.UpdateEnrollmentRequest
+import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserQueryPort
+import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserReference
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
@@ -10,8 +12,6 @@ import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
-import com.example.aandi_post_web_server.user.entity.ReportUser
-import com.example.aandi_post_web_server.user.infrastructure.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.mockito.ArgumentMatchers
@@ -87,10 +87,10 @@ class CourseEnrollmentCommandServiceTest : StringSpec({
     "삭제된 수강생은 다시 등록할 수 있다" {
         val fixture = CourseEnrollmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
-        val reportUser = reportUser(id = "user-1", publicCode = "#FL301", role = "USER")
+        val reportUser = enrollmentUser(id = "user-1", publicCode = "#FL301", role = "USER")
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "user-1"))
             .thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseEnrollmentRepository.save(ArgumentMatchers.any(CourseEnrollment::class.java)))
@@ -108,15 +108,72 @@ class CourseEnrollmentCommandServiceTest : StringSpec({
                 enrollment.publicCode shouldBe "#FL301"
             }
             .verifyComplete()
+
+        Mockito.verify(fixture.userQueryPort, Mockito.never()).findByPublicCode("FL301")
+    }
+
+    "canonical publicCode가 없으면 legacy 값으로 조회해 등록한다" {
+        val fixture = CourseEnrollmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val reportUser = enrollmentUser(id = "user-1", publicCode = "FL301", role = "USER")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#FL301")).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("FL301")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "user-1"))
+            .thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseEnrollmentRepository.save(ArgumentMatchers.any(CourseEnrollment::class.java)))
+            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as CourseEnrollment) }
+
+        StepVerifier.create(
+            fixture.service.enrollMember(
+                courseSlug = "back-basic",
+                request = EnrollCourseRequest(publicCode = "#FL301"),
+            )
+        )
+            .assertNext { enrollment ->
+                enrollment.userId shouldBe "user-1"
+                enrollment.publicCode shouldBe "FL301"
+            }
+            .verifyComplete()
+
+        val lookupOrder = Mockito.inOrder(fixture.userQueryPort)
+        lookupOrder.verify(fixture.userQueryPort).findByPublicCode("#FL301")
+        lookupOrder.verify(fixture.userQueryPort).findByPublicCode("FL301")
+    }
+
+    "동기화된 사용자가 없으면 422를 반환하고 수강 정보를 조회하지 않는다" {
+        val fixture = CourseEnrollmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#FL301")).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("FL301")).thenReturn(Mono.empty())
+
+        StepVerifier.create(
+            fixture.service.enrollMember(
+                courseSlug = "back-basic",
+                request = EnrollCourseRequest(publicCode = "FL301"),
+            )
+        )
+            .expectErrorSatisfies { error ->
+                val exception = error as ResponseStatusException
+                exception.statusCode shouldBe HttpStatus.UNPROCESSABLE_ENTITY
+                exception.reason shouldBe
+                    "report 서버에서 publicCode=#FL301 사용자를 찾을 수 없습니다. auth 이벤트 동기화 여부를 확인해주세요."
+            }
+            .verify()
+
+        Mockito.verifyNoInteractions(fixture.courseEnrollmentRepository)
     }
 
     "FL 코스는 FL 일반 유저만 등록할 수 있다" {
         val fixture = CourseEnrollmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "fl-basic", title = "FL 기초", fieldTag = CourseTrack.FL)
-        val reportUser = reportUser(id = "user-sp", publicCode = "#SP201", role = "USER")
+        val reportUser = enrollmentUser(id = "user-sp", publicCode = "#SP201", role = "USER")
 
         Mockito.`when`(fixture.courseRepository.findBySlug("fl-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#SP201")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#SP201")).thenReturn(Mono.just(reportUser))
 
         StepVerifier.create(
             fixture.service.enrollMember(
@@ -134,10 +191,10 @@ class CourseEnrollmentCommandServiceTest : StringSpec({
     "SP 코스는 SP 일반 유저를 등록할 수 있다" {
         val fixture = CourseEnrollmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "sp-basic", title = "SP 기초", fieldTag = CourseTrack.SP)
-        val reportUser = reportUser(id = "user-sp", publicCode = "#SP201", role = "USER")
+        val reportUser = enrollmentUser(id = "user-sp", publicCode = "#SP201", role = "USER")
 
         Mockito.`when`(fixture.courseRepository.findBySlug("sp-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#SP201")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#SP201")).thenReturn(Mono.just(reportUser))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "user-sp"))
             .thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseEnrollmentRepository.save(ArgumentMatchers.any(CourseEnrollment::class.java)))
@@ -159,10 +216,10 @@ class CourseEnrollmentCommandServiceTest : StringSpec({
     "SP 코스는 SP가 아닌 일반 유저 등록을 막는다" {
         val fixture = CourseEnrollmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "sp-basic", title = "SP 기초", fieldTag = CourseTrack.SP)
-        val reportUser = reportUser(id = "user-fl", publicCode = "#FL301", role = "USER")
+        val reportUser = enrollmentUser(id = "user-fl", publicCode = "#FL301", role = "USER")
 
         Mockito.`when`(fixture.courseRepository.findBySlug("sp-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
 
         StepVerifier.create(
             fixture.service.enrollMember(
@@ -180,10 +237,10 @@ class CourseEnrollmentCommandServiceTest : StringSpec({
     "NO 코스는 모든 일반 유저를 등록할 수 있다" {
         val fixture = CourseEnrollmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "no-basic", title = "NO 기초", fieldTag = CourseTrack.NO)
-        val reportUser = reportUser(id = "user-fl", publicCode = "#FL301", role = "USER")
+        val reportUser = enrollmentUser(id = "user-fl", publicCode = "#FL301", role = "USER")
 
         Mockito.`when`(fixture.courseRepository.findBySlug("no-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "user-fl"))
             .thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseEnrollmentRepository.save(ArgumentMatchers.any(CourseEnrollment::class.java)))
@@ -205,10 +262,10 @@ class CourseEnrollmentCommandServiceTest : StringSpec({
     "NO 코스는 SP 일반 유저도 등록할 수 있다" {
         val fixture = CourseEnrollmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "no-basic", title = "NO 기초", fieldTag = CourseTrack.NO)
-        val reportUser = reportUser(id = "user-sp", publicCode = "#SP201", role = "USER")
+        val reportUser = enrollmentUser(id = "user-sp", publicCode = "#SP201", role = "USER")
 
         Mockito.`when`(fixture.courseRepository.findBySlug("no-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#SP201")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#SP201")).thenReturn(Mono.just(reportUser))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "user-sp"))
             .thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseEnrollmentRepository.save(ArgumentMatchers.any(CourseEnrollment::class.java)))
@@ -230,10 +287,10 @@ class CourseEnrollmentCommandServiceTest : StringSpec({
     "ADMIN 은 어떤 코스에도 예외적으로 등록할 수 있다" {
         val fixture = CourseEnrollmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "sp-basic", title = "SP 기초", fieldTag = CourseTrack.SP)
-        val reportUser = reportUser(id = "admin-1", publicCode = "#AD001", role = "ADMIN")
+        val reportUser = enrollmentUser(id = "admin-1", publicCode = "#AD001", role = "ADMIN")
 
         Mockito.`when`(fixture.courseRepository.findBySlug("sp-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#AD001")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#AD001")).thenReturn(Mono.just(reportUser))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "admin-1"))
             .thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseEnrollmentRepository.save(ArgumentMatchers.any(CourseEnrollment::class.java)))
@@ -255,10 +312,10 @@ class CourseEnrollmentCommandServiceTest : StringSpec({
     "ORGANIZER 는 어떤 코스에도 예외적으로 등록할 수 있다" {
         val fixture = CourseEnrollmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "fl-basic", title = "FL 기초", fieldTag = CourseTrack.FL)
-        val reportUser = reportUser(id = "organizer-1", publicCode = "#OR001", role = "ORGANIZER")
+        val reportUser = enrollmentUser(id = "organizer-1", publicCode = "#OR001", role = "ORGANIZER")
 
         Mockito.`when`(fixture.courseRepository.findBySlug("fl-basic")).thenReturn(Mono.just(course))
-        Mockito.`when`(fixture.reportUserRepository.findByPublicCode("#OR001")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#OR001")).thenReturn(Mono.just(reportUser))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "organizer-1"))
             .thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseEnrollmentRepository.save(ArgumentMatchers.any(CourseEnrollment::class.java)))
@@ -282,11 +339,11 @@ class CourseEnrollmentCommandServiceTest : StringSpec({
 private class CourseEnrollmentCommandFixture {
     val courseRepository: CourseRepository = Mockito.mock(CourseRepository::class.java)
     val courseEnrollmentRepository: CourseEnrollmentRepository = Mockito.mock(CourseEnrollmentRepository::class.java)
-    val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
+    val userQueryPort: CourseEnrollmentUserQueryPort = Mockito.mock(CourseEnrollmentUserQueryPort::class.java)
     val service = CourseEnrollmentCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
-        reportUserRepository = reportUserRepository,
+        userQueryPort = userQueryPort,
     )
 }
 
@@ -304,11 +361,11 @@ private fun queryCourse(id: String, slug: String, title: String, fieldTag: Cours
     ),
 )
 
-private fun reportUser(
+private fun enrollmentUser(
     id: String,
     publicCode: String,
     role: String,
-): ReportUser = ReportUser(
+): CourseEnrollmentUserReference = CourseEnrollmentUserReference(
     id = id,
     publicCode = publicCode,
     username = id,

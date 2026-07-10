@@ -4,6 +4,8 @@ import com.example.aandi_post_web_server.common.security.UserRole
 import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.api.dto.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.UpdateEnrollmentRequest
+import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserQueryPort
+import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserReference
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
@@ -14,8 +16,6 @@ import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
-import com.example.aandi_post_web_server.user.entity.ReportUser
-import com.example.aandi_post_web_server.user.infrastructure.repository.ReportUserRepository
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -26,7 +26,7 @@ import java.time.Instant
 class CourseEnrollmentCommandService(
     private val courseRepository: CourseRepository,
     private val courseEnrollmentRepository: CourseEnrollmentRepository,
-    private val reportUserRepository: ReportUserRepository,
+    private val userQueryPort: CourseEnrollmentUserQueryPort,
 ) {
     fun enrollMember(courseSlug: String, request: EnrollCourseRequest): Mono<CourseEnrollmentResponse> {
         val slug = parseCourseSlug(courseSlug)
@@ -34,7 +34,7 @@ class CourseEnrollmentCommandService(
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                findReportUserByPublicCode(publicCode)
+                findEnrollmentUserByPublicCode(publicCode)
                     .switchIfEmpty(
                         Mono.error(
                             ResponseStatusException(
@@ -122,14 +122,14 @@ class CourseEnrollmentCommandService(
             .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다: ${slug.value}")))
     }
 
-    private fun findReportUserByPublicCode(publicCode: PublicCode): Mono<ReportUser> =
-        reportUserRepository.findByPublicCode(publicCode.value)
-            .switchIfEmpty(Mono.defer { reportUserRepository.findByPublicCode(publicCode.legacyValue) })
+    private fun findEnrollmentUserByPublicCode(publicCode: PublicCode): Mono<CourseEnrollmentUserReference> =
+        userQueryPort.findByPublicCode(publicCode.value)
+            .switchIfEmpty(Mono.defer { userQueryPort.findByPublicCode(publicCode.legacyValue) })
 
     private fun validateEnrollmentEligibility(
         course: Course,
         publicCode: PublicCode,
-        reportUser: ReportUser,
+        reportUser: CourseEnrollmentUserReference,
     ): Mono<Void> {
         if (isPrivilegedUser(reportUser)) {
             return Mono.empty()
@@ -148,7 +148,7 @@ class CourseEnrollmentCommandService(
         )
     }
 
-    private fun isPrivilegedUser(reportUser: ReportUser): Boolean {
+    private fun isPrivilegedUser(reportUser: CourseEnrollmentUserReference): Boolean {
         val role = UserRole.fromClaim(reportUser.role)
         return role == UserRole.ADMIN || role == UserRole.ORGANIZER
     }
@@ -156,7 +156,7 @@ class CourseEnrollmentCommandService(
     private fun enrollUser(
         courseId: CourseId,
         courseSlug: String,
-        reportUser: ReportUser,
+        reportUser: CourseEnrollmentUserReference,
     ): Mono<CourseEnrollmentResponse> {
         return courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, reportUser.id)
             .flatMap<CourseEnrollmentResponse> { existing ->

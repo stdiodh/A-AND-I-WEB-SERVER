@@ -19,13 +19,13 @@ import com.example.aandi_post_web_server.assignment.infrastructure.repository.As
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
+import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserQueryPort
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
 import com.example.aandi_post_web_server.course.infrastructure.adapter.AssignmentCourseAdapter
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
-import com.example.aandi_post_web_server.user.infrastructure.repository.ReportUserRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.mockito.Mockito
@@ -130,7 +130,7 @@ private class Fixture {
     val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
     val assignmentReportTestCaseEventPublisher = NoopAssignmentReportTestCaseEventPublisherForTest()
-    val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
+    val userQueryPort: CourseEnrollmentUserQueryPort = Mockito.mock(CourseEnrollmentUserQueryPort::class.java)
     val assignmentTestCaseValidator = AssignmentTestCaseValidator()
     val assignmentCommandRequestResolver = AssignmentCommandRequestResolver(assignmentTestCaseValidator)
     val assignmentCopyFingerprintCalculator = AssignmentCopyFingerprintCalculator()
@@ -153,7 +153,7 @@ private class Fixture {
     private val courseEnrollmentCommandService = CourseEnrollmentCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
-        reportUserRepository = reportUserRepository,
+        userQueryPort = userQueryPort,
     )
     private val assignmentCopyService = AssignmentCopyService(
         assignmentCoursePort = assignmentCoursePort,
