@@ -4,16 +4,17 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResp
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentRequirementResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentCoursePort
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentProblemSyncPort
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPublicationPolicy
 import com.example.aandi_post_web_server.assignment.domain.model.toDetailResponse
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventPayload
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventType
-import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEvent
-import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventMapper
-import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventPublisher
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
@@ -22,10 +23,6 @@ import com.example.aandi_post_web_server.course.domain.model.AssignmentId
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
 import com.example.aandi_post_web_server.course.domain.model.WeekNo
-import com.example.aandi_post_web_server.course.entity.Course
-import com.example.aandi_post_web_server.course.entity.CourseWeek
-import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
-import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
@@ -37,15 +34,14 @@ import java.util.UUID
 
 @Service
 class AssignmentCopyService(
-    private val courseRepository: CourseRepository,
-    private val courseWeekRepository: CourseWeekRepository,
+    private val assignmentCoursePort: AssignmentCoursePort,
     private val assignmentRepository: AssignmentRepository,
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
     private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
-    private val assignmentReportTestCaseEventMapper: AssignmentReportTestCaseEventMapper,
-    private val assignmentReportTestCaseEventPublisher: AssignmentReportTestCaseEventPublisher,
+    private val assignmentProblemSyncPort: AssignmentProblemSyncPort,
     private val assignmentCopyFingerprintCalculator: AssignmentCopyFingerprintCalculator,
+    private val assignmentPublicationPolicy: AssignmentPublicationPolicy = AssignmentPublicationPolicy(),
 ) {
     private val log = LoggerFactory.getLogger(AssignmentCopyService::class.java)
 
@@ -95,7 +91,7 @@ class AssignmentCopyService(
     }
 
     private fun copyAssignmentInternal(
-        targetCourse: Course,
+        targetCourse: AssignmentCourseReference,
         targetCourseId: CourseId,
         sourceAssignment: Assignment,
         sourceCourseSlug: String,
@@ -135,7 +131,7 @@ class AssignmentCopyService(
             .then(ensureAssignmentSlotAvailableForCreate(targetCourseId, targetWeekNo.value, targetOrderInWeek))
             .then(
                 Mono.defer {
-                    ensureWeekExistsOrCreate(
+                    assignmentCoursePort.ensureWeekExistsOrCreate(
                         courseId = targetCourseId,
                         weekNo = targetWeekNo,
                         startAt = targetStartAt,
@@ -328,31 +324,6 @@ class AssignmentCopyService(
             .then()
     }
 
-    private fun ensureWeekExistsOrCreate(
-        courseId: CourseId,
-        weekNo: WeekNo,
-        startAt: Instant,
-        endAt: Instant,
-    ): Mono<Void> {
-        return courseWeekRepository.findByCourseIdAndWeekNo(courseId.value, weekNo.value)
-            .switchIfEmpty(
-                Mono.defer {
-                    courseWeekRepository.save(
-                        CourseWeek(
-                            courseId = courseId.value,
-                            weekNo = weekNo.value,
-                            title = "${weekNo.value}주차",
-                            startDate = startAt.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate(),
-                            endDate = endAt.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate(),
-                            createdAt = Instant.now(),
-                            updatedAt = Instant.now(),
-                        )
-                    )
-                }
-            )
-            .then()
-    }
-
     private fun cleanupCopiedAssignment(assignmentId: String): Mono<Void> =
         deleteCopiedAssignmentDocuments(assignmentId)
             .onErrorResume { cleanupError ->
@@ -370,8 +341,7 @@ class AssignmentCopyService(
 
     private fun resolveAssignmentCourseSlug(assignment: Assignment): Mono<String> {
         val fallbackSlug = assignment.courseSlug.takeIf { it.isNotBlank() }
-        return courseRepository.findById(assignment.courseId)
-            .map { it.slug }
+        return assignmentCoursePort.findSlugById(assignment.courseId)
             .switchIfEmpty(
                 fallbackSlug?.let { Mono.just(it) }
                     ?: Mono.error(
@@ -383,94 +353,54 @@ class AssignmentCopyService(
             )
     }
 
-    private fun publishProblemSyncOnCreate(assignment: Assignment): Mono<Void> {
-        val assignmentId = requireNotNull(assignment.id)
-        return loadAssignmentProblemSyncSnapshot(assignmentId)
-            .flatMap { (snapshotAssignment, testCases) ->
-                publishProblemSyncEvent(assignmentReportTestCaseEventMapper.created(snapshotAssignment, testCases))
-            }
-    }
-
-    private fun loadAssignmentProblemSyncSnapshot(
-        assignmentId: String,
-    ): Mono<Pair<Assignment, List<AssignmentTestCaseResponse>>> =
-        assignmentRepository.findById(assignmentId)
-            .switchIfEmpty(
-                Mono.error(
-                    IllegalStateException("problem sync 대상 assignment snapshot을 찾을 수 없습니다: $assignmentId")
-                )
-            )
-            .zipWith(
-                assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId)
-                    .map { AssignmentTestCaseResponse(it.seq, it.inputValues, it.outputText, it.visibility) }
-                    .collectList()
-            )
-            .map { it.t1 to it.t2 }
-
-    private fun publishProblemSyncEvent(event: AssignmentReportTestCaseEvent): Mono<Void> {
-        log.info(
-            "Publishing assignment problem sync event. eventType={}, problemId={}, testCaseCount={}, caseIds={}",
-            event.eventType,
-            event.problemId,
-            event.testCases.size,
-            event.testCases.map { it.caseId },
-        )
-        return assignmentReportTestCaseEventPublisher.publish(event)
-    }
+    private fun publishProblemSyncOnCreate(assignment: Assignment): Mono<Void> =
+        assignmentProblemSyncPort.publishCreated(requireNotNull(assignment.id))
 
     private fun toAssignmentDetailResponse(
         courseSlug: String,
         assignment: Assignment,
         requirements: List<AssignmentRequirementResponse>,
         testCases: List<AssignmentTestCaseResponse>,
-    ): AssignmentDetailResponse = AssignmentDetailResponse(
-        id = requireNotNull(assignment.id),
-        courseSlug = courseSlug,
-        weekNo = assignment.weekNo,
-        orderInWeek = assignment.orderInWeek,
-        startAt = assignment.startAt,
-        endAt = assignment.endAt,
-        status = effectiveResponseStatus(assignment),
-        publishedAt = effectiveResponsePublishedAt(assignment),
-        metadata = assignment.metadata.toDetailResponse(requirements, testCases),
-    )
-
-    private fun effectiveResponseStatus(
-        assignment: Assignment,
-        now: Instant = Instant.now(),
-    ): AssignmentStatus {
-        if (assignment.status != AssignmentStatus.PUBLISHED) {
-            return assignment.status
-        }
-        return if (now >= assignment.startAt) AssignmentStatus.PUBLISHED else AssignmentStatus.DRAFT
+    ): AssignmentDetailResponse {
+        val publication = effectivePublication(assignment)
+        return AssignmentDetailResponse(
+            id = requireNotNull(assignment.id),
+            courseSlug = courseSlug,
+            weekNo = assignment.weekNo,
+            orderInWeek = assignment.orderInWeek,
+            startAt = assignment.startAt,
+            endAt = assignment.endAt,
+            status = publication.status,
+            publishedAt = publication.publishedAt,
+            metadata = assignment.metadata.toDetailResponse(requirements, testCases),
+        )
     }
-
-    private fun effectiveResponsePublishedAt(
-        assignment: Assignment,
-        now: Instant = Instant.now(),
-    ): Instant? =
-        if (effectiveResponseStatus(assignment, now) == AssignmentStatus.PUBLISHED) {
-            assignment.publishedAt ?: assignment.startAt
-        } else {
-            null
-        }
 
     private fun logAssignmentReportEvent(
         eventType: AssignmentReportEventType,
         assignment: Assignment,
-        now: Instant = Instant.now(),
+        now: Instant = assignmentPublicationPolicy.now(),
     ) {
+        val publication = effectivePublication(assignment, now)
         val payload = AssignmentReportEventPayload.from(
             eventType = eventType,
             assignment = assignment,
-            status = effectiveResponseStatus(assignment, now),
-            publishedAt = assignment.publishedAt ?: effectiveResponsePublishedAt(assignment, now),
+            status = publication.status,
+            publishedAt = assignment.publishedAt ?: publication.publishedAt,
         )
         log.info("Report EVENT payload={}", payload)
     }
 
-    private fun findCourseBySlug(slug: CourseSlug): Mono<Course> {
-        return courseRepository.findBySlug(slug.value)
+    private fun effectivePublication(assignment: Assignment, now: Instant = assignmentPublicationPolicy.now()) =
+        assignmentPublicationPolicy.resolve(
+            status = assignment.status,
+            startAt = assignment.startAt,
+            publishedAt = assignment.publishedAt,
+            now = now,
+        )
+
+    private fun findCourseBySlug(slug: CourseSlug): Mono<AssignmentCourseReference> {
+        return assignmentCoursePort.findBySlug(slug)
             .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다: ${slug.value}")))
     }
 

@@ -18,28 +18,8 @@ import com.fasterxml.jackson.databind.Module
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.module.SimpleModule
-import org.springframework.stereotype.Component
-import java.util.IdentityHashMap
 
-@Component
-class AssignmentMetadataPayloadTestCasePresenceTracker {
-    private val testCasesPresence = IdentityHashMap<AssignmentMetadataPayload, Boolean>()
-
-    fun markTestCasesProvided(payload: AssignmentMetadataPayload, provided: Boolean) {
-        synchronized(testCasesPresence) {
-            testCasesPresence[payload] = provided
-        }
-    }
-
-    fun consumeTestCasesProvided(payload: AssignmentMetadataPayload): Boolean? =
-        synchronized(testCasesPresence) {
-            testCasesPresence.remove(payload)
-        }
-}
-
-fun assignmentMetadataPayloadModule(
-    presenceTracker: AssignmentMetadataPayloadTestCasePresenceTracker,
-): Module =
+fun assignmentMetadataPayloadModule(): Module =
     SimpleModule("assignment-metadata-payload-module").setDeserializerModifier(
         object : BeanDeserializerModifier() {
             override fun modifyDeserializer(
@@ -48,21 +28,14 @@ fun assignmentMetadataPayloadModule(
                 deserializer: JsonDeserializer<*>,
             ): JsonDeserializer<*> {
                 if (beanDesc.beanClass == AssignmentMetadataPayload::class.java) {
-                    return AssignmentMetadataPayloadDeserializer(
-                        delegate = deserializer,
-                        presenceTracker = presenceTracker,
-                    )
+                    return AssignmentMetadataPayloadDeserializer()
                 }
                 return deserializer
             }
         }
     )
 
-private class AssignmentMetadataPayloadDeserializer(
-    @Suppress("UNUSED_PARAMETER")
-    private val delegate: JsonDeserializer<*>,
-    private val presenceTracker: AssignmentMetadataPayloadTestCasePresenceTracker,
-) : JsonDeserializer<AssignmentMetadataPayload>() {
+private class AssignmentMetadataPayloadDeserializer : JsonDeserializer<AssignmentMetadataPayload>() {
 
     override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): AssignmentMetadataPayload {
         val codec = parser.codec as ObjectMapper
@@ -88,8 +61,7 @@ private class AssignmentMetadataPayloadDeserializer(
                 root.get("codeTemplates"),
                 object : TypeReference<List<AssignmentCodeTemplatePayload>>() {},
             ),
-        )
-        presenceTracker.markTestCasesProvided(payload, root.has("testCases"))
+        ).also { it.testCasesProvided = root.has("testCases") }
         return payload
     }
 

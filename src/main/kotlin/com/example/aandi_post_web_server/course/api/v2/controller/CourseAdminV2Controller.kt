@@ -101,7 +101,7 @@ class CourseAdminV2Controller(
     fun updateCourse(
         @Parameter(description = "코스를 구분하는 슬러그", example = "back-basic")
         @PathVariable courseSlug: String,
-        @RequestBody request: UpdateCourseRequest,
+        @Valid @RequestBody request: UpdateCourseRequest,
     ): Mono<V2ApiEnvelope<CourseResponse>> =
         courseV1Service.updateCourse(courseSlug, request).map(V2ApiResponseFactory::success)
 

@@ -31,8 +31,11 @@ import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 class CourseQueryServiceTest : StringSpec({
     "관리자 코스 조회는 수강신청 여부와 관계없이 전체 코스를 반환한다" {
@@ -696,6 +699,28 @@ class CourseQueryServiceTest : StringSpec({
             .verifyComplete()
     }
 
+    "관리자 상태 필터와 응답은 요청당 동일한 공개 기준 시각을 사용한다" {
+        val startAt = Instant.parse("2026-07-10T00:00:00Z")
+        val clock = AdvancingClock(
+            startAt.minusNanos(1),
+            startAt.plusNanos(1),
+        )
+        val fixture = QueryFixture(clock)
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val scheduled = queryAssignment(id = queryAssignmentId(1), courseId = "course-1")
+            .copy(startAt = startAt, publishedAt = startAt)
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
+            .thenReturn(Flux.just(scheduled))
+
+        StepVerifier.create(fixture.service.getAdminAssignments("back-basic", null, AssignmentStatus.DRAFT))
+            .assertNext { summary -> summary.status shouldBe AssignmentStatus.DRAFT }
+            .verifyComplete()
+
+        clock.readCount shouldBe 1
+    }
+
     "과제 목록 조회는 수강 실패 시 assignment와 child document를 조회하지 않는다" {
         val fixture = QueryFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
@@ -995,7 +1020,7 @@ private fun verifyAssignmentListUsesSingleBatchForCount(count: Int) {
         .findAllByAssignmentIdOrderBySeq(Mockito.anyString())
 }
 
-private class QueryFixture {
+private class QueryFixture(clock: Clock = Clock.systemUTC()) {
     val courseRepository: CourseRepository = Mockito.mock(CourseRepository::class.java)
     val courseEnrollmentRepository: CourseEnrollmentRepository = Mockito.mock(CourseEnrollmentRepository::class.java)
     val courseWeekRepository: CourseWeekRepository = Mockito.mock(CourseWeekRepository::class.java)
@@ -1014,6 +1039,7 @@ private class QueryFixture {
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentTestCaseRepository = assignmentExampleRepository,
+        clock = clock,
     )
 
     fun stubBatchChildren(
@@ -1026,6 +1052,19 @@ private class QueryFixture {
             .thenReturn(Flux.fromIterable(examples))
         Mockito.clearInvocations(assignmentRequirementRepository, assignmentExampleRepository)
     }
+}
+
+private class AdvancingClock(
+    private vararg val instants: Instant,
+) : Clock() {
+    var readCount: Int = 0
+        private set
+
+    override fun instant(): Instant = instants[minOf(readCount++, instants.lastIndex)]
+
+    override fun getZone(): ZoneId = ZoneOffset.UTC
+
+    override fun withZone(zone: ZoneId): Clock = this
 }
 
 private fun queryAssignmentId(index: Int): String =

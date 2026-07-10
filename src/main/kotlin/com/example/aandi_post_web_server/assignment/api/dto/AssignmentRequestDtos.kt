@@ -2,7 +2,9 @@ package com.example.aandi_post_web_server.assignment.api.dto
 
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
+import com.fasterxml.jackson.annotation.JsonIgnore
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import java.time.Instant
@@ -16,14 +18,21 @@ data class AssignmentMetadataPayload(
     @field:Schema(description = "과제 설명", example = "# 문제 설명")
     val description: String? = null,
     @field:Schema(description = "문제 요구 사항")
+    @field:Valid
     val requirements: List<CreateAssignmentRequirementRequest> = emptyList(),
     @field:Schema(description = "학습 목표")
+    @field:Valid
     val learningGoals: List<CreateAssignmentLearningGoalRequest> = emptyList(),
     @field:Schema(description = "테스트 케이스")
+    @field:Valid
     val testCases: List<CreateAssignmentTestCaseRequest> = emptyList(),
     @field:Schema(description = "언어별 코드 템플릿")
     val codeTemplates: List<AssignmentCodeTemplatePayload> = emptyList(),
-)
+) {
+    @get:JsonIgnore
+    @field:Schema(hidden = true)
+    internal var testCasesProvided: Boolean = testCases.isNotEmpty()
+}
 
 @Schema(description = "과제 요구사항 생성 요청")
 data class CreateAssignmentRequirementRequest(
@@ -114,6 +123,7 @@ data class CreateAssignmentRequest(
     @field:Schema(description = "마감 시각(KST/Asia/Seoul)", example = "2026-03-11T08:59:59+09:00")
     val endAt: Instant,
     @field:Schema(description = "과제 메타데이터")
+    @field:Valid
     val metadata: AssignmentMetadataPayload,
 )
 
@@ -204,5 +214,6 @@ data class UpdateAssignmentRequest(
     @field:Schema(description = "마감 시각(옵션, KST/Asia/Seoul)", example = "2026-03-11T08:59:59+09:00")
     val endAt: Instant? = null,
     @field:Schema(description = "과제 메타데이터(전체 교체, 옵션)")
+    @field:Valid
     val metadata: AssignmentMetadataPayload? = null,
 )

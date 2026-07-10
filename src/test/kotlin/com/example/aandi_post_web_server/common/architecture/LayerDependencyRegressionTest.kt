@@ -41,6 +41,59 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
+    fun `assignment application does not depend on course command facade`() {
+        val assignmentApplication = "$basePackage.assignment.application"
+        val courseCommandService = "$basePackage.course.application.service.CourseCommandService"
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            if (!isSameOrChildPackage(packageName, assignmentApplication)) return@scanMainSourceImports null
+            if (importName != courseCommandService) return@scanMainSourceImports null
+
+            "$relativePath -> assignment application depends on course command facade: $importName"
+        }
+
+        assertNoViolations("Feature application dependency direction is broken", violations)
+    }
+
+    @Test
+    fun `assignment application does not depend on course entities or infrastructure`() {
+        val assignmentApplication = "$basePackage.assignment.application"
+        val forbiddenPrefixes = listOf(
+            "$basePackage.course.entity.",
+            "$basePackage.course.infrastructure.",
+        )
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            if (!isSameOrChildPackage(packageName, assignmentApplication)) return@scanMainSourceImports null
+            val forbiddenPrefix = forbiddenPrefixes.firstOrNull(importName::startsWith)
+                ?: return@scanMainSourceImports null
+
+            "$relativePath -> assignment application depends on course implementation: $forbiddenPrefix"
+        }
+
+        assertNoViolations("Feature application port boundary is broken", violations)
+    }
+
+    @Test
+    fun `assignment application does not depend on problem sync infrastructure`() {
+        val assignmentApplication = "$basePackage.assignment.application"
+        val eventInfrastructure = "$basePackage.assignment.infrastructure.event."
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            if (!isSameOrChildPackage(packageName, assignmentApplication)) return@scanMainSourceImports null
+            if (!importName.startsWith(eventInfrastructure)) return@scanMainSourceImports null
+            if (
+                importName != "${eventInfrastructure}*" &&
+                !importName.contains("AssignmentReportTestCase") &&
+                !importName.contains("AssignmentProblemSync")
+            ) {
+                return@scanMainSourceImports null
+            }
+
+            "$relativePath -> assignment application depends on problem sync implementation: $importName"
+        }
+
+        assertNoViolations("Assignment problem sync port boundary is broken", violations)
+    }
+
+    @Test
     fun `common runtime packages do not depend on feature packages`() {
         val featurePrefixes = listOf("assignment", "course", "report", "user")
             .map { "$basePackage.$it." }

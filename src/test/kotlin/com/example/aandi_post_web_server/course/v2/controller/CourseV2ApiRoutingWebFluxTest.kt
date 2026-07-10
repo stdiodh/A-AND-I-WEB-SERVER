@@ -173,6 +173,21 @@ class CourseV2ApiRoutingWebFluxTest : StringSpec() {
                 .jsonPath("$.error.code").isEqualTo(21201)
         }
 
+        "v2 admin 코스 수정 API는 잘못된 중첩 metadata를 400으로 거부한다" {
+            v2AdminClient().patch()
+                .uri("/v2/admin/courses/back-basic")
+                .bodyValue(
+                    mapOf(
+                        "metadata" to mapOf("title" to " "),
+                    )
+                )
+                .exchange()
+                .expectStatus().isBadRequest
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.error.code").isEqualTo(40301)
+        }
+
         "v2 admin API는 토큰이 없으면 401을 반환한다" {
             webTestClient.post()
                 .uri("/v2/admin/courses")

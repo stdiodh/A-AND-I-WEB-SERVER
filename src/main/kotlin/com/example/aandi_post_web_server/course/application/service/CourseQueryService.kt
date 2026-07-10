@@ -10,6 +10,7 @@ import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPublicationPolicy
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
@@ -50,6 +51,7 @@ class CourseQueryService(
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
     private val clock: Clock = Clock.systemUTC(),
+    private val assignmentPublicationPolicy: AssignmentPublicationPolicy = AssignmentPublicationPolicy(clock),
 ) {
 
     fun getAdminCourses(): Flux<CourseResponse> =
@@ -148,15 +150,16 @@ class CourseQueryService(
     ): Flux<AssignmentSummaryResponse> {
         val slug = parseCourseSlug(courseSlug)
         val parsedWeekNo = weekNo?.let { parseWeekNo(it) }
+        val now = assignmentPublicationPolicy.now()
         return findCourseBySlug(slug)
             .flatMapMany { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
                 findAdminAssignmentsByFilter(courseId, parsedWeekNo)
             }
-            .filter { assignment -> status == null || effectiveAssignmentStatus(assignment) == status }
+            .filter { assignment -> status == null || effectivePublication(assignment, now).status == status }
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
             .collectList()
-            .flatMapMany { assignments -> loadAssignmentSummaries(assignments, includeHidden = true) }
+            .flatMapMany { assignments -> loadAssignmentSummaries(assignments, includeHidden = true, now = now) }
     }
 
     fun getAssignmentDetail(
@@ -300,7 +303,11 @@ class CourseQueryService(
                 toAssignmentDetailResponse(courseSlug, assignment, effectiveAssignment(assignment), tuple.t1, tuple.t2)
             }
 
-    private fun loadAssignmentSummaries(assignments: List<Assignment>, includeHidden: Boolean): Flux<AssignmentSummaryResponse> {
+    private fun loadAssignmentSummaries(
+        assignments: List<Assignment>,
+        includeHidden: Boolean,
+        now: Instant = assignmentPublicationPolicy.now(),
+    ): Flux<AssignmentSummaryResponse> {
         if (assignments.isEmpty()) {
             return Flux.empty()
         }
@@ -340,7 +347,7 @@ class CourseQueryService(
                                     testCase.visibility,
                                 )
                             }
-                        toAssignmentSummaryResponse(assignment, effectiveAssignment(assignment), requirements, testCases)
+                        toAssignmentSummaryResponse(assignment, effectiveAssignment(assignment, now), requirements, testCases)
                     }
                 )
             }
@@ -447,26 +454,22 @@ class CourseQueryService(
     private fun isChecked(now: Instant, assignment: Assignment): Boolean = now.isAfter(assignment.endAt)
 
     private fun isVisibleToUser(assignment: Assignment): Boolean =
-        effectiveAssignmentStatus(assignment) == AssignmentStatus.PUBLISHED
+        effectivePublication(assignment).status == AssignmentStatus.PUBLISHED
 
-    private fun effectiveAssignmentStatus(assignment: Assignment, now: Instant = Instant.now(clock)): AssignmentStatus {
-        if (assignment.status != AssignmentStatus.PUBLISHED) {
-            return assignment.status
-        }
-        if (now >= assignment.startAt) {
-            return AssignmentStatus.PUBLISHED
-        }
-        return AssignmentStatus.DRAFT
+    private fun effectiveAssignment(assignment: Assignment, now: Instant = assignmentPublicationPolicy.now()): Assignment {
+        val publication = effectivePublication(assignment, now)
+        return assignment.copy(
+            status = publication.status,
+            publishedAt = publication.publishedAt,
+        )
     }
 
-    private fun effectiveAssignment(assignment: Assignment, now: Instant = Instant.now(clock)): Assignment =
-        assignment.copy(
-            status = effectiveAssignmentStatus(assignment, now),
-            publishedAt = if (effectiveAssignmentStatus(assignment, now) == AssignmentStatus.PUBLISHED) {
-                assignment.publishedAt ?: assignment.startAt
-            } else {
-                null
-            },
+    private fun effectivePublication(assignment: Assignment, now: Instant = assignmentPublicationPolicy.now()) =
+        assignmentPublicationPolicy.resolve(
+            status = assignment.status,
+            startAt = assignment.startAt,
+            publishedAt = assignment.publishedAt,
+            now = now,
         )
 
     private fun toAssignmentSummaryResponse(

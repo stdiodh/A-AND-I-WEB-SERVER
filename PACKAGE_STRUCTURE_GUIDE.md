@@ -72,6 +72,7 @@ com.example.aandi_post_web_server
 │  │  └─ v2
 │  │     └─ dto
 │  ├─ application
+│  │  ├─ port
 │  │  ├─ service
 │  │  └─ submission
 │  │     └─ service
@@ -101,6 +102,7 @@ com.example.aandi_post_web_server
 │  │  └─ model
 │  ├─ entity
 │  └─ infrastructure
+│     ├─ adapter
 │     └─ repository
 │
 ├─ report
@@ -145,10 +147,14 @@ com.example.aandi_post_web_server
 - 유스케이스 조합
 - 트랜잭션 또는 흐름 제어
 - 여러 도메인 객체를 엮는 조정 로직
+- 다른 feature 구현을 호출하기 위한 outbound port
 
 예시:
 
 - `course.application.service.CourseCommandService`
+- `assignment.application.port.AssignmentCoursePort`
+- `assignment.application.port.AssignmentProblemSyncPort`
+- `assignment.application.service.AssignmentCommandService`
 - `assignment.application.submission.service.AssignmentSubmissionStatusProjectionService`
 
 ### Domain 레이어
@@ -170,6 +176,7 @@ com.example.aandi_post_web_server
 아래에 해당하면 `infrastructure`에 둔다.
 
 - repository
+- application port의 adapter
 - 외부 이벤트 발행/소비
 - Jackson 지원 코드
 - Mongo/AWS 등 외부 기술 의존 구현
@@ -177,6 +184,8 @@ com.example.aandi_post_web_server
 예시:
 
 - `assignment.infrastructure.event.SnsAssignmentReportTestCaseEventPublisher`
+- `assignment.infrastructure.event.DirectAssignmentProblemSyncAdapter`
+- `course.infrastructure.adapter.AssignmentCourseAdapter`
 - `user.infrastructure.event.SqsUserEventConsumer`
 
 ## 명명 규칙
@@ -195,6 +204,7 @@ com.example.aandi_post_web_server
 
 - `CourseQueryService`
 - `CourseCommandService`
+- `AssignmentCommandService`
 
 ### Version
 
@@ -213,6 +223,9 @@ com.example.aandi_post_web_server
 
 - `common`은 진짜 공통만 둔다.
 - 기능 전용 DTO/로직을 `common`으로 올리지 않는다.
+- `assignment.application`에서 `course.entity`와 `course.infrastructure`를 직접 의존하지 않는다. 코스 조회·주차 보장은 `AssignmentCoursePort`를 사용한다.
+- assignment application의 problem sync는 `AssignmentProblemSyncPort`를 사용하고 mapper·publisher·wire event 구현을 직접 의존하지 않는다.
+- 다른 feature infrastructure가 필요하면 application port와 infrastructure adapter로 경계를 만든다.
 - `entity` 패키지는 운영 Mongo 문서 `_class` 확인 전까지 함부로 이동하지 않는다.
 
 ## Entity 관련 예외

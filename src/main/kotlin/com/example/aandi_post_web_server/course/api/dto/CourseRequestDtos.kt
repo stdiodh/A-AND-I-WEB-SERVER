@@ -4,6 +4,7 @@ import com.example.aandi_post_web_server.course.domain.model.CoursePhase
 import com.example.aandi_post_web_server.course.domain.model.CourseStatus
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import java.time.LocalDate
@@ -54,6 +55,7 @@ data class CreateCourseRequest(
     val endDate: LocalDate,
     @field:NotNull
     @field:Schema(description = "코스 메타데이터")
+    @field:Valid
     val metadata: CourseMetadataPayload,
 )
 
@@ -83,6 +85,7 @@ data class UpdateCourseRequest(
     @field:Schema(description = "과정 종료일", example = "2026-03-30")
     val endDate: LocalDate? = null,
     @field:Schema(description = "코스 메타데이터")
+    @field:Valid
     val metadata: CourseMetadataPayload? = null,
     @field:Schema(description = "코스 상태", example = "PUBLISHED")
     val status: CourseStatus? = null,

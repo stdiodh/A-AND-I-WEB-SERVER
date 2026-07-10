@@ -1,3 +1,5 @@
+# 주의: 현재 운영 태그 배포의 기준 파일이 아닙니다. 기존 운영 호스트에서 직접 실행하지 마세요.
+# 실제 배포는 mongo_data 볼륨을 사용합니다. 전환 절차는 docs/DEPLOYMENT.md를 확인하세요.
 services:
   mongodb:
     image: mongo:7

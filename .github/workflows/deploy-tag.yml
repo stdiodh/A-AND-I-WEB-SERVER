@@ -6,7 +6,7 @@ on:
       - "v*.*.*"
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-production
   cancel-in-progress: false
 
 jobs:
@@ -20,6 +20,7 @@ jobs:
       ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
       APP_DIR: ${{ vars.APP_DIR || '/opt/aandi-report-server' }}
       MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'aandi' }}
+      MONGO_VOLUME_NAME: ${{ vars.MONGO_VOLUME_NAME || '' }}
       SWAGGER_URL: ${{ vars.SWAGGER_URL || 'http://localhost:8080' }}
       AUTH_ISSUER_URI: ${{ vars.AUTH_ISSUER_URI || 'https://auth.aandiclub.com' }}
       AUTH_SERVICE_BASE_URL: ${{ vars.AUTH_SERVICE_BASE_URL || 'https://api.aandiclub.com' }}
@@ -66,9 +67,6 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build bootJar
-        run: ./gradlew clean bootJar --no-daemon
-
       - name: Validate tag format
         run: |
           if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -76,6 +74,18 @@ jobs:
             echo "Expected format: vX.Y.Z"
             exit 1
           fi
+
+      - name: Verify and build bootJar
+        run: |
+          ./gradlew clean test jacocoTestCoverageVerification bootJar --no-daemon
+          boot_jar_count="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' | wc -l | tr -d ' ')"
+          if [ "${boot_jar_count}" -ne 1 ]; then
+            echo "Expected exactly one bootJar, found ${boot_jar_count}"
+            exit 1
+          fi
+          boot_jar="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar')"
+          cp "${boot_jar}" build/libs/app.jar
+          test -s build/libs/app.jar
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -109,7 +119,11 @@ jobs:
         env:
           IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.ref_name }}
         run: |
-          docker build -t "${IMAGE_URI}" .
+          docker build \
+            --file Dockerfile.runtime \
+            --build-arg JAR_FILE=build/libs/app.jar \
+            --tag "${IMAGE_URI}" \
+            .
           docker push "${IMAGE_URI}"
 
       - name: Deploy on instance via SSH
@@ -119,6 +133,7 @@ jobs:
           IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.ref_name }}
           APP_DIR: ${{ env.APP_DIR }}
           MONGO_DB_NAME: ${{ env.MONGO_DB_NAME }}
+          MONGO_VOLUME_NAME: ${{ env.MONGO_VOLUME_NAME }}
           SWAGGER_URL: ${{ env.SWAGGER_URL }}
           AUTH_ISSUER_URI: ${{ env.AUTH_ISSUER_URI }}
           AUTH_SERVICE_BASE_URL: ${{ env.AUTH_SERVICE_BASE_URL }}
@@ -156,7 +171,7 @@ jobs:
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
           port: ${{ vars.AWS_PORT || '22' }}
-          envs: AWS_REGION,IMAGE_URI,APP_DIR,MONGO_DB_NAME,SWAGGER_URL,AUTH_ISSUER_URI,AUTH_SERVICE_BASE_URL,AUTH_AUDIENCE,AUTH_JWT_CLOCK_SKEW_SECONDS,APP_CORS_ALLOWED_ORIGIN_PATTERNS,ONLINE_JUDGE_BASE_URL,APP_EVENTS_REPORT_TEST_CASE_ENABLED,APP_EVENTS_REPORT_TEST_CASE_SNS_TOPIC_ARN,APP_EVENTS_REPORT_TEST_CASE_REGION,APP_EVENTS_USER_SYNC_ENABLED,APP_EVENTS_USER_SYNC_QUEUE_URL,APP_EVENTS_USER_SYNC_REGION,APP_EVENTS_USER_SYNC_WAIT_TIME_SECONDS,APP_EVENTS_USER_SYNC_MAX_NUMBER_OF_MESSAGES,REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED,REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL,REPORT_JUDGE_SUBMISSION_EVENTS_WAIT_TIME_SECONDS,REPORT_JUDGE_SUBMISSION_EVENTS_MAX_MESSAGES,REPORT_JUDGE_SUBMISSION_EVENTS_VISIBILITY_TIMEOUT_SECONDS,APP_ENV,APP_VERSION,APP_V2_LOG_SERVICE_NAME,APP_V2_LOG_DOMAIN_CODE,APP_V2_LOG_SERVICE_VERSION,APP_V2_LOG_INSTANCE_ID,APP_V2_LOG_MAX_BODY_BYTES,AWSLOGS_GROUP_REPORT,AWSLOGS_GROUP_REPORT_MONGODB,CLOUDWATCH_LOG_RETENTION_DAYS,APP_REPORT_V2_SALT_SECRET,AUTH_JWT_SECRET
+          envs: AWS_REGION,IMAGE_URI,APP_DIR,MONGO_DB_NAME,MONGO_VOLUME_NAME,SWAGGER_URL,AUTH_ISSUER_URI,AUTH_SERVICE_BASE_URL,AUTH_AUDIENCE,AUTH_JWT_CLOCK_SKEW_SECONDS,APP_CORS_ALLOWED_ORIGIN_PATTERNS,ONLINE_JUDGE_BASE_URL,APP_EVENTS_REPORT_TEST_CASE_ENABLED,APP_EVENTS_REPORT_TEST_CASE_SNS_TOPIC_ARN,APP_EVENTS_REPORT_TEST_CASE_REGION,APP_EVENTS_USER_SYNC_ENABLED,APP_EVENTS_USER_SYNC_QUEUE_URL,APP_EVENTS_USER_SYNC_REGION,APP_EVENTS_USER_SYNC_WAIT_TIME_SECONDS,APP_EVENTS_USER_SYNC_MAX_NUMBER_OF_MESSAGES,REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED,REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL,REPORT_JUDGE_SUBMISSION_EVENTS_WAIT_TIME_SECONDS,REPORT_JUDGE_SUBMISSION_EVENTS_MAX_MESSAGES,REPORT_JUDGE_SUBMISSION_EVENTS_VISIBILITY_TIMEOUT_SECONDS,APP_ENV,APP_VERSION,APP_V2_LOG_SERVICE_NAME,APP_V2_LOG_DOMAIN_CODE,APP_V2_LOG_SERVICE_VERSION,APP_V2_LOG_INSTANCE_ID,APP_V2_LOG_MAX_BODY_BYTES,AWSLOGS_GROUP_REPORT,AWSLOGS_GROUP_REPORT_MONGODB,CLOUDWATCH_LOG_RETENTION_DAYS,APP_REPORT_V2_SALT_SECRET,AUTH_JWT_SECRET
           script: |
             set -euo pipefail
 
@@ -188,51 +203,25 @@ jobs:
               exit 1
             fi
 
+            existing_mongo_volume="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data/db"}}{{.Name}}{{end}}{{end}}' aandi-report-mongodb 2>/dev/null || true)"
+            if [ -n "${existing_mongo_volume}" ]; then
+              if [ -n "${MONGO_VOLUME_NAME:-}" ] && [ "${MONGO_VOLUME_NAME}" != "${existing_mongo_volume}" ]; then
+                echo "MONGO_VOLUME_NAME does not match the running MongoDB volume"
+                exit 1
+              fi
+              MONGO_VOLUME_NAME="${existing_mongo_volume}"
+            elif [ -z "${MONGO_VOLUME_NAME:-}" ]; then
+              echo "MONGO_VOLUME_NAME is required when the existing MongoDB container cannot provide it"
+              exit 1
+            fi
+            export MONGO_VOLUME_NAME
+
             ECR_REGISTRY="$(echo "${IMAGE_URI}" | cut -d'/' -f1)"
 
             aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
 
             mkdir -p "${APP_DIR}"
-            cat > "${APP_DIR}/.env.runtime" <<EOF
-            IMAGE_URI=${IMAGE_URI}
-            AWS_REGION=${AWS_REGION}
-            MONGO_DB_NAME=${MONGO_DB_NAME}
-            SWAGGER_URL=${SWAGGER_URL}
-            AUTH_ISSUER_URI=${AUTH_ISSUER_URI}
-            AUTH_SERVICE_BASE_URL=${AUTH_SERVICE_BASE_URL}
-            AUTH_AUDIENCE=${AUTH_AUDIENCE}
-            AUTH_JWT_CLOCK_SKEW_SECONDS=${AUTH_JWT_CLOCK_SKEW_SECONDS}
-            APP_CORS_ALLOWED_ORIGIN_PATTERNS=${APP_CORS_ALLOWED_ORIGIN_PATTERNS}
-            ONLINE_JUDGE_BASE_URL=${ONLINE_JUDGE_BASE_URL}
-            APP_EVENTS_REPORT_TEST_CASE_ENABLED=${APP_EVENTS_REPORT_TEST_CASE_ENABLED}
-            APP_EVENTS_REPORT_TEST_CASE_SNS_TOPIC_ARN=${APP_EVENTS_REPORT_TEST_CASE_SNS_TOPIC_ARN}
-            APP_EVENTS_REPORT_TEST_CASE_REGION=${APP_EVENTS_REPORT_TEST_CASE_REGION}
-            APP_EVENTS_USER_SYNC_ENABLED=${APP_EVENTS_USER_SYNC_ENABLED}
-            APP_EVENTS_USER_SYNC_QUEUE_URL=${APP_EVENTS_USER_SYNC_QUEUE_URL}
-            APP_EVENTS_USER_SYNC_REGION=${APP_EVENTS_USER_SYNC_REGION}
-            APP_EVENTS_USER_SYNC_WAIT_TIME_SECONDS=${APP_EVENTS_USER_SYNC_WAIT_TIME_SECONDS}
-            APP_EVENTS_USER_SYNC_MAX_NUMBER_OF_MESSAGES=${APP_EVENTS_USER_SYNC_MAX_NUMBER_OF_MESSAGES}
-            REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED=${REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED}
-            REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL=${REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL}
-            REPORT_JUDGE_SUBMISSION_EVENTS_WAIT_TIME_SECONDS=${REPORT_JUDGE_SUBMISSION_EVENTS_WAIT_TIME_SECONDS}
-            REPORT_JUDGE_SUBMISSION_EVENTS_MAX_MESSAGES=${REPORT_JUDGE_SUBMISSION_EVENTS_MAX_MESSAGES}
-            REPORT_JUDGE_SUBMISSION_EVENTS_VISIBILITY_TIMEOUT_SECONDS=${REPORT_JUDGE_SUBMISSION_EVENTS_VISIBILITY_TIMEOUT_SECONDS}
-            APP_ENV=${APP_ENV}
-            APP_VERSION=${APP_VERSION}
-            APP_V2_LOG_SERVICE_NAME=${APP_V2_LOG_SERVICE_NAME}
-            APP_V2_LOG_DOMAIN_CODE=${APP_V2_LOG_DOMAIN_CODE}
-            APP_V2_LOG_SERVICE_VERSION=${APP_V2_LOG_SERVICE_VERSION}
-            APP_V2_LOG_INSTANCE_ID=${APP_V2_LOG_INSTANCE_ID}
-            APP_V2_LOG_MAX_BODY_BYTES=${APP_V2_LOG_MAX_BODY_BYTES}
-            AWSLOGS_GROUP_REPORT=${AWSLOGS_GROUP_REPORT}
-            AWSLOGS_GROUP_REPORT_MONGODB=${AWSLOGS_GROUP_REPORT_MONGODB}
-            CLOUDWATCH_LOG_RETENTION_DAYS=${CLOUDWATCH_LOG_RETENTION_DAYS}
-            APP_REPORT_V2_SALT_SECRET=${APP_REPORT_V2_SALT_SECRET}
-            AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
-            EOF
-
-            # Use an unquoted EOF so the compose file is rendered with the runtime env values.
-            cat <<EOF > "${APP_DIR}/docker-compose.yml"
+            cat <<'EOF' > "${APP_DIR}/docker-compose.yml"
             services:
               mongodb:
                 image: mongo:7
@@ -311,15 +300,83 @@ jobs:
 
             volumes:
               mongo_data:
+                name: ${MONGO_VOLUME_NAME}
             EOF
 
             cd "${APP_DIR}"
-            docker compose --env-file .env.runtime pull
-            docker compose --env-file .env.runtime up -d --remove-orphans
+            docker compose config --quiet
 
-            docker exec aandi-report-server sh -lc \
-              'echo "AUTH_JWT_SECRET_LEN=$(echo -n "${AUTH_JWT_SECRET:-}" | wc -c)"; echo "APP_REPORT_V2_SALT_SECRET_LEN=$(echo -n "${APP_REPORT_V2_SALT_SECRET:-}" | wc -c)"; env | egrep "AWS_REGION|AUTH_ISSUER_URI|AUTH_SERVICE_BASE_URL|AUTH_AUDIENCE|AUTH_JWT_CLOCK_SKEW_SECONDS|APP_CORS_ALLOWED_ORIGIN_PATTERNS|ONLINE_JUDGE_BASE_URL|APP_EVENTS_REPORT_TEST_CASE_ENABLED|APP_EVENTS_REPORT_TEST_CASE_SNS_TOPIC_ARN|APP_EVENTS_REPORT_TEST_CASE_REGION|APP_EVENTS_USER_SYNC_ENABLED|APP_EVENTS_USER_SYNC_QUEUE_URL|APP_EVENTS_USER_SYNC_REGION|APP_EVENTS_USER_SYNC_WAIT_TIME_SECONDS|APP_EVENTS_USER_SYNC_MAX_NUMBER_OF_MESSAGES|REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED|REPORT_JUDGE_SUBMISSION_EVENTS_QUEUE_URL|REPORT_JUDGE_SUBMISSION_EVENTS_WAIT_TIME_SECONDS|REPORT_JUDGE_SUBMISSION_EVENTS_MAX_MESSAGES|REPORT_JUDGE_SUBMISSION_EVENTS_VISIBILITY_TIMEOUT_SECONDS|APP_ENV|APP_VERSION|APP_V2_LOG_SERVICE_NAME|APP_V2_LOG_DOMAIN_CODE|APP_V2_LOG_SERVICE_VERSION|APP_V2_LOG_INSTANCE_ID|APP_V2_LOG_MAX_BODY_BYTES|AWSLOGS_GROUP_REPORT|AWSLOGS_GROUP_REPORT_MONGODB|CLOUDWATCH_LOG_RETENTION_DAYS"'
+            wait_for_container_health() {
+              local container_name="$1"
+              local attempt health
+              for attempt in $(seq 1 36); do
+                health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${container_name}" 2>/dev/null || true)"
+                if [ "${health}" = "healthy" ]; then
+                  return 0
+                fi
+                if [ "${health}" = "unhealthy" ] || [ "${health}" = "exited" ] || [ "${health}" = "dead" ]; then
+                  return 1
+                fi
+                sleep 5
+              done
+              return 1
+            }
 
-            rm -f "${APP_DIR}/.env.runtime"
+            rollback_image=""
+            previous_image_id="$(docker inspect --format '{{.Image}}' aandi-report-server 2>/dev/null || true)"
+            if [ -n "${previous_image_id}" ]; then
+              rollback_image="aandi-report-server:rollback"
+              docker image rm "${rollback_image}" >/dev/null 2>&1 || true
+              docker image tag "${previous_image_id}" "${rollback_image}"
+            fi
+
+            if ! docker image inspect mongo:7 >/dev/null 2>&1; then
+              docker compose pull mongodb
+            fi
+            docker compose pull report-server
+            docker compose up -d --no-recreate mongodb
+            wait_for_container_health aandi-report-mongodb
+
+            candidate_name="aandi-report-server-candidate"
+            docker rm -f "${candidate_name}" >/dev/null 2>&1 || true
+            if docker compose run \
+              -d --no-deps \
+              --name "${candidate_name}" \
+              -e APP_EVENTS_REPORT_TEST_CASE_ENABLED=false \
+              -e APP_EVENTS_USER_SYNC_ENABLED=false \
+              -e REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED=false \
+              report-server >/dev/null && \
+              wait_for_container_health "${candidate_name}"; then
+              docker rm -f "${candidate_name}" >/dev/null
+            else
+              echo "Candidate failed health checks; current service remains unchanged"
+              docker logs --tail 200 "${candidate_name}" || true
+              docker rm -f "${candidate_name}" >/dev/null 2>&1 || true
+              exit 1
+            fi
+
+            if docker compose up -d --no-deps --force-recreate report-server && \
+              wait_for_container_health aandi-report-server; then
+              echo "Deployment healthy: ${IMAGE_URI}"
+              if [ -n "${rollback_image}" ]; then
+                docker image rm "${rollback_image}" >/dev/null 2>&1 || true
+              fi
+            else
+              echo "Deployment failed health checks; restoring previous image with current runtime settings"
+              docker logs --tail 200 aandi-report-server || true
+              if [ -n "${rollback_image}" ] && \
+                IMAGE_URI="${rollback_image}" docker compose up -d --no-deps --force-recreate report-server && \
+                wait_for_container_health aandi-report-server; then
+                echo "Rollback completed: ${rollback_image}"
+              else
+                echo "Rollback unavailable or unhealthy"
+                current_health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' aandi-report-server 2>/dev/null || true)"
+                if [ "${current_health}" != "healthy" ]; then
+                  docker compose stop report-server || true
+                fi
+                docker logs --tail 200 aandi-report-server || true
+              fi
+              exit 1
+            fi
 
             docker image prune -f --filter "until=72h"

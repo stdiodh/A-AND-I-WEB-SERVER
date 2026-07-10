@@ -79,7 +79,7 @@ Web Server와 Online Judge Server 사이의 이벤트 구조는 현재 repo에�
 
 | 흐름 | 확인된 동작 | 근거 | 사용 여부 |
 | :--- | :--- | :--- | :--- |
-| Assignment problem sync publish | assignment 생성/수정/삭제 후 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED` snapshot을 SNS로 발행 | `AssignmentReportTestCaseEvent.kt`, `AssignmentReportTestCaseEventMapper.kt`, `SnsAssignmentReportTestCaseEventPublisher.kt`, `CourseCommandService.kt` | 사용 가능 |
+| Assignment problem sync publish | assignment 생성/수정/삭제 후 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED` snapshot을 SNS로 발행 | `AssignmentReportTestCaseEvent.kt`, `AssignmentReportTestCaseEventMapper.kt`, `SnsAssignmentReportTestCaseEventPublisher.kt`, `AssignmentCommandService.kt` | 사용 가능 |
 | Problem sync schema | `eventType`, `problemId`, `testCases[]`, `caseId`, `input`, `output` | `AssignmentReportTestCaseEvent.kt` | 사용 가능 |
 | Judge completed consume | raw JSON 또는 SNS envelope의 `JUDGE_COMPLETED`를 파싱해 projection upsert 후 SQS message 삭제 | `JudgeCompletedEventParser.kt`, `SqsJudgeSubmissionEventConsumer.kt`, `SqsJudgeSubmissionEventConsumerTest` | 사용 가능 |
 | Submission projection | `assignmentId + publicCode` unique index 기반으로 projection 저장, 최고 점수 기준 필드 갱신 | `AssignmentSubmissionStatusProjection.kt`, `AssignmentSubmissionStatusProjectionService.kt`, `AssignmentSubmissionStatusProjectionServiceTest` | 사용 가능 |

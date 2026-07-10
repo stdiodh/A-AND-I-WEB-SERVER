@@ -1,12 +1,13 @@
 package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseValidator
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentCommandService
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentCommandRequestResolver
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyFingerprintCalculator
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyService
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
-import com.example.aandi_post_web_server.assignment.infrastructure.jackson.AssignmentMetadataPayloadTestCasePresenceTracker
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequest
@@ -19,6 +20,7 @@ import com.example.aandi_post_web_server.assignment.infrastructure.event.Assignm
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventMapper
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventPublisher
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventType
+import com.example.aandi_post_web_server.assignment.infrastructure.event.DirectAssignmentProblemSyncAdapter
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentExampleRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
@@ -34,6 +36,7 @@ import com.example.aandi_post_web_server.course.entity.CourseWeek
 import com.example.aandi_post_web_server.course.domain.model.CoursePhase
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
+import com.example.aandi_post_web_server.course.infrastructure.adapter.AssignmentCourseAdapter
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
@@ -116,6 +119,113 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.verify(fixture.courseRepository).deleteById("course-1")
     }
 
+    "코스 삭제는 과제 cascade와 삭제 이벤트 완료 후 코스 관계를 삭제한다" {
+        var assignmentDeletesCompleted = 0
+        var deletionEventCompleted = false
+        var courseRelationsCompleted = 0
+        val publisher = RecordingAssignmentReportTestCaseEventPublisher {
+            Mono.defer {
+                assignmentDeletesCompleted shouldBe 4
+                deletionEventCompleted = true
+                Mono.empty<Void>()
+            }
+        }
+        val fixture = CommandFixture(publisher)
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignment = commandAssignment(
+            id = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
+            courseId = "course-1",
+            status = AssignmentStatus.PUBLISHED,
+        )
+        val assignmentIds = listOf(requireNotNull(assignment.id))
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1")).thenReturn(Flux.just(assignment))
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds))
+            .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
+        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds))
+            .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
+        Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds))
+            .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
+        Mockito.`when`(fixture.assignmentRepository.deleteAllById(assignmentIds))
+            .thenReturn(Mono.empty<Void>().doOnSuccess { assignmentDeletesCompleted++ })
+        Mockito.`when`(fixture.courseWeekRepository.deleteAllByCourseId("course-1"))
+            .thenAnswer {
+                Mono.defer {
+                    deletionEventCompleted shouldBe true
+                    courseRelationsCompleted++
+                    Mono.just(1L)
+                }
+            }
+        Mockito.`when`(fixture.courseEnrollmentRepository.deleteAllByCourseId("course-1"))
+            .thenAnswer {
+                Mono.defer {
+                    deletionEventCompleted shouldBe true
+                    courseRelationsCompleted++
+                    Mono.just(1L)
+                }
+            }
+        Mockito.`when`(fixture.courseRepository.deleteById("course-1"))
+            .thenAnswer {
+                Mono.defer {
+                    courseRelationsCompleted shouldBe 2
+                    Mono.empty<Void>()
+                }
+            }
+
+        StepVerifier.create(fixture.service.deleteCourse("back-basic"))
+            .verifyComplete()
+
+        deletionEventCompleted shouldBe true
+        courseRelationsCompleted shouldBe 2
+    }
+
+    "코스 삭제 중 두 번째 삭제 이벤트가 실패하면 후속 이벤트와 코스 관계 삭제를 중단한다" {
+        var publishAttempt = 0
+        var courseRelationDeleteSubscriptions = 0
+        val publisher = RecordingAssignmentReportTestCaseEventPublisher {
+            Mono.defer {
+                publishAttempt++
+                if (publishAttempt == 2) {
+                    Mono.error(IllegalStateException("publisher unavailable"))
+                } else {
+                    Mono.empty<Void>()
+                }
+            }
+        }
+        val fixture = CommandFixture(publisher)
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignments = listOf(
+            commandAssignment(id = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111", courseId = "course-1", status = AssignmentStatus.PUBLISHED),
+            commandAssignment(id = "7c53f1b3-0df8-4a9d-a56d-a5f50b96b7a1", courseId = "course-1", status = AssignmentStatus.DRAFT),
+            commandAssignment(id = "f32d1a17-7059-4811-8d85-9773c7d21b53", courseId = "course-1", status = AssignmentStatus.PUBLISHED),
+        )
+        val assignmentIds = assignments.map { requireNotNull(it.id) }
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1")).thenReturn(Flux.fromIterable(assignments))
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(3L))
+        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(3L))
+        Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(3L))
+        Mockito.`when`(fixture.assignmentRepository.deleteAllById(assignmentIds)).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.deleteAllByCourseId("course-1"))
+            .thenReturn(Mono.defer { courseRelationDeleteSubscriptions++; Mono.just(1L) })
+        Mockito.`when`(fixture.courseEnrollmentRepository.deleteAllByCourseId("course-1"))
+            .thenReturn(Mono.defer { courseRelationDeleteSubscriptions++; Mono.just(1L) })
+        Mockito.`when`(fixture.courseRepository.deleteById("course-1"))
+            .thenReturn(Mono.defer { courseRelationDeleteSubscriptions++; Mono.empty() })
+
+        StepVerifier.create(fixture.service.deleteCourse("back-basic"))
+            .expectErrorSatisfies { error ->
+                error::class shouldBe IllegalStateException::class
+                error.message shouldBe "publisher unavailable"
+            }
+            .verify()
+
+        publisher.events.map { it.problemId } shouldBe assignmentIds.take(2)
+        courseRelationDeleteSubscriptions shouldBe 0
+    }
+
     "과제 삭제는 과제 연관 데이터를 하드 삭제한다" {
         val fixture = CommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
@@ -140,6 +250,40 @@ class CourseCommandServiceTest : StringSpec({
         fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_DELETED
         fixture.assignmentReportTestCaseEventPublisher.events.single().problemId shouldBe assignmentId
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldBe emptyList()
+    }
+
+    "과제 삭제 publisher 오류는 모든 연관 데이터 삭제가 끝난 뒤 전파된다" {
+        var assignmentDeletesCompleted = 0
+        val publisher = RecordingAssignmentReportTestCaseEventPublisher {
+            Mono.error(IllegalStateException("publisher unavailable"))
+        }
+        publisher.beforePublish = { assignmentDeletesCompleted shouldBe 4 }
+        val fixture = CommandFixture(publisher)
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val assignment = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(assignment))
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
+        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
+        Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
+        Mockito.`when`(fixture.assignmentRepository.deleteById(assignmentId))
+            .thenReturn(Mono.empty<Void>().doOnSuccess { assignmentDeletesCompleted++ })
+
+        StepVerifier.create(fixture.service.deleteAssignment("back-basic", assignmentId))
+            .expectErrorSatisfies { error ->
+                error::class shouldBe IllegalStateException::class
+                error.message shouldBe "publisher unavailable"
+            }
+            .verify()
+
+        publisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_DELETED
+        publisher.events.single().problemId shouldBe assignmentId
     }
 
     "과제 수정은 전달된 필드를 반영해 저장한다" {
@@ -1591,7 +1735,10 @@ class CourseCommandServiceTest : StringSpec({
 
 })
 
-private class CommandFixture {
+private class CommandFixture(
+    val assignmentReportTestCaseEventPublisher: RecordingAssignmentReportTestCaseEventPublisher =
+        RecordingAssignmentReportTestCaseEventPublisher(),
+) {
     val courseRepository: CourseRepository = Mockito.mock(CourseRepository::class.java)
     val courseEnrollmentRepository: CourseEnrollmentRepository = Mockito.mock(CourseEnrollmentRepository::class.java)
     val courseWeekRepository: CourseWeekRepository = Mockito.mock(CourseWeekRepository::class.java)
@@ -1600,51 +1747,61 @@ private class CommandFixture {
     val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
     val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
-    val assignmentReportTestCaseEventPublisher = RecordingAssignmentReportTestCaseEventPublisher()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
     val assignmentTestCaseValidator = AssignmentTestCaseValidator()
+    val assignmentCommandRequestResolver = AssignmentCommandRequestResolver(assignmentTestCaseValidator)
     val assignmentCopyFingerprintCalculator = AssignmentCopyFingerprintCalculator()
-    val assignmentMetadataPayloadTestCasePresenceTracker = AssignmentMetadataPayloadTestCasePresenceTracker()
+    val assignmentCoursePort = AssignmentCourseAdapter(courseRepository, courseWeekRepository)
+    val assignmentProblemSyncPort = DirectAssignmentProblemSyncAdapter(
+        assignmentRepository = assignmentRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
+        eventMapper = assignmentReportTestCaseEventMapper,
+        eventPublisher = assignmentReportTestCaseEventPublisher,
+    )
     val courseEnrollmentCommandService = CourseEnrollmentCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
         reportUserRepository = reportUserRepository,
     )
     val assignmentCopyService = AssignmentCopyService(
-        courseRepository = courseRepository,
-        courseWeekRepository = courseWeekRepository,
+        assignmentCoursePort = assignmentCoursePort,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentTestCaseRepository = assignmentExampleRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
-        assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
-        assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
+        assignmentProblemSyncPort = assignmentProblemSyncPort,
         assignmentCopyFingerprintCalculator = assignmentCopyFingerprintCalculator,
+    )
+    val assignmentCommandService = AssignmentCommandService(
+        assignmentCoursePort = assignmentCoursePort,
+        assignmentRepository = assignmentRepository,
+        assignmentRequirementRepository = assignmentRequirementRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentDeliveryRepository = assignmentDeliveryRepository,
+        assignmentProblemSyncPort = assignmentProblemSyncPort,
+        assignmentCopyService = assignmentCopyService,
+        assignmentCommandRequestResolver = assignmentCommandRequestResolver,
     )
     val service = CourseCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
         courseWeekRepository = courseWeekRepository,
-        assignmentRepository = assignmentRepository,
-        assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
-        assignmentDeliveryRepository = assignmentDeliveryRepository,
-        assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
-        assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         courseEnrollmentCommandService = courseEnrollmentCommandService,
-        assignmentCopyService = assignmentCopyService,
-        assignmentTestCaseValidator = assignmentTestCaseValidator,
-        assignmentMetadataPayloadTestCasePresenceTracker = assignmentMetadataPayloadTestCasePresenceTracker,
+        assignmentCommandService = assignmentCommandService,
     )
 
 }
 
-private class RecordingAssignmentReportTestCaseEventPublisher : AssignmentReportTestCaseEventPublisher {
+private class RecordingAssignmentReportTestCaseEventPublisher(
+    private val publishResult: (AssignmentReportTestCaseEvent) -> Mono<Void> = { Mono.empty() },
+) : AssignmentReportTestCaseEventPublisher {
     val events = mutableListOf<AssignmentReportTestCaseEvent>()
+    var beforePublish: (AssignmentReportTestCaseEvent) -> Unit = {}
 
     override fun publish(event: AssignmentReportTestCaseEvent): Mono<Void> {
+        beforePublish(event)
         events += event
-        return Mono.empty()
+        return publishResult(event)
     }
 }
 

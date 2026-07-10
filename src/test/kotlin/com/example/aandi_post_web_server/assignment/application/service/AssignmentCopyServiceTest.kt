@@ -14,6 +14,7 @@ import com.example.aandi_post_web_server.assignment.infrastructure.event.Assignm
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventMapper
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventPublisher
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventType
+import com.example.aandi_post_web_server.assignment.infrastructure.event.DirectAssignmentProblemSyncAdapter
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
@@ -24,6 +25,7 @@ import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
 import com.example.aandi_post_web_server.course.entity.CourseWeek
+import com.example.aandi_post_web_server.course.infrastructure.adapter.AssignmentCourseAdapter
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -672,15 +674,20 @@ private class AssignmentCopyFixture {
     val assignmentTestCaseRepository: AssignmentTestCaseRepository = Mockito.mock(AssignmentTestCaseRepository::class.java)
     val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
     val eventPublisher = RecordingAssignmentReportTestCaseEventPublisher()
+    val assignmentCoursePort = AssignmentCourseAdapter(courseRepository, courseWeekRepository)
+    val assignmentProblemSyncPort = DirectAssignmentProblemSyncAdapter(
+        assignmentRepository = assignmentRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
+        eventMapper = AssignmentReportTestCaseEventMapper(),
+        eventPublisher = eventPublisher,
+    )
     val service = AssignmentCopyService(
-        courseRepository = courseRepository,
-        courseWeekRepository = courseWeekRepository,
+        assignmentCoursePort = assignmentCoursePort,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentTestCaseRepository = assignmentTestCaseRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
-        assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper(),
-        assignmentReportTestCaseEventPublisher = eventPublisher,
+        assignmentProblemSyncPort = assignmentProblemSyncPort,
         assignmentCopyFingerprintCalculator = AssignmentCopyFingerprintCalculator(),
     )
 

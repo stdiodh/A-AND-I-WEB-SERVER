@@ -1,15 +1,17 @@
 package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseValidator
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentCommandService
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentCommandRequestResolver
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyFingerprintCalculator
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyService
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEvent
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventMapper
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventPublisher
+import com.example.aandi_post_web_server.assignment.infrastructure.event.DirectAssignmentProblemSyncAdapter
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.infrastructure.jackson.AssignmentMetadataPayloadTestCasePresenceTracker
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentExampleRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
@@ -19,6 +21,7 @@ import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
+import com.example.aandi_post_web_server.course.infrastructure.adapter.AssignmentCourseAdapter
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
@@ -129,8 +132,15 @@ private class Fixture {
     val assignmentReportTestCaseEventPublisher = NoopAssignmentReportTestCaseEventPublisherForTest()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
     val assignmentTestCaseValidator = AssignmentTestCaseValidator()
+    val assignmentCommandRequestResolver = AssignmentCommandRequestResolver(assignmentTestCaseValidator)
     val assignmentCopyFingerprintCalculator = AssignmentCopyFingerprintCalculator()
-    val assignmentMetadataPayloadTestCasePresenceTracker = AssignmentMetadataPayloadTestCasePresenceTracker()
+    val assignmentCoursePort = AssignmentCourseAdapter(courseRepository, courseWeekRepository)
+    val assignmentProblemSyncPort = DirectAssignmentProblemSyncAdapter(
+        assignmentRepository = assignmentRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
+        eventMapper = assignmentReportTestCaseEventMapper,
+        eventPublisher = assignmentReportTestCaseEventPublisher,
+    )
 
     init {
         Mockito.`when`(assignmentRequirementRepository.findAllByAssignmentIdIn(Mockito.anyCollection()))
@@ -146,31 +156,31 @@ private class Fixture {
         reportUserRepository = reportUserRepository,
     )
     private val assignmentCopyService = AssignmentCopyService(
-        courseRepository = courseRepository,
-        courseWeekRepository = courseWeekRepository,
+        assignmentCoursePort = assignmentCoursePort,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentTestCaseRepository = assignmentExampleRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
-        assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
-        assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
+        assignmentProblemSyncPort = assignmentProblemSyncPort,
         assignmentCopyFingerprintCalculator = assignmentCopyFingerprintCalculator,
+    )
+    private val assignmentCommandService = AssignmentCommandService(
+        assignmentCoursePort = assignmentCoursePort,
+        assignmentRepository = assignmentRepository,
+        assignmentRequirementRepository = assignmentRequirementRepository,
+        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentDeliveryRepository = assignmentDeliveryRepository,
+        assignmentProblemSyncPort = assignmentProblemSyncPort,
+        assignmentCopyService = assignmentCopyService,
+        assignmentCommandRequestResolver = assignmentCommandRequestResolver,
     )
 
     private val courseCommandService = CourseCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
         courseWeekRepository = courseWeekRepository,
-        assignmentRepository = assignmentRepository,
-        assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
-        assignmentDeliveryRepository = assignmentDeliveryRepository,
-        assignmentReportTestCaseEventMapper = assignmentReportTestCaseEventMapper,
-        assignmentReportTestCaseEventPublisher = assignmentReportTestCaseEventPublisher,
         courseEnrollmentCommandService = courseEnrollmentCommandService,
-        assignmentCopyService = assignmentCopyService,
-        assignmentTestCaseValidator = assignmentTestCaseValidator,
-        assignmentMetadataPayloadTestCasePresenceTracker = assignmentMetadataPayloadTestCasePresenceTracker,
+        assignmentCommandService = assignmentCommandService,
     )
 
     private val courseQueryService = CourseQueryService(
