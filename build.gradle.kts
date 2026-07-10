@@ -63,18 +63,11 @@ jacoco {
 }
 
 val coverageExcludes = listOf(
-	"**/Application*",
-	"**/*$*",
-	"**/entity/**",
-	"**/repository/**",
-	"**/dto/**",
-	"**/common/openapi/**",
-	"**/common/annotation/**",
-	"**/common/config/SwaggerConfig*",
-	"**/common/config/WebConfig*",
-	"**/course/api/**/controller/**",
-	"**/course/application/service/CourseCommandService*",
-	"**/course/application/service/CourseV1Service*",
+	// Spring Boot bootstrap only; domain and adapter code remains in the measured scope.
+	"com/example/aandi_post_web_server/Application.class",
+	"com/example/aandi_post_web_server/ApplicationKt.class",
+	// OpenAPI response-shape carriers contain documentation metadata only.
+	"**/common/openapi/*EnvelopeDoc*",
 )
 
 val kotlinMainClasses = layout.buildDirectory.dir("classes/kotlin/main")
@@ -109,12 +102,12 @@ tasks.jacocoTestCoverageVerification {
 			limit {
 				counter = "LINE"
 				value = "COVEREDRATIO"
-				minimum = "0.83".toBigDecimal()
+				minimum = "0.86".toBigDecimal()
 			}
 			limit {
 				counter = "BRANCH"
 				value = "COVEREDRATIO"
-				minimum = "0.61".toBigDecimal()
+				minimum = "0.62".toBigDecimal()
 			}
 		}
 	}

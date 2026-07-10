@@ -2,7 +2,7 @@
 
 > 테스트 개수나 P95 숫자만 강조하지 않고, 어떤 데이터와 조건으로 무엇을 확인했는지 함께 기록합니다.
 
-> 이 문서의 188/277 테스트 수치는 과거 측정 기준입니다. 최신 안정화 검증값은 [2026-07 안정적 리팩터링 계획](./refactoring/2026-07-stable-refactoring.md)을 확인합니다.
+> 이 문서의 188/277 테스트 수치는 과거 측정 기준입니다. 최신 품질 기준은 아래 `2026-07-10 JaCoCo scope 재조정` checkpoint를 확인합니다.
 
 [README로 돌아가기](../README.md)
 
@@ -28,9 +28,9 @@
 
 ![Coverage Report](./assets/images/coverage-report.png)
 
-Coverage는 `build.gradle.kts`의 제외 규칙을 적용한 결과입니다.
+Coverage는 당시 `build.gradle.kts`의 제외 규칙을 적용한 결과입니다.
 
-entity, repository, DTO, OpenAPI/config 일부, controller 일부와 일부 legacy service가 제외되어 있으므로 전체 코드 기준 수치로 표현하지 않습니다.
+당시에는 entity, repository, DTO, OpenAPI/config 일부, controller 일부와 일부 legacy service가 제외되어 있었으므로 전체 코드 기준 수치로 표현하지 않습니다.
 
 ### PR #58 이후 coverage gate와 블로그 정리
 
@@ -51,6 +51,27 @@ PR #58의 최종 검증에서는 Gradle test, JaCoCo coverage verification, k6/p
 ![JaCoCo coverage gate summary](./assets/images/jacoco-report-before-after.png)
 
 JaCoCo HTML report는 `build/reports/jacoco/test/html/index.html`에서 확인합니다. 로컬 screenshot 도구가 없어 HTML screenshot asset은 추가하지 않았습니다.
+
+### 2026-07-10 JaCoCo scope 재조정
+
+실패 경로 보강 PR #71 이후 같은 338개 테스트 실행 데이터로 제외 규칙만 단계별 재계산했습니다.
+
+| 기준 | 테스트 수 | Line coverage | Branch coverage | CI gate |
+| :--- | ---: | ---: | ---: | :--- |
+| PR #71, 이전 configured scope | 338 | 2,819 / 3,133 = **89.98%** | 951 / 1,488 = **63.91%** | Line 83%, Branch 61% |
+| 확장 scope | 338 | 4,233 / 4,798 = **88.22%** | 1,125 / 1,774 = **63.42%** | Line 86%, Branch 62% |
+
+비율이 낮아진 것은 테스트 회귀가 아니라 측정 분모가 line 1,665개, branch 286개 늘어난 결과입니다. 실제 covered counter는 line 1,414개, branch 174개 증가했습니다.
+
+제외 목록은 다음 세 패턴만 유지합니다.
+
+- Spring Boot 진입점 `Application.class`
+- Kotlin top-level 진입점 `ApplicationKt.class`
+- 실행 로직이 없는 OpenAPI schema 문서 모델 `**/common/openapi/*EnvelopeDoc*`
+
+기존 `**/*$*` 패턴은 코루틴과 람다로 컴파일된 service 로직까지 숨겼기 때문에 제거했습니다. Entity, repository, DTO, validator, config, controller, service는 package 단위로 제외하지 않습니다.
+
+새 gate는 측정값보다 line 2.22%p, branch 1.42%p 낮게 두어 작은 변경의 변동 여유를 확보하면서도 기존 기준보다 강화했습니다. Scope나 제외 규칙이 다시 바뀌면 기존 비율과 직접 비교하지 않고 covered/missed counter를 함께 기록합니다.
 
 관련 블로그 정리: [테스트와 k6로 검증한 과제 목록 N+1 개선기](https://velog.io/@stdiodh/%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%99%80-k6%EB%A1%9C-%EA%B2%80%EC%A6%9D%ED%95%9C-%EA%B3%BC%EC%A0%9C-%EB%AA%A9%EB%A1%9D-N1-%EA%B0%9C%EC%84%A0%EA%B8%B0#%EC%A1%B0%ED%9A%8C-%ED%9A%9F%EC%88%98)
 

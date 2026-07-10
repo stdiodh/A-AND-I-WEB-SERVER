@@ -110,11 +110,13 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 | 초기 기준 | 188 | 78.07% | 54.71% | Line 70% |
 | 1차 보강 | 220 | 81.57% | 59.35% | Line 70% |
 | 2026-06-23 기준 | 277 | 85.04% | 62.59% | Line 83%, Branch 61% |
-| 현재 레거시 정리 검증 | 306 | 89.47% | 63.37% | Line 83%, Branch 61% |
+| 레거시 정리 (#69) | 306 | 89.47% | 63.37% | Line 83%, Branch 61% |
+| 실패 경로 보강 (#71, 이전 scope) | 338 | 89.98% | 63.91% | Line 83%, Branch 61% |
+| JaCoCo scope 재조정 | 338 | 88.22% | 63.42% | Line 86%, Branch 62% |
 
 ![JaCoCo coverage gate summary](./docs/assets/images/jacoco-report-before-after.png)
 
-이미지는 2026-06-23 gate 보강 시점의 기록입니다. 현재 수치는 표와 레거시 정리 기록의 local checkpoint를 기준으로 봅니다. Coverage는 JaCoCo 제외 규칙이 적용된 configured scope 기준입니다.
+이미지는 2026-06-23 gate 보강 시점의 기록입니다. 최신 수치는 같은 338개 테스트 실행 데이터를 더 넓은 scope로 재계산한 결과입니다. 현재 제외 대상은 Spring Boot 진입점과 OpenAPI schema-only 문서 모델뿐이며, 코루틴·controller·service·DTO·validator는 모두 측정합니다. Scope 확장 전후 비율은 직접적인 품질 증감으로 비교하지 않습니다.
 
 ### 읽기 API 부하 테스트
 
@@ -141,7 +143,7 @@ Resume 문장과 근거 상태는 [Resume Metrics](./docs/resume-metrics.md)에 
 
 | 지표 | 측정 조건 | 근거 |
 | :--- | :--- | :--- |
-| 자동화 테스트 306개, Line 89.47%, Branch 63.37% | 2026-07-10 KST, JaCoCo configured scope | `docs/refactoring/2026-07-legacy-cleanup.md`, `build/reports/jacoco/test/jacocoTestReport.xml`, `build.gradle.kts` |
+| 자동화 테스트 338개, Line 88.22%, Branch 63.42% | 2026-07-10 KST, expanded JaCoCo scope | `docs/MEASUREMENT.md`, `build/reports/jacoco/test/jacocoTestReport.xml`, `build.gradle.kts` |
 | Child repository calls 60 → 2 | 30 assignments, service-level repository interaction 기준 | `performance/results/assignment-read-query-evidence.json`, `CourseQueryServiceTest` |
 | HTTP 실패율 0.00%, Check 성공률 100.00%, Dropped iterations 0 | local fixed-load, 100 RPS, 2분 × 3회, 목록 60%·상세 40% | `performance/results/assignment-read-before.aggregate.json`, `performance/results/assignment-read-after.aggregate.json` |
 | Assignment list P95 9.297 ms → 7.565 ms | local fixed-load, 30 assignments, 목록 100%, 100 RPS, 2분 × 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.md` |
