@@ -73,24 +73,17 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
-    fun `assignment application does not depend on problem sync infrastructure`() {
+    fun `assignment application does not depend on event infrastructure`() {
         val assignmentApplication = "$basePackage.assignment.application"
         val eventInfrastructure = "$basePackage.assignment.infrastructure.event."
         val violations = scanMainSourceImports { packageName, importName, relativePath ->
             if (!isSameOrChildPackage(packageName, assignmentApplication)) return@scanMainSourceImports null
             if (!importName.startsWith(eventInfrastructure)) return@scanMainSourceImports null
-            if (
-                importName != "${eventInfrastructure}*" &&
-                !importName.contains("AssignmentReportTestCase") &&
-                !importName.contains("AssignmentProblemSync")
-            ) {
-                return@scanMainSourceImports null
-            }
 
-            "$relativePath -> assignment application depends on problem sync implementation: $importName"
+            "$relativePath -> assignment application depends on event infrastructure: $importName"
         }
 
-        assertNoViolations("Assignment problem sync port boundary is broken", violations)
+        assertNoViolations("Assignment event infrastructure boundary is broken", violations)
     }
 
     @Test

@@ -2,13 +2,13 @@ package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentCodeTemplate
-import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
+import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTemplateLanguage
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentExampleRepository
+import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.course.entity.Course
@@ -72,11 +72,11 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Flux.just(draft, published))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("7c53f1b3-0df8-4a9d-a56d-a5f50b96b7a1"))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("7c53f1b3-0df8-4a9d-a56d-a5f50b96b7a1"))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq("7c53f1b3-0df8-4a9d-a56d-a5f50b96b7a1"))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -107,7 +107,7 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Mono.just(draft))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -132,7 +132,7 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Flux.just(published))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -163,7 +163,7 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Mono.just(published))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -289,7 +289,7 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Flux.just(published, futureDraft))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -348,7 +348,7 @@ class CourseQueryServiceTest : StringSpec({
                 )
             ),
             examples = listOf(
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
                     seq = 1,
                     inputValues = listOf("ADD 1"),
@@ -503,14 +503,14 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Flux.just(published))
         fixture.stubBatchChildren(
             examples = listOf(
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = assignmentId,
                     seq = 1,
                     inputValues = listOf("public"),
                     outputText = "visible",
                     visibility = AssignmentTestCaseVisibility.PUBLIC,
                 ),
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = assignmentId,
                     seq = 2,
                     inputValues = listOf("hidden"),
@@ -558,11 +558,11 @@ class CourseQueryServiceTest : StringSpec({
 
         Mockito.verify(fixture.assignmentRequirementRepository, Mockito.never())
             .findAllByAssignmentIdIn(Mockito.anyCollection())
-        Mockito.verify(fixture.assignmentExampleRepository, Mockito.never())
+        Mockito.verify(fixture.assignmentTestCaseRepository, Mockito.never())
             .findAllByAssignmentIdIn(Mockito.anyCollection())
         Mockito.verify(fixture.assignmentRequirementRepository, Mockito.never())
             .findAllByAssignmentIdOrderBySortOrder(Mockito.anyString())
-        Mockito.verify(fixture.assignmentExampleRepository, Mockito.never())
+        Mockito.verify(fixture.assignmentTestCaseRepository, Mockito.never())
             .findAllByAssignmentIdOrderBySeq(Mockito.anyString())
     }
 
@@ -596,35 +596,35 @@ class CourseQueryServiceTest : StringSpec({
                 AssignmentRequirement(assignmentId = firstId, sortOrder = 1, requirementText = "duplicate requirement"),
             ),
             examples = listOf(
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = firstId,
                     seq = 3,
                     inputValues = listOf("hidden-a"),
                     outputText = privateMarker,
                     visibility = AssignmentTestCaseVisibility.HIDDEN,
                 ),
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = firstId,
                     seq = 2,
                     inputValues = listOf("a2"),
                     outputText = "A public second",
                     visibility = AssignmentTestCaseVisibility.PUBLIC,
                 ),
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = secondId,
                     seq = 1,
                     inputValues = listOf("same"),
                     outputText = "duplicate output",
                     visibility = AssignmentTestCaseVisibility.PUBLIC,
                 ),
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = firstId,
                     seq = 1,
                     inputValues = listOf("same"),
                     outputText = "duplicate output",
                     visibility = AssignmentTestCaseVisibility.PUBLIC,
                 ),
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = secondId,
                     seq = 2,
                     inputValues = listOf("hidden-b"),
@@ -667,21 +667,21 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Flux.just(draft))
         fixture.stubBatchChildren(
             examples = listOf(
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = assignmentId,
                     seq = 3,
                     inputValues = listOf("excluded"),
                     outputText = "internal",
                     visibility = AssignmentTestCaseVisibility.EXCLUDED,
                 ),
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = assignmentId,
                     seq = 1,
                     inputValues = listOf("public"),
                     outputText = "visible",
                     visibility = AssignmentTestCaseVisibility.PUBLIC,
                 ),
-                AssignmentExample(
+                AssignmentTestCase(
                     assignmentId = assignmentId,
                     seq = 2,
                     inputValues = listOf("hidden"),
@@ -740,7 +740,7 @@ class CourseQueryServiceTest : StringSpec({
         Mockito.verify(fixture.assignmentRepository, Mockito.never()).findAllByCourseId(Mockito.anyString())
         Mockito.verify(fixture.assignmentRequirementRepository, Mockito.never())
             .findAllByAssignmentIdIn(Mockito.anyCollection())
-        Mockito.verify(fixture.assignmentExampleRepository, Mockito.never())
+        Mockito.verify(fixture.assignmentTestCaseRepository, Mockito.never())
             .findAllByAssignmentIdIn(Mockito.anyCollection())
     }
 
@@ -807,24 +807,24 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Mono.just(published))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(
                 Flux.just(
-                    AssignmentExample(
+                    AssignmentTestCase(
                         assignmentId = assignmentId,
                         seq = 1,
                         inputValues = listOf("public"),
                         outputText = "visible",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     ),
-                    AssignmentExample(
+                    AssignmentTestCase(
                         assignmentId = assignmentId,
                         seq = 2,
                         inputValues = listOf("hidden"),
                         outputText = "secret",
                         visibility = AssignmentTestCaseVisibility.HIDDEN,
                     ),
-                    AssignmentExample(
+                    AssignmentTestCase(
                         assignmentId = assignmentId,
                         seq = 3,
                         inputValues = listOf("excluded"),
@@ -842,11 +842,11 @@ class CourseQueryServiceTest : StringSpec({
 
         Mockito.verify(fixture.assignmentRequirementRepository)
             .findAllByAssignmentIdOrderBySortOrder(assignmentId)
-        Mockito.verify(fixture.assignmentExampleRepository)
+        Mockito.verify(fixture.assignmentTestCaseRepository)
             .findAllByAssignmentIdOrderBySeq(assignmentId)
         Mockito.verify(fixture.assignmentRequirementRepository, Mockito.never())
             .findAllByAssignmentIdIn(Mockito.anyCollection())
-        Mockito.verify(fixture.assignmentExampleRepository, Mockito.never())
+        Mockito.verify(fixture.assignmentTestCaseRepository, Mockito.never())
             .findAllByAssignmentIdIn(Mockito.anyCollection())
     }
 
@@ -861,24 +861,24 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Mono.just(draft))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(
                 Flux.just(
-                    AssignmentExample(
+                    AssignmentTestCase(
                         assignmentId = assignmentId,
                         seq = 1,
                         inputValues = listOf("public"),
                         outputText = "visible",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     ),
-                    AssignmentExample(
+                    AssignmentTestCase(
                         assignmentId = assignmentId,
                         seq = 2,
                         inputValues = listOf("hidden"),
                         outputText = "secret",
                         visibility = AssignmentTestCaseVisibility.HIDDEN,
                     ),
-                    AssignmentExample(
+                    AssignmentTestCase(
                         assignmentId = assignmentId,
                         seq = 3,
                         inputValues = listOf("excluded"),
@@ -907,7 +907,7 @@ class CourseQueryServiceTest : StringSpec({
             .thenReturn(Flux.just(published))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(fixture.service.getAdminAssignments("back-basic", 1, null))
@@ -1012,11 +1012,11 @@ private fun verifyAssignmentListUsesSingleBatchForCount(count: Int) {
 
     Mockito.verify(fixture.assignmentRequirementRepository, Mockito.times(1))
         .findAllByAssignmentIdIn(assignmentIds)
-    Mockito.verify(fixture.assignmentExampleRepository, Mockito.times(1))
+    Mockito.verify(fixture.assignmentTestCaseRepository, Mockito.times(1))
         .findAllByAssignmentIdIn(assignmentIds)
     Mockito.verify(fixture.assignmentRequirementRepository, Mockito.never())
         .findAllByAssignmentIdOrderBySortOrder(Mockito.anyString())
-    Mockito.verify(fixture.assignmentExampleRepository, Mockito.never())
+    Mockito.verify(fixture.assignmentTestCaseRepository, Mockito.never())
         .findAllByAssignmentIdOrderBySeq(Mockito.anyString())
 }
 
@@ -1026,7 +1026,7 @@ private class QueryFixture(clock: Clock = Clock.systemUTC()) {
     val courseWeekRepository: CourseWeekRepository = Mockito.mock(CourseWeekRepository::class.java)
     val assignmentRepository: AssignmentRepository = Mockito.mock(AssignmentRepository::class.java)
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
-    val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
+    val assignmentTestCaseRepository: AssignmentTestCaseRepository = Mockito.mock(AssignmentTestCaseRepository::class.java)
 
     init {
         stubBatchChildren()
@@ -1038,19 +1038,19 @@ private class QueryFixture(clock: Clock = Clock.systemUTC()) {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
         clock = clock,
     )
 
     fun stubBatchChildren(
         requirements: List<AssignmentRequirement> = emptyList(),
-        examples: List<AssignmentExample> = emptyList(),
+        examples: List<AssignmentTestCase> = emptyList(),
     ) {
         Mockito.`when`(assignmentRequirementRepository.findAllByAssignmentIdIn(Mockito.anyCollection()))
             .thenReturn(Flux.fromIterable(requirements))
-        Mockito.`when`(assignmentExampleRepository.findAllByAssignmentIdIn(Mockito.anyCollection()))
+        Mockito.`when`(assignmentTestCaseRepository.findAllByAssignmentIdIn(Mockito.anyCollection()))
             .thenReturn(Flux.fromIterable(examples))
-        Mockito.clearInvocations(assignmentRequirementRepository, assignmentExampleRepository)
+        Mockito.clearInvocations(assignmentRequirementRepository, assignmentTestCaseRepository)
     }
 }
 

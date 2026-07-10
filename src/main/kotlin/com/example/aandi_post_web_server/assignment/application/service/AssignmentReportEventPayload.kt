@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.assignment.infrastructure.event
+package com.example.aandi_post_web_server.assignment.application.service
 
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.entity.Assignment

@@ -20,7 +20,6 @@
 - `common`
 - `assignment`
 - `course`
-- `report`
 - `user`
 
 ### 2. 그 아래는 계층 기준
@@ -32,7 +31,7 @@
 - `domain`
 - `infrastructure`
 
-### 3. 버전은 API 레이어에만 둔다
+### 3. 기능 버전은 원칙적으로 API 레이어에만 둔다
 
 버전 표기는 아래 위치에만 둔다.
 
@@ -47,6 +46,8 @@
 - `feature.domain`
 - `feature.infrastructure`
 
+`common.error.v2`, `common.logging.v2`, `common.security.v2`처럼 여러 기능의 v2 외부 프로토콜을 지원하는 공통 경계는 명시적 예외입니다. 이 예외를 새 기능 내부 레이어로 확장하지 않습니다.
+
 ## 현재 기준 구조
 
 ```text
@@ -58,6 +59,7 @@ com.example.aandi_post_web_server
 │  │  ├─ factory
 │  │  └─ header
 │  ├─ config
+│  ├─ controller
 │  ├─ error
 │  │  └─ v2
 │  ├─ logging
@@ -70,8 +72,10 @@ com.example.aandi_post_web_server
 │  ├─ api
 │  │  ├─ dto
 │  │  └─ v2
+│  │     ├─ controller
 │  │     └─ dto
 │  ├─ application
+│  │  ├─ activation
 │  │  ├─ port
 │  │  ├─ service
 │  │  └─ submission
@@ -104,14 +108,6 @@ com.example.aandi_post_web_server
 │  └─ infrastructure
 │     ├─ adapter
 │     └─ repository
-│
-├─ report
-│  ├─ api
-│  │  └─ v2
-│  │     ├─ error
-│  │     └─ openapi
-│  └─ infrastructure
-│     └─ mapper
 │
 └─ user
    ├─ application
@@ -208,7 +204,8 @@ com.example.aandi_post_web_server
 
 ### Version
 
-- 클래스명에 버전이 남아 있어도 되지만, 패키지는 API 레이어에서만 버전 구분을 우선한다.
+- 클래스명에 버전이 남아 있어도 되지만, 기능 패키지는 API 레이어에서만 버전 구분을 우선한다.
+- 공통 외부 프로토콜 경계의 `common.*.v2`는 위 기본 원칙의 명시적 예외다.
 
 ## 금지/주의 규칙
 

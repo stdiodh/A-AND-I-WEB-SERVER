@@ -13,7 +13,7 @@ import com.example.aandi_post_web_server.assignment.infrastructure.event.DirectA
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentExampleRepository
+import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.course.entity.Course
@@ -60,7 +60,7 @@ class CourseV1ServiceTest : StringSpec({
             .thenReturn(Flux.just(visibleAssignment))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -101,7 +101,7 @@ class CourseV1ServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111", "course-1")).thenReturn(Mono.just(assignment))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq("8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -126,7 +126,7 @@ private class Fixture {
     val courseWeekRepository: CourseWeekRepository = Mockito.mock(CourseWeekRepository::class.java)
     val assignmentRepository: AssignmentRepository = Mockito.mock(AssignmentRepository::class.java)
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
-    val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
+    val assignmentTestCaseRepository: AssignmentTestCaseRepository = Mockito.mock(AssignmentTestCaseRepository::class.java)
     val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
     val assignmentReportTestCaseEventPublisher = NoopAssignmentReportTestCaseEventPublisherForTest()
@@ -137,7 +137,7 @@ private class Fixture {
     val assignmentCoursePort = AssignmentCourseAdapter(courseRepository, courseWeekRepository)
     val assignmentProblemSyncPort = DirectAssignmentProblemSyncAdapter(
         assignmentRepository = assignmentRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
         eventMapper = assignmentReportTestCaseEventMapper,
         eventPublisher = assignmentReportTestCaseEventPublisher,
     )
@@ -145,9 +145,9 @@ private class Fixture {
     init {
         Mockito.`when`(assignmentRequirementRepository.findAllByAssignmentIdIn(Mockito.anyCollection()))
             .thenReturn(Flux.empty())
-        Mockito.`when`(assignmentExampleRepository.findAllByAssignmentIdIn(Mockito.anyCollection()))
+        Mockito.`when`(assignmentTestCaseRepository.findAllByAssignmentIdIn(Mockito.anyCollection()))
             .thenReturn(Flux.empty())
-        Mockito.clearInvocations(assignmentRequirementRepository, assignmentExampleRepository)
+        Mockito.clearInvocations(assignmentRequirementRepository, assignmentTestCaseRepository)
     }
 
     private val courseEnrollmentCommandService = CourseEnrollmentCommandService(
@@ -159,7 +159,7 @@ private class Fixture {
         assignmentCoursePort = assignmentCoursePort,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
         assignmentProblemSyncPort = assignmentProblemSyncPort,
         assignmentCopyFingerprintCalculator = assignmentCopyFingerprintCalculator,
@@ -168,7 +168,7 @@ private class Fixture {
         assignmentCoursePort = assignmentCoursePort,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
         assignmentProblemSyncPort = assignmentProblemSyncPort,
         assignmentCopyService = assignmentCopyService,
@@ -189,7 +189,7 @@ private class Fixture {
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
     )
 
     val service = CourseV1Service(

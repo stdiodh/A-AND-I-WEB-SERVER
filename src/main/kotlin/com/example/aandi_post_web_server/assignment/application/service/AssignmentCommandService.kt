@@ -16,8 +16,6 @@ import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequ
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCoursePort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentProblemSyncPort
-import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventPayload
-import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventType
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase

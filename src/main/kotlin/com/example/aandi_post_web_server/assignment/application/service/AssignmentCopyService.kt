@@ -13,8 +13,6 @@ import com.example.aandi_post_web_server.assignment.domain.model.toDetailRespons
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
-import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventPayload
-import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportEventType
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository

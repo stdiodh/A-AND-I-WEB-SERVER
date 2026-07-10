@@ -1,6 +1,6 @@
 package com.example.aandi_post_web_server.assignment.domain.model
 
-import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentExampleRequest
+import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
@@ -28,21 +28,21 @@ class AssignmentDraftCollectionsTest : StringSpec({
         entities.first().createdAt shouldBe now
     }
 
-    "AssignmentExampleDrafts는 seq 중복을 거부한다" {
+    "AssignmentTestCaseDrafts는 seq 중복을 거부한다" {
         shouldThrow<IllegalArgumentException> {
-            AssignmentExampleDrafts.fromRequests(
+            AssignmentTestCaseDrafts.fromRequests(
                 listOf(
-                    CreateAssignmentExampleRequest(seq = 1, inputValues = listOf("1"), outputText = "1"),
-                    CreateAssignmentExampleRequest(seq = 1, inputValues = listOf("2"), outputText = "2"),
+                    CreateAssignmentTestCaseRequest(seq = 1, inputValues = listOf("1"), outputText = "1"),
+                    CreateAssignmentTestCaseRequest(seq = 1, inputValues = listOf("2"), outputText = "2"),
                 )
             )
         }
     }
 
-    "AssignmentExampleDrafts는 요청을 엔티티로 변환한다" {
-        val drafts = AssignmentExampleDrafts.fromRequests(
+    "AssignmentTestCaseDrafts는 요청을 엔티티로 변환한다" {
+        val drafts = AssignmentTestCaseDrafts.fromRequests(
             listOf(
-                CreateAssignmentExampleRequest(seq = 1, inputValues = listOf("ADD 1"), outputText = "+1"),
+                CreateAssignmentTestCaseRequest(seq = 1, inputValues = listOf("ADD 1"), outputText = "+1"),
             )
         )
         val now = Instant.parse("2026-03-01T00:00:00Z")

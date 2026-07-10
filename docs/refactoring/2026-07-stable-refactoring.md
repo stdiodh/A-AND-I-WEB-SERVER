@@ -1,12 +1,14 @@
-# 2026-07 안정적 리팩터링 계획
+# 2026-07 안정적 리팩터링 완료 기록
 
 ## 목표와 원칙
 
 외부 API와 이벤트 순서를 유지하면서 전역 상태, 중복 정책, 서비스 경계, 배포 위험을 작은 단계로 줄입니다. 각 단계는 독립적인 테스트 checkpoint를 통과한 뒤 다음 단계로 넘어갑니다.
 
+- 상태: 완료 — [PR #68](https://github.com/Team-AnI/A-AND-I-WEB-SERVER/pull/68)로 `main` 병합
 - 기준 commit: `14a283a`
-- 작업 branch: `develop/stable-refactoring`
-- 최종 local checkpoint: 306 tests, failures/errors/skipped 0, Line 85.67%, Branch 63.37%
+- 작업 branch(기록): `develop/stable-refactoring`
+- 병합 commit: `c2c542d`
+- 최종 checkpoint: 306 tests, failures/errors/skipped 0, Line 85.67%, Branch 63.37%
 
 보존하는 핵심 계약:
 
@@ -31,7 +33,9 @@
 | 7A. problem sync 발행 경계 | 완료 | 동기 발행 계약을 테스트로 고정하고 application port/direct adapter로 분리 |
 | 7B. transactional outbox | 제안 | replica-set transaction과 소비자 idempotency 확인 후 ADR 0001에 따라 진행 |
 | 8. 데이터 운영 | 예정 | Mongo index migration, replica/backup 복원, Testcontainers 동시성 검증 |
-| 9. 레거시 정리 | 진행 | 현재 문서와 과거 측정 근거 분류, 운영 Compose 단일화는 볼륨 확인 후 수행 |
+| 9. 문서·레거시 분류 | 완료 | 현재 문서와 과거 측정 근거를 분류하고 후속 코드·운영 정리는 별도 단계로 분리 |
+
+이 문서의 구현 범위는 PR #68에서 완료했습니다. 7B transactional outbox, 8 데이터 운영, 운영 Compose 단일화는 완료 누락이 아니라 별도 운영 전제와 검증이 필요한 후속 작업입니다.
 
 ## 완료한 서비스 경계
 

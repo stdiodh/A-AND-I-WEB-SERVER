@@ -6,12 +6,12 @@ import com.example.aandi_post_web_server.assignment.application.service.Assignme
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyFingerprintCalculator
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentCopyService
 import com.example.aandi_post_web_server.assignment.entity.Assignment
-import com.example.aandi_post_web_server.assignment.entity.AssignmentExample
+import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequest
-import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentExampleRequest
+import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
@@ -22,7 +22,7 @@ import com.example.aandi_post_web_server.assignment.infrastructure.event.Assignm
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventType
 import com.example.aandi_post_web_server.assignment.infrastructure.event.DirectAssignmentProblemSyncAdapter
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentExampleRepository
+import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.course.api.dto.CreateCourseRequest
@@ -95,7 +95,7 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1")).thenReturn(Flux.fromIterable(assignments))
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(2))
-        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(2))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(2))
         Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(4))
         Mockito.`when`(fixture.assignmentRepository.deleteAllById(assignmentIds)).thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseWeekRepository.deleteAllByCourseId("course-1")).thenReturn(Mono.just(3))
@@ -106,7 +106,7 @@ class CourseCommandServiceTest : StringSpec({
             .verifyComplete()
 
         Mockito.verify(fixture.assignmentRequirementRepository).deleteAllByAssignmentIdIn(assignmentIds)
-        Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(assignmentIds)
+        Mockito.verify(fixture.assignmentTestCaseRepository).deleteAllByAssignmentIdIn(assignmentIds)
         Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(assignmentIds)
         Mockito.verify(fixture.assignmentRepository).deleteAllById(assignmentIds)
         fixture.assignmentReportTestCaseEventPublisher.events.map { it.problemId } shouldBe assignmentIds
@@ -143,7 +143,7 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1")).thenReturn(Flux.just(assignment))
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds))
             .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
-        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(assignmentIds))
             .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
         Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds))
             .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
@@ -205,7 +205,7 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1")).thenReturn(Flux.fromIterable(assignments))
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(3L))
-        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(3L))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(3L))
         Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds)).thenReturn(Mono.just(3L))
         Mockito.`when`(fixture.assignmentRepository.deleteAllById(assignmentIds)).thenReturn(Mono.empty())
         Mockito.`when`(fixture.courseWeekRepository.deleteAllByCourseId("course-1"))
@@ -236,7 +236,7 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
             .thenReturn(Mono.just(assignment))
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId))).thenReturn(Mono.just(1))
-        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId))).thenReturn(Mono.just(1))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId))).thenReturn(Mono.just(1))
         Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId))).thenReturn(Mono.just(0))
         Mockito.`when`(fixture.assignmentRepository.deleteById(assignmentId)).thenReturn(Mono.empty())
 
@@ -244,7 +244,7 @@ class CourseCommandServiceTest : StringSpec({
             .verifyComplete()
 
         Mockito.verify(fixture.assignmentRequirementRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
-        Mockito.verify(fixture.assignmentExampleRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
+        Mockito.verify(fixture.assignmentTestCaseRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentDeliveryRepository).deleteAllByAssignmentIdIn(listOf(assignmentId))
         Mockito.verify(fixture.assignmentRepository).deleteById(assignmentId)
         fixture.assignmentReportTestCaseEventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_DELETED
@@ -268,7 +268,7 @@ class CourseCommandServiceTest : StringSpec({
             .thenReturn(Mono.just(assignment))
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
             .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
-        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
             .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
         Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
             .thenReturn(Mono.just(1L).doOnSuccess { assignmentDeletesCompleted++ })
@@ -329,7 +329,7 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenAnswer { Mono.just(persistedAssignment) }
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -389,7 +389,7 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenAnswer { Mono.just(persistedAssignment) }
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -729,7 +729,7 @@ class CourseCommandServiceTest : StringSpec({
                 difficulty = AssignmentDifficulty.MID,
                 description = "문제 설명",
                 testCases = listOf(
-                    CreateAssignmentExampleRequest(
+                    CreateAssignmentTestCaseRequest(
                         seq = 1,
                         inputValues = emptyList(),
                         outputText = "0",
@@ -768,11 +768,11 @@ class CourseCommandServiceTest : StringSpec({
             .thenAnswer { Mono.just(requireNotNull(persistedAssignment)) }
         Mockito.doAnswer { invocation ->
             @Suppress("UNCHECKED_CAST")
-            val saved = invocation.arguments[0] as List<AssignmentExample>
+            val saved = invocation.arguments[0] as List<AssignmentTestCase>
             Flux.fromIterable(saved)
-        }.`when`(fixture.assignmentExampleRepository)
-            .saveAll(ArgumentMatchers.anyList<AssignmentExample>())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
+        }.`when`(fixture.assignmentTestCaseRepository)
+            .saveAll(ArgumentMatchers.anyList<AssignmentTestCase>())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
             .thenReturn(Flux.empty())
 
         StepVerifier.create(
@@ -808,7 +808,7 @@ class CourseCommandServiceTest : StringSpec({
                 difficulty = AssignmentDifficulty.MID,
                 description = "문제 설명",
                 testCases = listOf(
-                    CreateAssignmentExampleRequest(
+                    CreateAssignmentTestCaseRequest(
                         seq = 1,
                         inputValues = listOf("1 2"),
                         outputText = "3",
@@ -853,7 +853,7 @@ class CourseCommandServiceTest : StringSpec({
         val startAt = Instant.now().minusSeconds(3600)
         val endAt = Instant.now().plusSeconds(3600)
         var persistedAssignment: Assignment? = null
-        var persistedTestCases: List<AssignmentExample> = emptyList()
+        var persistedTestCases: List<AssignmentTestCase> = emptyList()
         val request = CreateAssignmentRequest(
             weekNo = 1,
             orderInWeek = 3,
@@ -864,19 +864,19 @@ class CourseCommandServiceTest : StringSpec({
                 difficulty = AssignmentDifficulty.LOW,
                 description = "문제 설명",
                 testCases = listOf(
-                    CreateAssignmentExampleRequest(
+                    CreateAssignmentTestCaseRequest(
                         seq = 1,
                         inputValues = listOf("ADD 1", "CLOSE"),
                         outputText = "3",
                         visibility = AssignmentTestCaseVisibility.PUBLIC,
                     ),
-                    CreateAssignmentExampleRequest(
+                    CreateAssignmentTestCaseRequest(
                         seq = 2,
                         inputValues = listOf("2 3"),
                         outputText = "5",
                         visibility = AssignmentTestCaseVisibility.HIDDEN,
                     ),
-                    CreateAssignmentExampleRequest(
+                    CreateAssignmentTestCaseRequest(
                         seq = 3,
                         inputValues = listOf("9 9"),
                         outputText = "18",
@@ -912,12 +912,12 @@ class CourseCommandServiceTest : StringSpec({
             .thenAnswer { Mono.just(requireNotNull(persistedAssignment)) }
         Mockito.doAnswer { invocation ->
             @Suppress("UNCHECKED_CAST")
-            val saved = invocation.arguments[0] as List<AssignmentExample>
+            val saved = invocation.arguments[0] as List<AssignmentTestCase>
             persistedTestCases = saved
             Flux.fromIterable(saved)
-        }.`when`(fixture.assignmentExampleRepository)
-            .saveAll(ArgumentMatchers.anyList<AssignmentExample>())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
+        }.`when`(fixture.assignmentTestCaseRepository)
+            .saveAll(ArgumentMatchers.anyList<AssignmentTestCase>())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
             .thenAnswer { Flux.fromIterable(persistedTestCases) }
 
         StepVerifier.create(fixture.service.createAssignment("back-basic", request, "admin"))
@@ -941,7 +941,7 @@ class CourseCommandServiceTest : StringSpec({
         val startAt = Instant.now().plusSeconds(3600)
         val endAt = Instant.now().plusSeconds(7200)
         var persistedAssignment: Assignment? = null
-        var persistedTestCases: List<AssignmentExample> = emptyList()
+        var persistedTestCases: List<AssignmentTestCase> = emptyList()
         val request = CreateAssignmentRequest(
             weekNo = 1,
             orderInWeek = 4,
@@ -952,7 +952,7 @@ class CourseCommandServiceTest : StringSpec({
                 difficulty = AssignmentDifficulty.LOW,
                 description = "문제 설명",
                 testCases = listOf(
-                    CreateAssignmentExampleRequest(
+                    CreateAssignmentTestCaseRequest(
                         seq = 1,
                         inputValues = listOf("1 2"),
                         outputText = "3",
@@ -987,12 +987,12 @@ class CourseCommandServiceTest : StringSpec({
             .thenAnswer { Mono.just(requireNotNull(persistedAssignment)) }
         Mockito.doAnswer { invocation ->
             @Suppress("UNCHECKED_CAST")
-            val saved = invocation.arguments[0] as List<AssignmentExample>
+            val saved = invocation.arguments[0] as List<AssignmentTestCase>
             persistedTestCases = saved
             Flux.fromIterable(saved)
-        }.`when`(fixture.assignmentExampleRepository)
-            .saveAll(ArgumentMatchers.anyList<AssignmentExample>())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
+        }.`when`(fixture.assignmentTestCaseRepository)
+            .saveAll(ArgumentMatchers.anyList<AssignmentTestCase>())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
             .thenAnswer { Flux.fromIterable(persistedTestCases) }
 
         StepVerifier.create(fixture.service.createAssignment("back-basic", request, "admin"))
@@ -1025,7 +1025,7 @@ class CourseCommandServiceTest : StringSpec({
         )
         val sourceRequirements = listOf(AssignmentRequirement(assignmentId = sourceId, sortOrder = 1, requirementText = "함수 분리 필수"))
         val sourceTestCases = listOf(
-            AssignmentExample(
+            AssignmentTestCase(
                 assignmentId = sourceId,
                 seq = 1,
                 inputValues = listOf("1 2"),
@@ -1035,7 +1035,7 @@ class CourseCommandServiceTest : StringSpec({
         )
         var persistedAssignment: Assignment? = null
         var persistedRequirements: List<AssignmentRequirement> = emptyList()
-        var persistedTestCases: List<AssignmentExample> = emptyList()
+        var persistedTestCases: List<AssignmentTestCase> = emptyList()
 
         stubCopyHappyPath(
             fixture = fixture,
@@ -1252,7 +1252,7 @@ class CourseCommandServiceTest : StringSpec({
             .thenReturn(Flux.error(DuplicateKeyException("duplicate requirement")))
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
             .thenReturn(Mono.just(0))
-        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
             .thenReturn(Mono.just(0))
         Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
             .thenReturn(Mono.just(0))
@@ -1410,7 +1410,7 @@ class CourseCommandServiceTest : StringSpec({
                 difficulty = AssignmentDifficulty.LOW,
                 description = "문제 설명",
                 testCases = listOf(
-                    CreateAssignmentExampleRequest(
+                    CreateAssignmentTestCaseRequest(
                         seq = 1,
                         inputValues = listOf("1 2"),
                         outputText = "3",
@@ -1436,14 +1436,14 @@ class CourseCommandServiceTest : StringSpec({
         val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
         val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.PUBLISHED)
         var persistedAssignment: Assignment = target
-        var persistedTestCases: List<AssignmentExample> = emptyList()
+        var persistedTestCases: List<AssignmentTestCase> = emptyList()
         val updateRequest = UpdateAssignmentRequest(
             metadata = AssignmentMetadataPayload(
                 title = "updated title",
                 difficulty = AssignmentDifficulty.LOW,
                 description = "updated description",
                 testCases = listOf(
-                    CreateAssignmentExampleRequest(
+                    CreateAssignmentTestCaseRequest(
                         seq = 1,
                         inputValues = listOf("updated input"),
                         outputText = "updated output",
@@ -1477,16 +1477,16 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenAnswer { Mono.just(persistedAssignment) }
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
             .thenReturn(Mono.just(0))
-        Mockito.`when`(fixture.assignmentExampleRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
             .thenReturn(Mono.just(2))
         Mockito.doAnswer { invocation ->
             @Suppress("UNCHECKED_CAST")
-            val saved = invocation.arguments[0] as List<AssignmentExample>
+            val saved = invocation.arguments[0] as List<AssignmentTestCase>
             persistedTestCases = saved
             Flux.fromIterable(saved)
-        }.`when`(fixture.assignmentExampleRepository)
-            .saveAll(ArgumentMatchers.anyList<AssignmentExample>())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        }.`when`(fixture.assignmentTestCaseRepository)
+            .saveAll(ArgumentMatchers.anyList<AssignmentTestCase>())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenAnswer { Flux.fromIterable(persistedTestCases) }
 
         StepVerifier.create(
@@ -1540,10 +1540,10 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenReturn(Mono.just(persistedAssignment))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(
                 Flux.just(
-                    AssignmentExample(
+                    AssignmentTestCase(
                         id = "ex-1",
                         assignmentId = assignmentId,
                         seq = 1,
@@ -1599,10 +1599,10 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenReturn(Mono.just(persistedAssignment))
         Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
             .thenReturn(Mono.just(0))
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(
                 Flux.just(
-                    AssignmentExample(
+                    AssignmentTestCase(
                         id = "ex-1",
                         assignmentId = assignmentId,
                         seq = 1,
@@ -1632,7 +1632,7 @@ class CourseCommandServiceTest : StringSpec({
             }
             .verifyComplete()
 
-        Mockito.verify(fixture.assignmentExampleRepository, Mockito.never())
+        Mockito.verify(fixture.assignmentTestCaseRepository, Mockito.never())
             .deleteAllByAssignmentIdIn(listOf(assignmentId))
         fixture.assignmentReportTestCaseEventPublisher.events.single().testCases shouldHaveSize 1
     }
@@ -1669,10 +1669,10 @@ class CourseCommandServiceTest : StringSpec({
         Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenAnswer { Mono.just(persistedAssignment) }
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
             .thenReturn(Flux.empty())
-        Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
             .thenReturn(
                 Flux.just(
-                    AssignmentExample(
+                    AssignmentTestCase(
                         id = "ex-1",
                         assignmentId = assignmentId,
                         seq = 1,
@@ -1709,7 +1709,7 @@ class CourseCommandServiceTest : StringSpec({
                 difficulty = AssignmentDifficulty.LOW,
                 description = "updated description",
                 testCases = listOf(
-                    CreateAssignmentExampleRequest(
+                    CreateAssignmentTestCaseRequest(
                         seq = 1,
                         inputValues = listOf("new input"),
                         outputText = "new output",
@@ -1744,7 +1744,7 @@ private class CommandFixture(
     val courseWeekRepository: CourseWeekRepository = Mockito.mock(CourseWeekRepository::class.java)
     val assignmentRepository: AssignmentRepository = Mockito.mock(AssignmentRepository::class.java)
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
-    val assignmentExampleRepository: AssignmentExampleRepository = Mockito.mock(AssignmentExampleRepository::class.java)
+    val assignmentTestCaseRepository: AssignmentTestCaseRepository = Mockito.mock(AssignmentTestCaseRepository::class.java)
     val assignmentDeliveryRepository: AssignmentDeliveryRepository = Mockito.mock(AssignmentDeliveryRepository::class.java)
     val assignmentReportTestCaseEventMapper = AssignmentReportTestCaseEventMapper()
     val reportUserRepository: ReportUserRepository = Mockito.mock(ReportUserRepository::class.java)
@@ -1754,7 +1754,7 @@ private class CommandFixture(
     val assignmentCoursePort = AssignmentCourseAdapter(courseRepository, courseWeekRepository)
     val assignmentProblemSyncPort = DirectAssignmentProblemSyncAdapter(
         assignmentRepository = assignmentRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
         eventMapper = assignmentReportTestCaseEventMapper,
         eventPublisher = assignmentReportTestCaseEventPublisher,
     )
@@ -1767,7 +1767,7 @@ private class CommandFixture(
         assignmentCoursePort = assignmentCoursePort,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
         assignmentProblemSyncPort = assignmentProblemSyncPort,
         assignmentCopyFingerprintCalculator = assignmentCopyFingerprintCalculator,
@@ -1776,7 +1776,7 @@ private class CommandFixture(
         assignmentCoursePort = assignmentCoursePort,
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentExampleRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
         assignmentDeliveryRepository = assignmentDeliveryRepository,
         assignmentProblemSyncPort = assignmentProblemSyncPort,
         assignmentCopyService = assignmentCopyService,
@@ -1811,11 +1811,11 @@ private fun stubCopyHappyPath(
     targetCourse: Course,
     sourceAssignment: Assignment,
     sourceRequirements: List<AssignmentRequirement> = emptyList(),
-    sourceTestCases: List<AssignmentExample> = emptyList(),
+    sourceTestCases: List<AssignmentTestCase> = emptyList(),
     persistedAssignment: () -> Assignment?,
     onPersistAssignment: (Assignment) -> Unit,
     onPersistRequirements: (List<AssignmentRequirement>) -> Unit = {},
-    onPersistTestCases: (List<AssignmentExample>) -> Unit = {},
+    onPersistTestCases: (List<AssignmentTestCase>) -> Unit = {},
 ) {
     val sourceId = requireNotNull(sourceAssignment.id)
     val targetCourseId = requireNotNull(targetCourse.id)
@@ -1832,7 +1832,7 @@ private fun stubCopyHappyPath(
         }
     Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(sourceId))
         .thenReturn(Flux.fromIterable(sourceRequirements))
-    Mockito.`when`(fixture.assignmentExampleRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
+    Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
         .thenAnswer { invocation ->
             val assignmentId = invocation.arguments[0] as String
             if (assignmentId == sourceId) {
@@ -1871,11 +1871,11 @@ private fun stubCopyHappyPath(
         .saveAll(ArgumentMatchers.anyList<AssignmentRequirement>())
     Mockito.doAnswer { invocation ->
         @Suppress("UNCHECKED_CAST")
-        val saved = invocation.arguments[0] as List<AssignmentExample>
+        val saved = invocation.arguments[0] as List<AssignmentTestCase>
         onPersistTestCases(saved)
         Flux.fromIterable(saved)
-    }.`when`(fixture.assignmentExampleRepository)
-        .saveAll(ArgumentMatchers.anyList<AssignmentExample>())
+    }.`when`(fixture.assignmentTestCaseRepository)
+        .saveAll(ArgumentMatchers.anyList<AssignmentTestCase>())
 }
 
 private fun commandAssignment(

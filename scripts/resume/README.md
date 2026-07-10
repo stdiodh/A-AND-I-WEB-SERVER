@@ -12,6 +12,8 @@ python3 scripts/resume/generate_resume_metrics.py \
   --out-md "docs/resume-metrics.md"
 ```
 
+`--ci-summary`를 포함한 입력 파일은 선택 사항입니다. 기본 경로에 파일이 없으면 생성기는 실패하지 않고 해당 값을 `측정 필요`로 기록합니다.
+
 Validation-only mode checks the schema file and committed JSON outputs:
 
 ```bash

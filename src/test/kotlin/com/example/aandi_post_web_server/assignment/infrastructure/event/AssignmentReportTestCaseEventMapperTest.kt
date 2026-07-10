@@ -1,6 +1,8 @@
 package com.example.aandi_post_web_server.assignment.infrastructure.event
 
-import com.example.aandi_post_web_server.assignment.api.dto.AssignmentExampleResponse
+import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentReportEventPayload
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentReportEventType
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
@@ -21,9 +23,9 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 3, inputValues = listOf("9", "9"), outputText = "18", visibility = AssignmentTestCaseVisibility.EXCLUDED),
-                AssignmentExampleResponse(seq = 2, inputValues = listOf("3", "4"), outputText = "7", visibility = AssignmentTestCaseVisibility.HIDDEN),
-                AssignmentExampleResponse(seq = 1, inputValues = listOf("1", "2"), outputText = "3", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                AssignmentTestCaseResponse(seq = 3, inputValues = listOf("9", "9"), outputText = "18", visibility = AssignmentTestCaseVisibility.EXCLUDED),
+                AssignmentTestCaseResponse(seq = 2, inputValues = listOf("3", "4"), outputText = "7", visibility = AssignmentTestCaseVisibility.HIDDEN),
+                AssignmentTestCaseResponse(seq = 1, inputValues = listOf("1", "2"), outputText = "3", visibility = AssignmentTestCaseVisibility.PUBLIC),
             ),
         )
 
@@ -44,8 +46,8 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.PUBLISHED,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 1, inputValues = listOf("A"), outputText = "B", visibility = AssignmentTestCaseVisibility.PUBLIC),
-                AssignmentExampleResponse(seq = 2, inputValues = listOf("C"), outputText = "D", visibility = AssignmentTestCaseVisibility.HIDDEN),
+                AssignmentTestCaseResponse(seq = 1, inputValues = listOf("A"), outputText = "B", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                AssignmentTestCaseResponse(seq = 2, inputValues = listOf("C"), outputText = "D", visibility = AssignmentTestCaseVisibility.HIDDEN),
             ),
         )
 
@@ -98,7 +100,7 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 1, inputValues = emptyList(), outputText = "EMPTY", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                AssignmentTestCaseResponse(seq = 1, inputValues = emptyList(), outputText = "EMPTY", visibility = AssignmentTestCaseVisibility.PUBLIC),
             ),
         )
 
@@ -112,7 +114,7 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.PUBLISHED,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(
+                AssignmentTestCaseResponse(
                     seq = 1,
                     inputValues = listOf("hello world", "42  99"),
                     outputText = "ok",
@@ -131,7 +133,7 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentExampleResponse(seq = 1, inputValues = listOf("1 2"), outputText = "3", visibility = AssignmentTestCaseVisibility.EXCLUDED),
+                AssignmentTestCaseResponse(seq = 1, inputValues = listOf("1 2"), outputText = "3", visibility = AssignmentTestCaseVisibility.EXCLUDED),
             ),
         )
 
