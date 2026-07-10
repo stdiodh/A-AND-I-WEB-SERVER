@@ -48,6 +48,46 @@ class TokenValidatorsTest : StringSpec({
         result.hasErrors() shouldBe true
     }
 
+    "AccessTokenClaimsValidator는 유효하지 않은 UUID subject를 거부한다" {
+        val now = Instant.parse("2026-03-05T00:00:00Z")
+        val validator = AccessTokenClaimsValidator(Duration.ofSeconds(30), Clock.fixed(now, ZoneOffset.UTC))
+        val result = validator.validate(buildJwt(subject = "not-a-uuid", issuedAt = now))
+
+        result.errors.single().description shouldBe "sub must be UUID"
+    }
+
+    "AccessTokenClaimsValidator는 지원하지 않는 role을 거부한다" {
+        val now = Instant.parse("2026-03-05T00:00:00Z")
+        val validator = AccessTokenClaimsValidator(Duration.ofSeconds(30), Clock.fixed(now, ZoneOffset.UTC))
+        val result = validator.validate(buildJwt(role = "SUPER_ADMIN", issuedAt = now))
+
+        result.errors.single().description shouldBe "role must be one of USER, ORGANIZER, ADMIN"
+    }
+
+    "AccessTokenClaimsValidator는 blank jti를 거부한다" {
+        val now = Instant.parse("2026-03-05T00:00:00Z")
+        val validator = AccessTokenClaimsValidator(Duration.ofSeconds(30), Clock.fixed(now, ZoneOffset.UTC))
+        val result = validator.validate(buildJwt(jti = " ", issuedAt = now))
+
+        result.errors.single().description shouldBe "jti is required"
+    }
+
+    "AccessTokenClaimsValidator는 iat 누락을 거부한다" {
+        val now = Instant.parse("2026-03-05T00:00:00Z")
+        val validator = AccessTokenClaimsValidator(Duration.ofSeconds(30), Clock.fixed(now, ZoneOffset.UTC))
+        val result = validator.validate(buildJwt(issuedAt = null))
+
+        result.errors.single().description shouldBe "iat is required"
+    }
+
+    "AccessTokenClaimsValidator는 clock skew 경계의 iat를 허용한다" {
+        val now = Instant.parse("2026-03-05T00:00:00Z")
+        val validator = AccessTokenClaimsValidator(Duration.ofSeconds(30), Clock.fixed(now, ZoneOffset.UTC))
+        val result = validator.validate(buildJwt(issuedAt = now.plusSeconds(30)))
+
+        result.hasErrors() shouldBe false
+    }
+
     "RequiredAudienceValidator는 필수 aud가 없으면 실패한다" {
         val validator = RequiredAudienceValidator("aandi-gateway")
         val jwt = buildJwt(audience = listOf("another-aud"))
@@ -70,18 +110,21 @@ class TokenValidatorsTest : StringSpec({
             role: String = "USER",
             subject: String = UUID.randomUUID().toString(),
             jti: String = "jti-default",
-            issuedAt: Instant = Instant.parse("2026-03-05T00:00:00Z"),
+            issuedAt: Instant? = Instant.parse("2026-03-05T00:00:00Z"),
             audience: List<String> = listOf("aandi-gateway"),
-        ): Jwt =
-            Jwt.withTokenValue("token-value")
+        ): Jwt {
+            val builder = Jwt.withTokenValue("token-value")
                 .header("alg", "HS256")
                 .claim("token_type", tokenType)
                 .claim("role", role)
                 .claim("sub", subject)
                 .claim("jti", jti)
                 .claim("aud", audience)
-                .issuedAt(issuedAt)
-                .expiresAt(issuedAt.plusSeconds(3600))
-                .build()
+            issuedAt?.let {
+                builder.issuedAt(it)
+                builder.expiresAt(it.plusSeconds(3600))
+            }
+            return builder.build()
+        }
     }
 }

@@ -5,6 +5,8 @@ import com.example.aandi_post_web_server.assignment.infrastructure.submission.ev
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import org.springframework.dao.DuplicateKeyException
+import org.springframework.dao.OptimisticLockingFailureException
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
 import java.time.Clock
@@ -122,6 +124,176 @@ class AssignmentSubmissionStatusProjectionServiceTest : StringSpec({
         projection.latestPassedCases shouldBe 10
         projection.latestTotalCases shouldBe 10
     }
+
+    "신규 projection 저장의 DuplicateKeyException 은 재조회 후 동시 생성 결과와 병합한다" {
+        val incomingEvent = judgeCompletedEvent(
+            score = 80,
+            passedCases = 8,
+            timestamp = Instant.parse("2026-04-13T08:20:11Z"),
+        )
+        val concurrentProjection = statusProjection(
+            id = "concurrent-projection",
+            score = 90,
+            passedCases = 9,
+            firstCompletedAt = Instant.parse("2026-04-13T08:40:11Z"),
+            version = 0,
+        )
+        val conflict = DuplicateKeyException("concurrent projection insert")
+        val store = RecordingAssignmentSubmissionStatusProjectionStore(
+            findResult = { attempt ->
+                if (attempt == 1) Mono.empty() else Mono.just(concurrentProjection)
+            },
+            saveResult = { attempt, projection ->
+                if (attempt == 1) {
+                    Mono.error(conflict)
+                } else {
+                    Mono.just(projection.copy(version = (projection.version ?: -1L) + 1L))
+                }
+            },
+        )
+        val service = AssignmentSubmissionStatusProjectionService(
+            store = store,
+            clock = Clock.fixed(Instant.parse("2026-04-13T09:00:00Z"), ZoneOffset.UTC),
+        )
+
+        StepVerifier.create(service.upsert(incomingEvent))
+            .assertNext { projection ->
+                projection.id shouldBe concurrentProjection.id
+                projection.version shouldBe 1L
+                projection.firstCompletedAt shouldBe incomingEvent.timestamp
+                projection.lastCompletedAt shouldBe concurrentProjection.lastCompletedAt
+                projection.lastEventTimestamp shouldBe concurrentProjection.lastEventTimestamp
+                projection.latestScore shouldBe 90
+                projection.latestPassedCases shouldBe 9
+            }
+            .verifyComplete()
+
+        store.findCount shouldBe 2
+        store.saveCount shouldBe 2
+        store.savedProjections shouldHaveSize 2
+        store.savedProjections[1].id shouldBe concurrentProjection.id
+        store.savedProjections[1].version shouldBe concurrentProjection.version
+    }
+
+    "기존 projection 저장의 OptimisticLockingFailureException 은 최신 상태를 재조회해 병합한다" {
+        val baseProjection = statusProjection(
+            score = 60,
+            passedCases = 6,
+            firstCompletedAt = Instant.parse("2026-04-13T08:10:11Z"),
+            version = 0,
+        )
+        val concurrentProjection = statusProjection(
+            score = 100,
+            passedCases = 10,
+            firstCompletedAt = baseProjection.firstCompletedAt,
+            lastCompletedAt = Instant.parse("2026-04-13T08:20:11Z"),
+            lastEventTimestamp = Instant.parse("2026-04-13T08:20:11Z"),
+            version = 1,
+        )
+        val incomingEvent = judgeCompletedEvent(
+            score = 90,
+            passedCases = 9,
+            timestamp = Instant.parse("2026-04-13T08:30:11Z"),
+        )
+        val conflict = OptimisticLockingFailureException("concurrent projection update")
+        val store = RecordingAssignmentSubmissionStatusProjectionStore(
+            findResult = { attempt ->
+                Mono.just(if (attempt == 1) baseProjection else concurrentProjection)
+            },
+            saveResult = { attempt, projection ->
+                if (attempt == 1) {
+                    Mono.error(conflict)
+                } else {
+                    Mono.just(projection.copy(version = (projection.version ?: -1L) + 1L))
+                }
+            },
+        )
+        val service = AssignmentSubmissionStatusProjectionService(
+            store = store,
+            clock = Clock.fixed(Instant.parse("2026-04-13T09:00:00Z"), ZoneOffset.UTC),
+        )
+
+        StepVerifier.create(service.upsert(incomingEvent))
+            .assertNext { projection ->
+                projection.id shouldBe concurrentProjection.id
+                projection.version shouldBe 2L
+                projection.firstCompletedAt shouldBe baseProjection.firstCompletedAt
+                projection.lastCompletedAt shouldBe incomingEvent.timestamp
+                projection.lastEventTimestamp shouldBe concurrentProjection.lastEventTimestamp
+                projection.latestScore shouldBe 100
+                projection.latestPassedCases shouldBe 10
+            }
+            .verifyComplete()
+
+        store.findCount shouldBe 2
+        store.saveCount shouldBe 2
+        store.savedProjections shouldHaveSize 2
+        store.savedProjections[1].version shouldBe concurrentProjection.version
+    }
+
+    "재시도 가능한 충돌이 계속되면 총 6회 후 마지막 원인을 보존해 실패한다" {
+        val existingProjection = statusProjection(
+            score = 70,
+            passedCases = 7,
+            firstCompletedAt = Instant.parse("2026-04-13T08:10:11Z"),
+            version = 0,
+        )
+        val incomingEvent = judgeCompletedEvent(
+            score = 80,
+            passedCases = 8,
+            timestamp = Instant.parse("2026-04-13T08:20:11Z"),
+        )
+        val conflict = OptimisticLockingFailureException("persistent projection conflict")
+        val store = RecordingAssignmentSubmissionStatusProjectionStore(
+            findResult = { Mono.just(existingProjection) },
+            saveResult = { _, _ -> Mono.error(conflict) },
+        )
+        val service = AssignmentSubmissionStatusProjectionService(
+            store = store,
+            clock = Clock.fixed(Instant.parse("2026-04-13T09:00:00Z"), ZoneOffset.UTC),
+        )
+
+        StepVerifier.create(service.upsert(incomingEvent))
+            .expectErrorSatisfies { error ->
+                val storeError = error as AssignmentSubmissionStatusProjectionStoreException
+                storeError.message shouldBe
+                    "assignment submission status projection upsert failed after 6 attempt(s)"
+                storeError.cause shouldBe conflict
+            }
+            .verify()
+
+        store.findCount shouldBe 6
+        store.saveCount shouldBe 6
+    }
+
+    "projection 조회 오류는 저장하지 않고 1회 시도 예외로 변환한다" {
+        val incomingEvent = judgeCompletedEvent(
+            score = 80,
+            passedCases = 8,
+            timestamp = Instant.parse("2026-04-13T08:20:11Z"),
+        )
+        val failure = IllegalStateException("projection store unavailable")
+        val store = RecordingAssignmentSubmissionStatusProjectionStore(
+            findResult = { Mono.error(failure) },
+            saveResult = { _, projection -> Mono.just(projection) },
+        )
+        val service = AssignmentSubmissionStatusProjectionService(
+            store = store,
+            clock = Clock.fixed(Instant.parse("2026-04-13T09:00:00Z"), ZoneOffset.UTC),
+        )
+
+        StepVerifier.create(service.upsert(incomingEvent))
+            .expectErrorSatisfies { error ->
+                val storeError = error as AssignmentSubmissionStatusProjectionStoreException
+                storeError.message shouldBe
+                    "assignment submission status projection upsert failed after 1 attempt(s)"
+                storeError.cause shouldBe failure
+            }
+            .verify()
+
+        store.findCount shouldBe 1
+        store.saveCount shouldBe 0
+    }
 })
 
 private class InMemoryAssignmentSubmissionStatusProjectionStore : AssignmentSubmissionStatusProjectionStore {
@@ -146,3 +318,69 @@ private class InMemoryAssignmentSubmissionStatusProjectionStore : AssignmentSubm
 
     fun findAll(): List<AssignmentSubmissionStatusProjection> = projections.values.toList()
 }
+
+private class RecordingAssignmentSubmissionStatusProjectionStore(
+    private val findResult: (attempt: Int) -> Mono<AssignmentSubmissionStatusProjection>,
+    private val saveResult: (
+        attempt: Int,
+        projection: AssignmentSubmissionStatusProjection,
+    ) -> Mono<AssignmentSubmissionStatusProjection>,
+) : AssignmentSubmissionStatusProjectionStore {
+    var findCount: Int = 0
+        private set
+    var saveCount: Int = 0
+        private set
+    val savedProjections = mutableListOf<AssignmentSubmissionStatusProjection>()
+
+    override fun findByAssignmentIdAndPublicCode(
+        assignmentId: String,
+        publicCode: String,
+    ): Mono<AssignmentSubmissionStatusProjection> =
+        findResult(++findCount)
+
+    override fun save(projection: AssignmentSubmissionStatusProjection): Mono<AssignmentSubmissionStatusProjection> {
+        savedProjections += projection
+        return saveResult(++saveCount, projection)
+    }
+}
+
+private fun judgeCompletedEvent(
+    score: Int,
+    passedCases: Int,
+    timestamp: Instant,
+): JudgeCompletedEvent =
+    JudgeCompletedEvent(
+        assignmentId = TEST_ASSIGNMENT_ID,
+        publicCode = TEST_PUBLIC_CODE,
+        score = score,
+        passedCases = passedCases,
+        totalCases = 10,
+        timestamp = timestamp,
+    )
+
+private fun statusProjection(
+    id: String = "projection-1",
+    score: Int,
+    passedCases: Int,
+    firstCompletedAt: Instant,
+    lastCompletedAt: Instant = firstCompletedAt,
+    lastEventTimestamp: Instant = lastCompletedAt,
+    version: Long,
+): AssignmentSubmissionStatusProjection =
+    AssignmentSubmissionStatusProjection(
+        id = id,
+        assignmentId = TEST_ASSIGNMENT_ID,
+        publicCode = TEST_PUBLIC_CODE,
+        firstCompletedAt = firstCompletedAt,
+        lastCompletedAt = lastCompletedAt,
+        latestScore = score,
+        latestPassedCases = passedCases,
+        latestTotalCases = 10,
+        lastEventTimestamp = lastEventTimestamp,
+        createdAt = Instant.parse("2026-04-13T08:00:00Z"),
+        updatedAt = Instant.parse("2026-04-13T08:00:00Z"),
+        version = version,
+    )
+
+private const val TEST_ASSIGNMENT_ID = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001"
+private const val TEST_PUBLIC_CODE = "A00123"

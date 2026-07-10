@@ -25,7 +25,7 @@ import java.time.Instant
 import java.util.concurrent.CompletableFuture
 
 class SqsJudgeSubmissionEventConsumerTest : StringSpec({
-    val queueUrl = "https://example.com/queues/judge-submission-events"
+    val queueUrl = JUDGE_QUEUE_URL
 
     "메시지 처리 성공 시 projection 저장 후 deleteMessage 를 호출한다" {
         val sqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
@@ -255,9 +255,144 @@ class SqsJudgeSubmissionEventConsumerTest : StringSpec({
         Mockito.verify(sqsAsyncClient, Mockito.never())
             .deleteMessage(ArgumentMatchers.any(DeleteMessageRequest::class.java))
     }
+
+    "deleteMessage 실패는 오류를 전파하고 저장된 projection 을 유지한다" {
+        val sqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
+        val store = InMemoryAssignmentSubmissionStatusProjectionStore()
+        val consumer = judgeSubmissionEventConsumer(sqsAsyncClient, store)
+        val message = judgeCompletedMessage(
+            messageId = "msg-delete-failure",
+            receiptHandle = "receipt-delete-failure",
+            assignmentId = "quiz-delete-failure",
+            publicCode = "A01001",
+        )
+        val deleteFailure = IllegalStateException("delete unavailable")
+
+        Mockito.`when`(sqsAsyncClient.deleteMessage(ArgumentMatchers.any(DeleteMessageRequest::class.java)))
+            .thenReturn(CompletableFuture.failedFuture<DeleteMessageResponse>(deleteFailure))
+
+        StepVerifier.create(consumer.processMessage(message))
+            .expectErrorMatches { ex ->
+                ex is IllegalStateException && ex.message == deleteFailure.message
+            }
+            .verify()
+
+        store.findAll() shouldHaveSize 1
+        store.findAll().single().assignmentId shouldBe "quiz-delete-failure"
+        Mockito.verify(sqsAsyncClient).deleteMessage(ArgumentMatchers.any(DeleteMessageRequest::class.java))
+    }
+
+    "pollBatch 는 실패한 메시지를 삭제하지 않고 다음 메시지를 계속 처리한다" {
+        val sqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
+        val store = InMemoryAssignmentSubmissionStatusProjectionStore(
+            failingAssignmentId = "quiz-failure",
+        )
+        val consumer = judgeSubmissionEventConsumer(sqsAsyncClient, store)
+        val failedMessage = judgeCompletedMessage(
+            messageId = "msg-batch-failure",
+            receiptHandle = "receipt-batch-failure",
+            assignmentId = "quiz-failure",
+            publicCode = "A01002",
+        )
+        val successfulMessage = judgeCompletedMessage(
+            messageId = "msg-batch-success",
+            receiptHandle = "receipt-batch-success",
+            assignmentId = "quiz-success",
+            publicCode = "A01003",
+        )
+        val deleteCaptor = ArgumentCaptor.forClass(DeleteMessageRequest::class.java)
+
+        Mockito.`when`(sqsAsyncClient.receiveMessage(ArgumentMatchers.any(ReceiveMessageRequest::class.java)))
+            .thenReturn(
+                CompletableFuture.completedFuture(
+                    ReceiveMessageResponse.builder()
+                        .messages(failedMessage, successfulMessage)
+                        .build()
+                )
+            )
+        Mockito.`when`(sqsAsyncClient.deleteMessage(deleteCaptor.capture()))
+            .thenReturn(CompletableFuture.completedFuture(DeleteMessageResponse.builder().build()))
+
+        StepVerifier.create(consumer.pollBatch())
+            .verifyComplete()
+
+        store.findAll() shouldHaveSize 1
+        store.findAll().single().assignmentId shouldBe "quiz-success"
+        with(deleteCaptor.value) {
+            queueUrl() shouldBe queueUrl
+            receiptHandle() shouldBe "receipt-batch-success"
+        }
+        Mockito.verify(sqsAsyncClient, Mockito.times(1))
+            .deleteMessage(ArgumentMatchers.any(DeleteMessageRequest::class.java))
+    }
+
+    "receiveMessage 실패는 pollBatch 밖으로 전파하고 deleteMessage 를 호출하지 않는다" {
+        val sqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
+        val store = InMemoryAssignmentSubmissionStatusProjectionStore()
+        val consumer = judgeSubmissionEventConsumer(sqsAsyncClient, store)
+        val receiveFailure = IllegalStateException("receive unavailable")
+
+        Mockito.`when`(sqsAsyncClient.receiveMessage(ArgumentMatchers.any(ReceiveMessageRequest::class.java)))
+            .thenReturn(CompletableFuture.failedFuture<ReceiveMessageResponse>(receiveFailure))
+
+        StepVerifier.create(consumer.pollBatch())
+            .expectErrorMatches { ex ->
+                ex is IllegalStateException && ex.message == receiveFailure.message
+            }
+            .verify()
+
+        store.findAll() shouldHaveSize 0
+        Mockito.verify(sqsAsyncClient, Mockito.never())
+            .deleteMessage(ArgumentMatchers.any(DeleteMessageRequest::class.java))
+    }
 })
 
-private class InMemoryAssignmentSubmissionStatusProjectionStore : AssignmentSubmissionStatusProjectionStore {
+private const val JUDGE_QUEUE_URL = "https://example.com/queues/judge-submission-events"
+
+private fun judgeSubmissionEventConsumer(
+    sqsAsyncClient: SqsAsyncClient,
+    store: AssignmentSubmissionStatusProjectionStore,
+): SqsJudgeSubmissionEventConsumer =
+    SqsJudgeSubmissionEventConsumer(
+        properties = JudgeSubmissionEventProperties(
+            enabled = true,
+            queueUrl = JUDGE_QUEUE_URL,
+            region = "ap-northeast-2",
+        ),
+        sqsAsyncClient = sqsAsyncClient,
+        judgeCompletedEventParser = JudgeCompletedEventParser(
+            jacksonObjectMapper().registerModule(JavaTimeModule()),
+        ),
+        projectionService = AssignmentSubmissionStatusProjectionService(store),
+    )
+
+private fun judgeCompletedMessage(
+    messageId: String,
+    receiptHandle: String,
+    assignmentId: String,
+    publicCode: String,
+): Message =
+    Message.builder()
+        .messageId(messageId)
+        .receiptHandle(receiptHandle)
+        .body(
+            """
+            {
+              "eventType": "JUDGE_COMPLETED",
+              "publicCode": "$publicCode",
+              "problemId": "$assignmentId",
+              "score": 80,
+              "passedCases": 8,
+              "totalCases": 10,
+              "timestamp": "2026-04-09T02:15:30.123Z"
+            }
+            """.trimIndent()
+        )
+        .build()
+
+private class InMemoryAssignmentSubmissionStatusProjectionStore(
+    private val failingAssignmentId: String? = null,
+) : AssignmentSubmissionStatusProjectionStore {
     private val projections = linkedMapOf<String, AssignmentSubmissionStatusProjection>()
 
     override fun findByAssignmentIdAndPublicCode(
@@ -267,6 +402,10 @@ private class InMemoryAssignmentSubmissionStatusProjectionStore : AssignmentSubm
         Mono.justOrEmpty(projections["$assignmentId::$publicCode"])
 
     override fun save(projection: AssignmentSubmissionStatusProjection): Mono<AssignmentSubmissionStatusProjection> {
+        if (projection.assignmentId == failingAssignmentId) {
+            return Mono.error(IllegalStateException("projection store unavailable"))
+        }
+
         val key = "${projection.assignmentId}::${projection.publicCode}"
         val currentVersion = projections[key]?.version ?: -1L
         val persisted = projection.copy(
