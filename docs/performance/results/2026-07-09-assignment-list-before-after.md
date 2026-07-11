@@ -110,8 +110,14 @@ CLEANUP_AFTER=true \
 performance/scripts/run-assignment-scale-local.sh
 ```
 
-Repository interaction characterization test:
+Repository interaction characterization test used for this recorded measurement:
 
 ```bash
 ./gradlew test --tests 'com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTest'
+```
+
+The test layout was later split by query boundary. The current equivalent command is:
+
+```bash
+./gradlew test --tests 'com.example.aandi_post_web_server.course.application.service.CourseQueryServiceUserAssignmentTest'
 ```

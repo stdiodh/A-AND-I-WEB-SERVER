@@ -194,7 +194,7 @@ fixed 100 RPS 시나리오의 처리량은 부하 발생기가 고정한 값이�
 
 Before 구조는 assignment 30개 기준 requirement 단건 조회 30회와 testcase 단건 조회 30회로 예상되는 `2N` child lookup입니다.
 
-After 구조는 requirement batch 조회 1회와 testcase batch 조회 1회입니다. `CourseQueryServiceTest`는 0, 1, 30 assignments에서 batch 호출 수와 단건 child 조회 미사용을 검증합니다.
+After 구조는 requirement batch 조회 1회와 testcase batch 조회 1회입니다. `CourseQueryServiceUserAssignmentTest`는 0, 1, 30 assignments에서 batch 호출 수와 단건 child 조회 미사용을 검증합니다.
 
 ### Explain summary
 
