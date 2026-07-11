@@ -19,4 +19,5 @@ data class ReportUser(
     val profileImageUrl: String? = null,
     val syncedAt: Instant = Instant.now(),
     val updatedAt: Instant = Instant.now(),
+    val deletedAt: Instant? = null,
 )

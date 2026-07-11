@@ -11,7 +11,7 @@ class AdminAssignmentSubmissionUserQueryAdapter(
     private val reportUserRepository: ReportUserRepository,
 ) : AdminAssignmentSubmissionUserQueryPort {
     override fun findAllByIds(userIds: Collection<String>): Flux<AdminAssignmentSubmissionUserReference> =
-        reportUserRepository.findAllById(userIds)
+        reportUserRepository.findAllByIdInAndDeletedAtIsNull(userIds)
             .map { user ->
                 AdminAssignmentSubmissionUserReference(
                     id = user.id,

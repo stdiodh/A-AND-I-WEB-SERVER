@@ -9,11 +9,11 @@ import reactor.core.publisher.Flux
 import reactor.test.StepVerifier
 
 class AdminAssignmentSubmissionUserQueryAdapterTest : StringSpec({
-    "users are projected to id and nullable nickname" {
+    "active users are projected to id and nullable nickname" {
         val reportUserRepository = Mockito.mock(ReportUserRepository::class.java)
         val adapter = AdminAssignmentSubmissionUserQueryAdapter(reportUserRepository)
         val userIds = listOf("user-1", "user-2")
-        Mockito.`when`(reportUserRepository.findAllById(userIds))
+        Mockito.`when`(reportUserRepository.findAllByIdInAndDeletedAtIsNull(userIds))
             .thenReturn(
                 Flux.just(
                     reportUser("user-1", "앨리스"),
@@ -31,6 +31,23 @@ class AdminAssignmentSubmissionUserQueryAdapterTest : StringSpec({
                 user.nickname shouldBe null
             }
             .verifyComplete()
+
+        Mockito.verify(reportUserRepository).findAllByIdInAndDeletedAtIsNull(userIds)
+        Mockito.verifyNoMoreInteractions(reportUserRepository)
+    }
+
+    "tombstoned users are not exposed by the active-only repository lookup" {
+        val reportUserRepository = Mockito.mock(ReportUserRepository::class.java)
+        val adapter = AdminAssignmentSubmissionUserQueryAdapter(reportUserRepository)
+        val userIds = listOf("deleted-user")
+        Mockito.`when`(reportUserRepository.findAllByIdInAndDeletedAtIsNull(userIds))
+            .thenReturn(Flux.empty())
+
+        StepVerifier.create(adapter.findAllByIds(userIds))
+            .verifyComplete()
+
+        Mockito.verify(reportUserRepository).findAllByIdInAndDeletedAtIsNull(userIds)
+        Mockito.verifyNoMoreInteractions(reportUserRepository)
     }
 })
 

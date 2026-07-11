@@ -11,7 +11,7 @@ class CourseEnrollmentUserQueryAdapter(
     private val reportUserRepository: ReportUserRepository,
 ) : CourseEnrollmentUserQueryPort {
     override fun findByPublicCode(publicCode: String): Mono<CourseEnrollmentUserReference> =
-        reportUserRepository.findByPublicCode(publicCode)
+        reportUserRepository.findByPublicCodeAndDeletedAtIsNull(publicCode)
             .map { user ->
                 CourseEnrollmentUserReference(
                     id = user.id,

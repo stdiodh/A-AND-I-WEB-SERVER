@@ -9,10 +9,10 @@ import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
 
 class CourseEnrollmentUserQueryAdapterTest : StringSpec({
-    "user fields required for enrollment are projected" {
+    "active user fields required for enrollment are projected" {
         val reportUserRepository = Mockito.mock(ReportUserRepository::class.java)
         val adapter = CourseEnrollmentUserQueryAdapter(reportUserRepository)
-        Mockito.`when`(reportUserRepository.findByPublicCode("#FL301"))
+        Mockito.`when`(reportUserRepository.findByPublicCodeAndDeletedAtIsNull("#FL301"))
             .thenReturn(Mono.just(enrollmentReportUser()))
 
         StepVerifier.create(adapter.findByPublicCode("#FL301"))
@@ -23,16 +23,22 @@ class CourseEnrollmentUserQueryAdapterTest : StringSpec({
                 user.role shouldBe "ORGANIZER"
             }
             .verifyComplete()
+
+        Mockito.verify(reportUserRepository).findByPublicCodeAndDeletedAtIsNull("#FL301")
+        Mockito.verifyNoMoreInteractions(reportUserRepository)
     }
 
-    "missing repository user remains empty" {
+    "tombstoned user is not exposed by the active-only repository lookup" {
         val reportUserRepository = Mockito.mock(ReportUserRepository::class.java)
         val adapter = CourseEnrollmentUserQueryAdapter(reportUserRepository)
-        Mockito.`when`(reportUserRepository.findByPublicCode("#FL999"))
+        Mockito.`when`(reportUserRepository.findByPublicCodeAndDeletedAtIsNull("#FL999"))
             .thenReturn(Mono.empty())
 
         StepVerifier.create(adapter.findByPublicCode("#FL999"))
             .verifyComplete()
+
+        Mockito.verify(reportUserRepository).findByPublicCodeAndDeletedAtIsNull("#FL999")
+        Mockito.verifyNoMoreInteractions(reportUserRepository)
     }
 })
 

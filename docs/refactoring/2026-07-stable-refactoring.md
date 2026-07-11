@@ -33,6 +33,7 @@
 | 7A. problem sync 발행 경계 | 완료 | 동기 발행 계약을 테스트로 고정하고 application port/direct adapter로 분리 |
 | 7B. transactional outbox | 제안 | replica-set transaction과 소비자 idempotency 확인 후 ADR 0001에 따라 진행 |
 | 8. 데이터 운영 | 진행 | Mongo index V001과 preflight/apply/verify 절차 마련. replica/backup 복원과 동시성 검증은 운영 환경 확인 후 진행 |
+| 8A. 사용자 동기화 순서 | 완료 | hard delete를 동일 문서 tombstone으로 전환하고 stale profile 재삽입과 tombstone 조회 노출 차단 |
 | 9. 문서·레거시 분류 | 완료 | 현재 문서와 과거 측정 근거를 분류하고 후속 코드·운영 정리는 별도 단계로 분리 |
 
 이 문서의 최초 구현 범위는 PR #68에서 완료했습니다. 이후 데이터 운영 단계에서 애플리케이션 자동 생성을 사용하지 않는 Mongo index V001과 운영 절차를 추가했습니다. 7B transactional outbox, replica/backup 복원과 동시성 검증, 운영 Compose 단일화는 별도 운영 전제와 검증이 필요한 후속 작업입니다.
@@ -87,6 +88,21 @@ assignment application은 Course persistence 구현을 더 이상 직접 사용�
 ### 운영 설정 단일화
 
 `deploy-tag.yml`과 `docker-compose.prod.yml`의 볼륨 이름을 바로 통일하지 않습니다. 실제 운영 볼륨과 복구 절차를 확인한 뒤 canonical Compose 파일을 별도 PR에서 도입합니다.
+
+### 사용자 삭제 tombstone
+
+사용자 삭제 이벤트가 `users` 문서를 물리 삭제하면 정렬 기준 시각도 함께 사라져, 늦게 도착한 과거 profile 이벤트가 사용자를 다시 insert할 수 있었습니다. 삭제 후에는 같은 `_id` 문서에 tombstone을 남겨 단일 문서 conditional upsert로 순서를 보존합니다.
+
+- profile과 delete 이벤트 시각은 MongoDB BSON Date 정밀도에 맞춰 millisecond로 정규화
+- 같은 millisecond에서는 delete 우선, 더 최신 profile만 tombstone을 해제하고 재활성화
+- tombstone은 원래 publicCode·username·nickname·profileImageUrl을 보존하지 않음
+- publicCode unique 계약은 사용자 ID별 예약 sentinel 문자열로 유지
+- publicCode 및 ID batch 조회는 `deletedAt: null` 조건으로 legacy active 문서를 포함하고 tombstone을 제외
+- replay 상한이 없으므로 tombstone TTL은 두지 않음
+
+이 변경은 `users` 문서의 profile 정보를 최소 tombstone으로 바꾸는 범위입니다. `course_enrollments`처럼 기존에 별도 저장된 사용자 snapshot 정리는 포함하지 않습니다.
+
+배포 전에 이미 hard delete되어 DB에서 사라진 사용자는 이 서버만으로 식별할 수 없습니다. 배포 경계의 과거 profile 재전달까지 차단하려면 Auth 원본에서 삭제 사용자 ID를 재전달하거나 별도 승인된 backfill을 수행해야 합니다.
 
 ## 공통 checkpoint
 
