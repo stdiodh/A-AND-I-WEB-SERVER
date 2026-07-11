@@ -40,6 +40,28 @@ class AssignmentQueryService(
     private val assignmentPublicationPolicy: AssignmentPublicationPolicy = AssignmentPublicationPolicy(clock),
 ) {
 
+    fun getVisibleOutlineAssignments(courseId: CourseId): Flux<AssignmentOutlineReference> =
+        assignmentRepository.findAllByCourseId(courseId.value)
+            .filter(::isVisibleToUser)
+            .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
+            .map { assignment ->
+                AssignmentOutlineReference(
+                    assignmentId = requireNotNull(assignment.id),
+                    weekNo = assignment.weekNo,
+                    orderInWeek = assignment.orderInWeek,
+                    title = assignment.metadata.title,
+                    difficulty = assignment.metadata.difficulty,
+                    startAt = assignment.startAt,
+                    endAt = assignment.endAt,
+                )
+            }
+
+    fun getVisibleAssignmentCourseId(assignmentId: AssignmentId): Mono<String> =
+        assignmentRepository.findById(assignmentId.value)
+            .switchIfEmpty(assignmentNotFound(assignmentId))
+            .flatMap { assignment -> ensureVisibleToUser(assignment, assignmentId) }
+            .map(Assignment::courseId)
+
     fun getAssignmentsByWeek(
         courseSlug: String,
         weekNo: Int,

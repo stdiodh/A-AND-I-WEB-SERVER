@@ -116,7 +116,6 @@ internal class CourseQueryServiceTestFixture(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
         courseWeekRepository = courseWeekRepository,
-        assignmentRepository = assignmentRepository,
         assignmentQueryService = assignmentQueryService,
         clock = clock,
     )

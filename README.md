@@ -116,6 +116,7 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 | MongoDB 인덱스 계약 | 350 | 88.36% | 63.42% | Line 86%, Branch 62% |
 | 사용자 동기화 순서 보장 | 358 | 88.45% | 63.66% | Line 86%, Branch 62% |
 | 과제 조회 경계 분리 | 366 | 88.64% | 63.59% | Line 86%, Branch 62% |
+| Course 과제 조회 의존 제거 | 372 | 88.67% | 63.69% | Line 86%, Branch 62% |
 
 ![JaCoCo coverage gate summary](./docs/assets/images/jacoco-report-before-after.png)
 
@@ -146,7 +147,7 @@ Resume 문장과 근거 상태는 [Resume Metrics](./docs/resume-metrics.md)에 
 
 | 지표 | 측정 조건 | 근거 |
 | :--- | :--- | :--- |
-| 자동화 테스트 366개, Line 88.64%, Branch 63.59% | 2026-07-11 KST, 과제 조회 경계 테스트 포함 | `docs/MEASUREMENT.md`, `build/reports/jacoco/test/jacocoTestReport.xml`, `build.gradle.kts` |
+| 자동화 테스트 372개, Line 88.67%, Branch 63.69% | 2026-07-11 KST, Course 과제 조회 의존 제거 포함 | `docs/MEASUREMENT.md`, `build/reports/jacoco/test/jacocoTestReport.xml`, `build.gradle.kts` |
 | Child repository calls 60 → 2 | 30 assignments, service-level repository interaction 기준 | `performance/results/assignment-read-query-evidence.json`, `CourseQueryServiceUserAssignmentTest` |
 | HTTP 실패율 0.00%, Check 성공률 100.00%, Dropped iterations 0 | local fixed-load, 100 RPS, 2분 × 3회, 목록 60%·상세 40% | `performance/results/assignment-read-before.aggregate.json`, `performance/results/assignment-read-after.aggregate.json` |
 | Assignment list P95 9.297 ms → 7.565 ms | local fixed-load, 30 assignments, 목록 100%, 100 RPS, 2분 × 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.md` |

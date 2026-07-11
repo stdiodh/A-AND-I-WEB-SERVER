@@ -73,17 +73,14 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
-    fun `course application does not depend on assignment child repositories`() {
+    fun `course application does not depend on assignment infrastructure`() {
         val courseApplication = "$basePackage.course.application"
-        val forbiddenRepositories = setOf(
-            "$basePackage.assignment.infrastructure.repository.AssignmentRequirementRepository",
-            "$basePackage.assignment.infrastructure.repository.AssignmentTestCaseRepository",
-        )
+        val assignmentInfrastructure = "$basePackage.assignment.infrastructure."
         val violations = scanMainSourceImports { packageName, importName, relativePath ->
             if (!isSameOrChildPackage(packageName, courseApplication)) return@scanMainSourceImports null
-            if (importName !in forbiddenRepositories) return@scanMainSourceImports null
+            if (!importName.startsWith(assignmentInfrastructure)) return@scanMainSourceImports null
 
-            "$relativePath -> course application depends on assignment child repository: $importName"
+            "$relativePath -> course application depends on assignment infrastructure: $importName"
         }
 
         assertNoViolations("Assignment query service boundary is broken", violations)

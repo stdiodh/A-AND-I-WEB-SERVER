@@ -1,9 +1,9 @@
 package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.fixedNow
 import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.queryAssignment
+import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.queryAssignmentId
 import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.queryCourse
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
@@ -70,7 +70,7 @@ class CourseQueryServiceCourseTest : StringSpec({
             .verifyComplete()
     }
 
-    "코스 목차 요약은 주차별 과제와 진행 상태를 함께 반환한다" {
+    "코스 목차는 공개 과제만 주차와 순서로 정렬하고 종료 시각을 지난 과제만 완료 처리한다" {
         val fixture = CourseQueryServiceTestFixture()
         val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
         val now = fixedNow
@@ -81,49 +81,47 @@ class CourseQueryServiceCourseTest : StringSpec({
             userId = userId,
             status = EnrollmentStatus.ENABLED,
         )
-        val completedA = Assignment(
-            id = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
-            courseId = "course-1",
-            createdBy = "admin",
+        val week1Order1 = queryAssignment(queryAssignmentId(1), "course-1").copy(
             weekNo = 1,
             orderInWeek = 1,
-            startAt = now.minusSeconds(172800),
-            endAt = now.minusSeconds(86400),
-            metadata = queryAssignment("tmp", "course-1").metadata.copy(title = "Hello"),
-            status = AssignmentStatus.PUBLISHED,
-            createdAt = now.minusSeconds(172800),
-            updatedAt = now.minusSeconds(172800),
-            publishedAt = now.minusSeconds(172800),
+            endAt = now.plusSeconds(1),
+            metadata = queryAssignment(queryAssignmentId(1), "course-1").metadata.copy(title = "Hello"),
         )
-        val inProgress = Assignment(
-            id = "7c53f1b3-0df8-4a9d-a56d-a5f50b96b7a1",
-            courseId = "course-1",
-            createdBy = "admin",
+        val week1Order2 = queryAssignment(queryAssignmentId(2), "course-1").copy(
+            weekNo = 1,
+            orderInWeek = 2,
+            endAt = now.minusNanos(1),
+            metadata = queryAssignment(queryAssignmentId(2), "course-1").metadata.copy(title = "OOP Calculator"),
+        )
+        val week2Order1 = queryAssignment(queryAssignmentId(3), "course-1").copy(
             weekNo = 2,
             orderInWeek = 1,
-            startAt = now.minusSeconds(1800),
+            endAt = now,
+        )
+        val draft = queryAssignment(queryAssignmentId(4), "course-1").copy(
+            status = AssignmentStatus.DRAFT,
+            publishedAt = null,
+        )
+        val futurePublished = queryAssignment(queryAssignmentId(5), "course-1").copy(
+            startAt = now.plusSeconds(1),
             endAt = now.plusSeconds(3600),
-            metadata = queryAssignment("tmp2", "course-1").metadata.copy(title = "OOP Calculator"),
-            status = AssignmentStatus.PUBLISHED,
-            createdAt = now.minusSeconds(3600),
-            updatedAt = now.minusSeconds(3600),
-            publishedAt = now.minusSeconds(3600),
+            publishedAt = now.plusSeconds(1),
         )
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", userId))
             .thenReturn(Mono.just(enrollment))
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
-            .thenReturn(Flux.just(completedA, inProgress))
+            .thenReturn(Flux.just(week2Order1, futurePublished, draft, week1Order2, week1Order1))
 
         StepVerifier.create(fixture.service.getCourseOutline("back-basic", userId))
             .assertNext { outline ->
-                outline.totalAssignments shouldBe 2
-                outline.assignments.size shouldBe 2
-                outline.assignments[0].weekNo shouldBe 1
-                outline.assignments[0].checked shouldBe true
-                outline.assignments[1].weekNo shouldBe 2
-                outline.assignments[1].checked shouldBe false
+                outline.totalAssignments shouldBe 3
+                outline.assignments.map { it.assignmentId }
+                    .shouldContainExactly(week1Order1.id, week1Order2.id, week2Order1.id)
+                outline.assignments.map { it.weekNo to it.orderInWeek }
+                    .shouldContainExactly(1 to 1, 1 to 2, 2 to 1)
+                outline.assignments.map { it.checked }.shouldContainExactly(false, true, false)
             }
             .verifyComplete()
     }
@@ -279,6 +277,67 @@ class CourseQueryServiceCourseTest : StringSpec({
                 error.reason shouldBe "코스를 찾을 수 없습니다: missing-course"
             }
             .verify()
+    }
+
+    "과제 ID로 코스 조회는 DRAFT와 미래 공개 과제를 정확한 과제 NOT_FOUND로 처리한다" {
+        val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
+        val hiddenAssignments = listOf(
+            queryAssignment(queryAssignmentId(6), "course-1").copy(
+                status = AssignmentStatus.DRAFT,
+                publishedAt = null,
+            ),
+            queryAssignment(queryAssignmentId(7), "course-1").copy(
+                startAt = fixedNow.plusSeconds(1),
+                endAt = fixedNow.plusSeconds(3600),
+                publishedAt = fixedNow.plusSeconds(1),
+            ),
+        )
+
+        hiddenAssignments.forEach { assignment ->
+            val fixture = CourseQueryServiceTestFixture()
+            val assignmentId = requireNotNull(assignment.id)
+            Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenReturn(Mono.just(assignment))
+
+            StepVerifier.create(fixture.service.getAssignmentCourse(assignmentId, userId))
+                .expectErrorSatisfies { error ->
+                    (error as ResponseStatusException).statusCode shouldBe HttpStatus.NOT_FOUND
+                    error.reason shouldBe "과제를 찾을 수 없습니다: $assignmentId"
+                }
+                .verify()
+
+            Mockito.verifyNoInteractions(fixture.courseRepository, fixture.courseEnrollmentRepository)
+        }
+    }
+
+    "과제 ID로 코스 조회는 BANNED 또는 미수강 사용자에게 기존 조회 불가 NOT_FOUND를 반환한다" {
+        val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
+        val assignmentId = queryAssignmentId(8)
+        val assignment = queryAssignment(assignmentId, "course-1")
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val enrollmentCases = listOf(
+            CourseEnrollment(
+                id = "enroll-banned",
+                courseId = "course-1",
+                userId = userId,
+                status = EnrollmentStatus.BANNED,
+            ),
+            null,
+        )
+
+        enrollmentCases.forEach { enrollment ->
+            val fixture = CourseQueryServiceTestFixture()
+            Mockito.`when`(fixture.assignmentRepository.findById(assignmentId)).thenReturn(Mono.just(assignment))
+            Mockito.`when`(fixture.courseRepository.findById("course-1")).thenReturn(Mono.just(course))
+            Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", userId))
+                .thenReturn(if (enrollment == null) Mono.empty() else Mono.just(enrollment))
+
+            StepVerifier.create(fixture.service.getAssignmentCourse(assignmentId, userId))
+                .expectErrorSatisfies { error ->
+                    (error as ResponseStatusException).statusCode shouldBe HttpStatus.NOT_FOUND
+                    error.reason shouldBe "조회 가능한 코스를 찾을 수 없습니다."
+                }
+                .verify()
+        }
     }
 
     "수강 코스 조회는 수강 내역이 없으면 빈 목록을 반환한다" {

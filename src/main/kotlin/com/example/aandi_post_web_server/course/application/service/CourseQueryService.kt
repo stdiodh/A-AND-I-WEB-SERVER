@@ -1,12 +1,10 @@
 package com.example.aandi_post_web_server.course.application.service
 
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentOutlineReference
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryService
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryResponse
-import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPublicationPolicy
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.course.domain.model.AssignmentId
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
@@ -38,10 +36,8 @@ class CourseQueryService(
     private val courseRepository: CourseRepository,
     private val courseEnrollmentRepository: CourseEnrollmentRepository,
     private val courseWeekRepository: CourseWeekRepository,
-    private val assignmentRepository: AssignmentRepository,
     private val assignmentQueryService: AssignmentQueryService,
     private val clock: Clock = Clock.systemUTC(),
-    private val assignmentPublicationPolicy: AssignmentPublicationPolicy = AssignmentPublicationPolicy(clock),
 ) {
 
     fun getAdminCourses(): Flux<CourseResponse> =
@@ -61,9 +57,7 @@ class CourseQueryService(
         return findAccessibleCourseBySlug(slug, parsedUserId)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findAllByCourseId(courseId.value)
-                    .filter { assignment -> isVisibleToUser(assignment) }
-                    .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
+                assignmentQueryService.getVisibleOutlineAssignments(courseId)
                     .collectList()
                     .map { assignments -> toCourseOutlineResponse(course, assignments) }
             }
@@ -141,21 +135,19 @@ class CourseQueryService(
     fun getAssignmentCourse(assignmentId: String, userId: String): Mono<CourseResponse> {
         val parsedAssignmentId = parseAssignmentId(assignmentId)
         val parsedUserId = parseUserId(userId)
-        return assignmentRepository.findById(parsedAssignmentId.value)
-            .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${parsedAssignmentId.value}")))
-            .flatMap { assignment -> ensureVisibleToUser(assignment, parsedAssignmentId) }
-            .flatMap { assignment ->
-                courseRepository.findById(assignment.courseId)
+        return assignmentQueryService.getVisibleAssignmentCourseId(parsedAssignmentId)
+            .flatMap { courseId ->
+                courseRepository.findById(courseId)
                     .switchIfEmpty(
                         Mono.error(
                             ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
-                                "코스를 찾을 수 없습니다: ${assignment.courseId}",
+                                "코스를 찾을 수 없습니다: $courseId",
                             )
                         )
                     ).flatMap { course ->
-                        val courseId = parseCourseId(requireNotNull(course.id))
-                        ensureEnrolled(courseId, parsedUserId).thenReturn(course)
+                        val parsedCourseId = parseCourseId(requireNotNull(course.id))
+                        ensureEnrolled(parsedCourseId, parsedUserId).thenReturn(course)
                     }
             }
             .map(::toCourseResponse)
@@ -195,13 +187,6 @@ class CourseQueryService(
                     ResponseStatusException(HttpStatus.NOT_FOUND, "조회 가능한 코스를 찾을 수 없습니다.")
                 )
             )
-    }
-
-    private fun ensureVisibleToUser(assignment: Assignment, assignmentId: AssignmentId): Mono<Assignment> {
-        if (!isVisibleToUser(assignment)) {
-            return Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다: ${assignmentId.value}"))
-        }
-        return Mono.just(assignment)
     }
 
     private fun parseCourseSlug(raw: String): CourseSlug =
@@ -262,20 +247,22 @@ class CourseQueryService(
         updatedAt = week.updatedAt,
     )
 
-    private fun toCourseOutlineResponse(course: Course, assignments: List<Assignment>): CourseOutlineResponse {
+    private fun toCourseOutlineResponse(
+        course: Course,
+        assignments: List<AssignmentOutlineReference>,
+    ): CourseOutlineResponse {
         val now = Instant.now(clock)
         val assignmentItems = assignments
-            .sortedWith(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
             .map { assignment ->
                 CourseOutlineAssignmentItemResponse(
-                    assignmentId = requireNotNull(assignment.id),
+                    assignmentId = assignment.assignmentId,
                     weekNo = assignment.weekNo,
                     orderInWeek = assignment.orderInWeek,
-                    title = assignment.metadata.title,
-                    difficulty = assignment.metadata.difficulty,
+                    title = assignment.title,
+                    difficulty = assignment.difficulty,
                     startAt = assignment.startAt,
                     endAt = assignment.endAt,
-                    checked = isChecked(now, assignment),
+                    checked = isChecked(now, assignment.endAt),
                 )
             }
 
@@ -293,17 +280,6 @@ class CourseQueryService(
         )
     }
 
-    private fun isChecked(now: Instant, assignment: Assignment): Boolean = now.isAfter(assignment.endAt)
-
-    private fun isVisibleToUser(assignment: Assignment): Boolean =
-        effectivePublication(assignment).status == AssignmentStatus.PUBLISHED
-
-    private fun effectivePublication(assignment: Assignment, now: Instant = assignmentPublicationPolicy.now()) =
-        assignmentPublicationPolicy.resolve(
-            status = assignment.status,
-            startAt = assignment.startAt,
-            publishedAt = assignment.publishedAt,
-            now = now,
-        )
+    private fun isChecked(now: Instant, endAt: Instant): Boolean = now.isAfter(endAt)
 
 }

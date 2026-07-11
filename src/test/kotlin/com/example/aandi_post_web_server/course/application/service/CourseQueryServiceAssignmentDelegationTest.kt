@@ -2,7 +2,6 @@ package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryService
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
@@ -17,13 +16,11 @@ class CourseQueryServiceAssignmentDelegationTest : StringSpec({
         val courseRepository = Mockito.mock(CourseRepository::class.java)
         val courseEnrollmentRepository = Mockito.mock(CourseEnrollmentRepository::class.java)
         val courseWeekRepository = Mockito.mock(CourseWeekRepository::class.java)
-        val assignmentRepository = Mockito.mock(AssignmentRepository::class.java)
         val assignmentQueryService = Mockito.mock(AssignmentQueryService::class.java)
         val service = CourseQueryService(
             courseRepository = courseRepository,
             courseEnrollmentRepository = courseEnrollmentRepository,
             courseWeekRepository = courseWeekRepository,
-            assignmentRepository = assignmentRepository,
             assignmentQueryService = assignmentQueryService,
         )
 
@@ -71,7 +68,6 @@ class CourseQueryServiceAssignmentDelegationTest : StringSpec({
             courseRepository,
             courseEnrollmentRepository,
             courseWeekRepository,
-            assignmentRepository,
         )
     }
 })

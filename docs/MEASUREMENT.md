@@ -81,7 +81,7 @@ JaCoCo HTML report는 `build/reports/jacoco/test/html/index.html`에서 확인�
 
 | 테스트 수 | Line coverage | Branch coverage | CI gate |
 | ---: | ---: | ---: | :--- |
-| 366 | 4,409 / 4,974 = **88.64%** | 1,142 / 1,796 = **63.59%** | Line 86%, Branch 62% |
+| 372 | 4,415 / 4,979 = **88.67%** | 1,140 / 1,790 = **63.69%** | Line 86%, Branch 62% |
 
 MongoDB 인덱스 migration JavaScript의 12개 단위 테스트는 `node --test`로 별도 실행하며 위 Gradle 테스트 수와 JaCoCo 분자·분모에는 포함하지 않습니다.
 
