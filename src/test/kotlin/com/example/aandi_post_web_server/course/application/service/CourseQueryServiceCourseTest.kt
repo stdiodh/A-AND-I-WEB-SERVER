@@ -1,9 +1,9 @@
 package com.example.aandi_post_web_server.course.application.service
 
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryServiceTestData.queryAssignment
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryServiceTestData.queryAssignmentId
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.fixedNow
-import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.queryAssignment
-import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.queryAssignmentId
 import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.queryCourse
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus

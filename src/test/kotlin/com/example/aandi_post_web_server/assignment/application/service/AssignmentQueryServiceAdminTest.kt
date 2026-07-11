@@ -1,12 +1,12 @@
-package com.example.aandi_post_web_server.course.application.service
+package com.example.aandi_post_web_server.assignment.application.service
 
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTemplateLanguage
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
-import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.queryAssignment
-import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.queryAssignmentId
-import com.example.aandi_post_web_server.course.application.service.CourseQueryServiceTestData.queryCourse
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryServiceTestData.queryAssignment
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryServiceTestData.queryAssignmentId
+import com.example.aandi_post_web_server.course.domain.model.CourseSlug
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -21,10 +21,9 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 
-class CourseQueryServiceAdminAssignmentTest : StringSpec({
+class AssignmentQueryServiceAdminTest : StringSpec({
     "관리자 과제 목록 조회는 수강 상태와 무관하게 status 필터를 적용한다" {
-        val fixture = CourseQueryServiceTestFixture()
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val fixture = AssignmentQueryServiceTestFixture()
         val draft = queryAssignment(id = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111", courseId = "course-1").copy(
             status = AssignmentStatus.DRAFT,
             startAt = Instant.parse("2026-04-01T00:00:00Z"),
@@ -32,7 +31,7 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
         )
         val published = queryAssignment(id = "7c53f1b3-0df8-4a9d-a56d-a5f50b96b7a1", courseId = "course-1")
 
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        fixture.stubCourse()
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
             .thenReturn(Flux.just(draft, published))
 
@@ -50,8 +49,7 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
     }
 
     "관리자 과제 상세 조회는 DRAFT 과제도 조회할 수 있다" {
-        val fixture = CourseQueryServiceTestFixture()
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val fixture = AssignmentQueryServiceTestFixture()
         val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
         val draft = queryAssignment(id = assignmentId, courseId = "course-1").copy(
             status = AssignmentStatus.DRAFT,
@@ -59,7 +57,7 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
             publishedAt = null,
         )
 
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        fixture.stubCourse()
         Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
             .thenReturn(Mono.just(draft))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
@@ -79,12 +77,11 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
     }
 
     "관리자 과제 목록 응답은 top-level title, publishedAt, problemId 를 포함한다" {
-        val fixture = CourseQueryServiceTestFixture()
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val fixture = AssignmentQueryServiceTestFixture()
         val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
         val published = queryAssignment(id = assignmentId, courseId = "course-1")
 
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        fixture.stubCourse()
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
             .thenReturn(Flux.just(published))
 
@@ -106,12 +103,11 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
     }
 
     "관리자 과제 상세 응답은 top-level title, publishedAt, problemId 를 포함한다" {
-        val fixture = CourseQueryServiceTestFixture()
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val fixture = AssignmentQueryServiceTestFixture()
         val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
         val published = queryAssignment(id = assignmentId, courseId = "course-1")
 
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        fixture.stubCourse()
         Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
             .thenReturn(Mono.just(published))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
@@ -133,13 +129,12 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
     }
 
     "관리자 과제 목록 조회는 hidden과 excluded testcase 노출 동작을 유지한다" {
-        val fixture = CourseQueryServiceTestFixture()
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val fixture = AssignmentQueryServiceTestFixture()
         val assignmentId = queryAssignmentId(1)
         val draft = queryAssignment(id = assignmentId, courseId = "course-1")
             .copy(status = AssignmentStatus.DRAFT, publishedAt = null)
 
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        fixture.stubCourse()
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
             .thenReturn(Flux.just(draft))
         fixture.stubBatchChildren(
@@ -182,12 +177,11 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
             startAt.minusNanos(1),
             startAt.plusNanos(1),
         )
-        val fixture = CourseQueryServiceTestFixture(clock)
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val fixture = AssignmentQueryServiceTestFixture(clock)
         val scheduled = queryAssignment(id = queryAssignmentId(1), courseId = "course-1")
             .copy(startAt = startAt, publishedAt = startAt)
 
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        fixture.stubCourse()
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
             .thenReturn(Flux.just(scheduled))
 
@@ -199,12 +193,11 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
     }
 
     "관리자 과제 상세 조회는 hidden과 excluded testcase를 모두 포함한다" {
-        val fixture = CourseQueryServiceTestFixture()
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val fixture = AssignmentQueryServiceTestFixture()
         val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
         val draft = queryAssignment(id = assignmentId, courseId = "course-1").copy(status = AssignmentStatus.DRAFT, publishedAt = null)
 
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        fixture.stubCourse()
         Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
             .thenReturn(Mono.just(draft))
         Mockito.`when`(fixture.assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId))
@@ -245,8 +238,9 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
     }
 
     "관리자 과제 목록 조회는 없는 코스를 NOT_FOUND로 분류하고 과제를 조회하지 않는다" {
-        val fixture = CourseQueryServiceTestFixture()
-        Mockito.`when`(fixture.courseRepository.findBySlug("missing-course")).thenReturn(Mono.empty())
+        val fixture = AssignmentQueryServiceTestFixture()
+        Mockito.`when`(fixture.assignmentCourseQueryPort.findBySlug(CourseSlug.from("missing-course")))
+            .thenReturn(Mono.empty())
 
         StepVerifier.create(fixture.service.getAdminAssignments("missing-course", null, null))
             .expectErrorSatisfies { error ->
@@ -261,12 +255,11 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
     }
 
     "관리자 과제 목록 week 필터는 주차별 repository 조회를 사용한다" {
-        val fixture = CourseQueryServiceTestFixture()
-        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val fixture = AssignmentQueryServiceTestFixture()
         val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
         val published = queryAssignment(id = assignmentId, courseId = "course-1")
 
-        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        fixture.stubCourse()
         Mockito.`when`(fixture.assignmentRepository.findAllByCourseIdAndWeekNo("course-1", 1))
             .thenReturn(Flux.just(published))
 

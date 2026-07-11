@@ -31,6 +31,7 @@
 | 5. 과제 명령 서비스 분리 | 완료 | CRUD·복사·`deleteAllByCourseId`를 `AssignmentCommandService`로 이동하고 기존 Course facade는 delegate 유지 |
 | 6. Course 의존 포트 | 완료 | 코스 조회·주차 보장 port/adapter 도입, assignment application의 Course persistence 직접 의존 금지 |
 | 6A. 과제 조회 서비스 경계 | 완료 | 목록·상세·outline·과제 course 참조를 `AssignmentQueryService`로 이동하고 Course→Assignment infrastructure 의존 제거 |
+| 6B. 과제 조회 테스트 소유권 | 완료 | 사용자·관리자 조회 테스트를 Assignment 패키지와 query port mock 기반 직접 서비스 테스트로 이동 |
 | 7A. problem sync 발행 경계 | 완료 | 동기 발행 계약을 테스트로 고정하고 application port/direct adapter로 분리 |
 | 7B. transactional outbox | 제안 | replica-set transaction과 소비자 idempotency 확인 후 ADR 0001에 따라 진행 |
 | 8. 데이터 운영 | 진행 | Mongo index V001과 preflight/apply/verify 절차 마련. replica/backup 복원과 동시성 검증은 운영 환경 확인 후 진행 |
@@ -91,6 +92,16 @@
 - course application의 모든 Assignment infrastructure 직접 import를 금지하는 구조 테스트 추가
 - facade 전체 위임과 adapter의 course 없음·활성/비활성/미수강 경계 테스트 추가
 - 전체 372개 테스트와 JaCoCo gate, bootJar 통과
+
+### 과제 조회 테스트 소유권 정리
+
+서비스 이동 뒤에도 Course 패키지에 남아 facade와 실제 adapter를 함께 거치던 사용자·관리자 조회 테스트를 Assignment 패키지로 옮겼습니다. 동작 계약은 유지하면서 service와 adapter의 테스트 책임을 분리했습니다.
+
+- 사용자 13개·관리자 9개 조회 계약을 `AssignmentQueryService` 직접 테스트로 유지
+- Course repository mock 대신 `AssignmentCourseQueryPort`의 typed 입력과 결과를 stub
+- Course 패키지는 course 응답 조합·outline·facade 위임 테스트만 소유
+- `AssignmentCourseQueryAdapterTest`가 course/enrollment repository 매핑 경계를 별도로 검증
+- 전체 372개 테스트 수와 JaCoCo 측정값을 유지하고 gate·bootJar 통과
 
 ## 다음 변경의 안전 기준
 
