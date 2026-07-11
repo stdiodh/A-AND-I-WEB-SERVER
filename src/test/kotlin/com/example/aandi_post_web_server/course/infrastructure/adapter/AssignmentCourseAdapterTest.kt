@@ -15,6 +15,7 @@ import io.kotest.matchers.shouldBe
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
+import org.springframework.dao.DuplicateKeyException
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
 import java.time.Instant
@@ -97,6 +98,60 @@ class AssignmentCourseAdapterTest : StringSpec({
         captor.value.title shouldBe "7주차"
         captor.value.startDate shouldBe LocalDate.of(2026, 5, 12)
         captor.value.endDate shouldBe LocalDate.of(2026, 5, 18)
+    }
+
+    "concurrent course week insert converges when the saved week becomes visible" {
+        val fixture = AssignmentCourseAdapterFixture()
+        val duplicate = DuplicateKeyException("concurrent course week insert")
+        val existingWeek = CourseWeek(
+            id = "week-7",
+            courseId = COURSE_ID,
+            weekNo = WEEK_NO,
+            title = "7주차",
+        )
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo(COURSE_ID, WEEK_NO))
+            .thenReturn(Mono.empty(), Mono.just(existingWeek))
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenReturn(Mono.error(duplicate))
+
+        StepVerifier.create(
+            fixture.adapter.ensureWeekExistsOrCreate(
+                courseId = CourseId.from(COURSE_ID),
+                weekNo = WeekNo.from(WEEK_NO),
+                startAt = START_AT,
+                endAt = END_AT,
+            )
+        ).verifyComplete()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.times(2))
+            .findByCourseIdAndWeekNo(COURSE_ID, WEEK_NO)
+        Mockito.verify(fixture.courseWeekRepository)
+            .save(ArgumentMatchers.any(CourseWeek::class.java))
+    }
+
+    "concurrent course week insert preserves the duplicate failure when the week stays missing" {
+        val fixture = AssignmentCourseAdapterFixture()
+        val duplicate = DuplicateKeyException("concurrent course week insert")
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo(COURSE_ID, WEEK_NO))
+            .thenReturn(Mono.empty(), Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenReturn(Mono.error(duplicate))
+
+        StepVerifier.create(
+            fixture.adapter.ensureWeekExistsOrCreate(
+                courseId = CourseId.from(COURSE_ID),
+                weekNo = WeekNo.from(WEEK_NO),
+                startAt = START_AT,
+                endAt = END_AT,
+            )
+        )
+            .expectErrorMatches { error -> error === duplicate }
+            .verify()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.times(2))
+            .findByCourseIdAndWeekNo(COURSE_ID, WEEK_NO)
+        Mockito.verify(fixture.courseWeekRepository)
+            .save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 })
 

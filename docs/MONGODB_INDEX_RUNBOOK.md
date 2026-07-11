@@ -69,6 +69,8 @@ mongosh "$MONGODB_URI" --quiet --file scripts/mongo/indexes/v001-verify.js
 
 검증은 필요한 인덱스의 키와 옵션이 실제 DB에 존재하는지 확인합니다. 성공한 뒤 애플리케이션의 오류율과 MongoDB 인덱스 생성 부하를 관찰하고 운영 기록에 결과를 남깁니다.
 
+과제 생성·수정·복사의 동시 CourseWeek 생성 수렴은 `ux_course_week(courseId, weekNo)` unique index가 실제 적용된 환경을 전제로 합니다. 이 인덱스가 없으면 애플리케이션의 충돌 후 재조회 로직만으로 중복 주차 생성을 막을 수 없습니다.
+
 ## 재실행과 복구 원칙
 
 - 사전 점검과 검증은 읽기 전용이므로 반복 실행할 수 있습니다.

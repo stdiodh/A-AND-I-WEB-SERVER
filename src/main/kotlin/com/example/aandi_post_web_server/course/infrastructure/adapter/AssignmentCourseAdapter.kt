@@ -8,6 +8,7 @@ import com.example.aandi_post_web_server.course.domain.model.WeekNo
 import com.example.aandi_post_web_server.course.entity.CourseWeek
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 import java.time.Instant
@@ -46,6 +47,10 @@ class AssignmentCourseAdapter(
                             updatedAt = Instant.now(),
                         )
                     )
+                        .onErrorResume(DuplicateKeyException::class.java) { error ->
+                            courseWeekRepository.findByCourseIdAndWeekNo(courseId.value, weekNo.value)
+                                .switchIfEmpty(Mono.error(error))
+                        }
                 }
             )
             .then()

@@ -369,6 +369,39 @@ class AssignmentCopyServiceTest : StringSpec({
             .verify()
     }
 
+    "CourseWeek save race failure is not mapped to copy CONFLICT" {
+        val fixture = AssignmentCopyFixture()
+        fixture.stubCopyPath(targetWeekExists = false)
+        val weekSaveConflict = DuplicateKeyException("duplicate course week")
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenReturn(Mono.error(weekSaveConflict))
+
+        StepVerifier.create(
+            fixture.service.copyAssignment(
+                targetCourseSlug = TARGET_COURSE_SLUG,
+                request = CopyAssignmentRequest(sourceAssignmentId = SOURCE_ASSIGNMENT_ID),
+                createdBy = CREATED_BY,
+            )
+        )
+            .expectErrorSatisfies { error ->
+                error shouldBe weekSaveConflict
+            }
+            .verify()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.times(2))
+            .findByCourseIdAndWeekNo(TARGET_COURSE_ID, 1)
+        fixture.verifyNoWrites()
+        Mockito.verify(fixture.assignmentRequirementRepository, Mockito.never())
+            .deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection())
+        Mockito.verify(fixture.assignmentTestCaseRepository, Mockito.never())
+            .deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection())
+        Mockito.verify(fixture.assignmentDeliveryRepository, Mockito.never())
+            .deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection())
+        Mockito.verify(fixture.assignmentRepository, Mockito.never())
+            .deleteById(ArgumentMatchers.anyString())
+        fixture.eventPublisher.events shouldBe emptyList()
+    }
+
     "full successful copy creates a draft assignment, deep-copies children, and publishes one create event" {
         val sourceInputs = mutableListOf("2 3", "ADD")
         val sourceAssignment = sourceAssignment()

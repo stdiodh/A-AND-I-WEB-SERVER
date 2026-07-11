@@ -138,8 +138,10 @@ class AssignmentCopyService(
                     )
                 }
             )
-            .then(Mono.defer { assignmentRepository.save(copiedAssignment) })
-            .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentCopyConflict() }
+            .then(
+                Mono.defer { assignmentRepository.save(copiedAssignment) }
+                    .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentCopyConflict() }
+            )
             .flatMap { saved ->
                 val savedAssignmentId = parseAssignmentId(requireNotNull(saved.id))
                 copyRequirements(savedAssignmentId, sourceRequirements)

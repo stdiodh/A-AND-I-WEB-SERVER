@@ -38,6 +38,7 @@
 | 7B. transactional outbox | 제안 | [현재 계약과 전환 차단조건](../ASSIGNMENT_EVENT_CONTRACT_RUNBOOK.md)을 확인한 뒤 ADR 0001에 따라 진행 |
 | 8. 데이터 운영 | 진행 | Mongo index V001과 preflight/apply/verify 절차 마련. replica/backup 복원과 동시성 검증은 운영 환경 확인 후 진행 |
 | 8A. 사용자 동기화 순서 | 완료 | hard delete를 동일 문서 tombstone으로 전환하고 stale profile 재삽입과 tombstone 조회 노출 차단 |
+| 8B. CourseWeek 동시 생성 수렴 | 완료 | unique 충돌 뒤 동일 주차를 재조회하고 assignment 저장 충돌만 슬롯 CONFLICT로 변환 |
 | 9. 문서·레거시 분류 | 완료 | 현재 문서와 과거 측정 근거를 분류하고 후속 코드·운영 정리는 별도 단계로 분리 |
 
 이 문서의 최초 구현 범위는 PR #68에서 완료했습니다. 이후 데이터 운영 단계에서 애플리케이션 자동 생성을 사용하지 않는 Mongo index V001과 운영 절차를 추가했습니다. 7B transactional outbox, replica/backup 복원과 동시성 검증, 운영 Compose 단일화는 별도 운영 전제와 검증이 필요한 후속 작업입니다.
@@ -125,6 +126,16 @@
 - 복사 cleanup 오류는 모두 시도한 뒤 기존처럼 기록·흡수하여 원본 copy 오류를 보존
 - `TestPublisher`로 각 이전 delete 완료 전 다음 delete가 구독되지 않는 동작을 검증
 - 전체 380개 테스트, Line 88.78%, Branch 63.74%, JaCoCo gate와 bootJar 통과
+
+### CourseWeek 동시 생성 수렴
+
+같은 미생성 주차에 과제 생성·수정·복사가 동시에 도달하면 양쪽 요청이 최초 조회에서 빈 결과를 보고 `course_weeks` 저장을 시도할 수 있습니다. `ux_course_week` 충돌 뒤 동일 `(courseId, weekNo)`를 재조회해 경쟁 요청이 만든 주차가 확인되면 성공으로 수렴합니다.
+
+- 충돌 뒤에도 주차가 없으면 원본 `DuplicateKeyException`을 그대로 전파
+- assignment 저장의 `DuplicateKeyException`만 기존 슬롯/복사 CONFLICT로 변환하도록 오류 매핑 범위를 축소
+- 주차 경쟁 오류 뒤 assignment·child 저장, cleanup, problem event가 시작되지 않음을 검증
+- 실제 중복 방지는 운영 DB에 V001 `ux_course_week` unique index가 적용·검증된 경우에만 보장
+- 전체 387개 테스트, Line 88.87%, Branch 63.74%, JaCoCo gate와 bootJar 통과
 
 ## 다음 변경의 안전 기준
 

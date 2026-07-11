@@ -96,8 +96,8 @@ class AssignmentCommandService(
                                         )
                                     )
                                 }
+                                    .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentSlotConflict() }
                             )
-                            .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentSlotConflict() }
                             .flatMap { assignment ->
                                 val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
                                 saveRequirements(assignmentId, requirementDrafts)
@@ -333,8 +333,10 @@ class AssignmentCommandService(
         }
         return checkDuplicate
             .then(checkWeek)
-            .then(Mono.defer { assignmentRepository.save(candidate) })
-            .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentSlotConflict() }
+            .then(
+                Mono.defer { assignmentRepository.save(candidate) }
+                    .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentSlotConflict() }
+            )
             .flatMap { saved ->
                 loadOrReplaceRequirements(parsedAssignmentId, requirementDrafts)
                     .flatMap { requirements ->

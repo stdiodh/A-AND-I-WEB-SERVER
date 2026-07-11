@@ -37,6 +37,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.Exceptions
@@ -539,6 +540,76 @@ class AssignmentCommandServiceTest : StringSpec({
         Mockito.verify(fixture.courseWeekRepository, Mockito.never()).save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 
+    "과제 수정 주차 생성 race 실패는 슬롯 CONFLICT 로 바꾸지 않는다" {
+        val fixture = AssignmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+        val failure = DuplicateKeyException("course week race")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek("course-1", 2, target.orderInWeek)
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("course-1", 2))
+            .thenReturn(Mono.empty(), Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenReturn(Mono.error(failure))
+
+        StepVerifier.create(
+            fixture.service.updateAssignment(
+                courseSlug = "back-basic",
+                assignmentId = assignmentId,
+                request = UpdateAssignmentRequest(weekNo = 2),
+            )
+        )
+            .expectErrorSatisfies { error -> (error === failure) shouldBe true }
+            .verify()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.times(2))
+            .findByCourseIdAndWeekNo("course-1", 2)
+        Mockito.verify(fixture.assignmentRepository, Mockito.never())
+            .save(ArgumentMatchers.any(Assignment::class.java))
+        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
+    }
+
+    "과제 수정 저장 DuplicateKey 는 슬롯 CONFLICT 로 바꾸고 하위 작업을 시작하지 않는다" {
+        val fixture = AssignmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                "course-1",
+                target.weekNo,
+                target.orderInWeek + 1,
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("course-1", target.weekNo))
+            .thenReturn(Mono.just(CourseWeek(id = "week-1", courseId = "course-1", weekNo = 1, title = "1주차")))
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenReturn(Mono.error(DuplicateKeyException("assignment slot race")))
+
+        StepVerifier.create(
+            fixture.service.updateAssignment(
+                courseSlug = "back-basic",
+                assignmentId = assignmentId,
+                request = UpdateAssignmentRequest(orderInWeek = target.orderInWeek + 1),
+            )
+        )
+            .expectErrorSatisfies(::assertDuplicateAssignmentSlotConflict)
+            .verify()
+
+        Mockito.verifyNoInteractions(fixture.assignmentRequirementRepository, fixture.assignmentTestCaseRepository)
+        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
+    }
+
     "주차가 없으면 과제 생성 시 주차를 자동 생성한다" {
         val fixture = AssignmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
@@ -669,6 +740,54 @@ class AssignmentCommandServiceTest : StringSpec({
             .verify()
 
         Mockito.verify(fixture.courseWeekRepository, Mockito.never()).save(ArgumentMatchers.any(CourseWeek::class.java))
+    }
+
+    "과제 생성 주차 생성 race 실패는 슬롯 CONFLICT 로 바꾸지 않는다" {
+        val fixture = AssignmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val failure = DuplicateKeyException("course week race")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek("course-1", 1, 1)
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("course-1", 1))
+            .thenReturn(Mono.empty(), Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.save(ArgumentMatchers.any(CourseWeek::class.java)))
+            .thenReturn(Mono.error(failure))
+
+        StepVerifier.create(
+            fixture.service.createAssignment("back-basic", sequentialChildWriteCreateRequest(), "admin")
+        )
+            .expectErrorSatisfies { error -> (error === failure) shouldBe true }
+            .verify()
+
+        Mockito.verify(fixture.courseWeekRepository, Mockito.times(2))
+            .findByCourseIdAndWeekNo("course-1", 1)
+        Mockito.verify(fixture.assignmentRepository, Mockito.never())
+            .save(ArgumentMatchers.any(Assignment::class.java))
+        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
+    }
+
+    "과제 생성 저장 DuplicateKey 는 슬롯 CONFLICT 로 바꾸고 하위 작업을 시작하지 않는다" {
+        val fixture = AssignmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek("course-1", 1, 1)
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("course-1", 1))
+            .thenReturn(Mono.just(CourseWeek(id = "week-1", courseId = "course-1", weekNo = 1, title = "1주차")))
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenReturn(Mono.error(DuplicateKeyException("assignment slot race")))
+
+        StepVerifier.create(fixture.service.createAssignment("back-basic", sequentialChildWriteCreateRequest(), "admin"))
+            .expectErrorSatisfies(::assertDuplicateAssignmentSlotConflict)
+            .verify()
+
+        Mockito.verifyNoInteractions(fixture.assignmentRequirementRepository, fixture.assignmentTestCaseRepository)
+        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
     }
 
     "게시 상태로 생성된 과제는 EXCLUDED 를 제외한 케이스만 PROBLEM_CREATED 로 발행한다" {
@@ -1458,6 +1577,11 @@ class AssignmentCommandServiceTest : StringSpec({
     }
 
 })
+
+private fun assertDuplicateAssignmentSlotConflict(error: Throwable) {
+    (error as ResponseStatusException).statusCode shouldBe HttpStatus.CONFLICT
+    error.reason shouldBe "동일 코스/주차/순번 과제가 이미 존재합니다."
+}
 
 private fun sequentialChildWriteCreateRequest(): CreateAssignmentRequest {
     val startAt = Instant.now().plusSeconds(3600)
