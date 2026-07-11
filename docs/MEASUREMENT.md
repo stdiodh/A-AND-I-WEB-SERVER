@@ -77,11 +77,11 @@ JaCoCo HTML report는 `build/reports/jacoco/test/html/index.html`에서 확인�
 
 ### 2026-07-11 현재 checkpoint
 
-서비스 경계, MongoDB 인덱스 계약, 사용자 tombstone 이벤트 순서 테스트를 추가한 뒤 같은 expanded scope와 gate로 다시 측정했습니다.
+서비스 경계, MongoDB 인덱스 계약, 사용자 tombstone 이벤트 순서, 과제 조회 경계 테스트를 추가한 뒤 같은 expanded scope와 gate로 다시 측정했습니다.
 
 | 테스트 수 | Line coverage | Branch coverage | CI gate |
 | ---: | ---: | ---: | :--- |
-| 358 | 4,319 / 4,883 = **88.45%** | 1,137 / 1,786 = **63.66%** | Line 86%, Branch 62% |
+| 366 | 4,409 / 4,974 = **88.64%** | 1,142 / 1,796 = **63.59%** | Line 86%, Branch 62% |
 
 MongoDB 인덱스 migration JavaScript의 12개 단위 테스트는 `node --test`로 별도 실행하며 위 Gradle 테스트 수와 JaCoCo 분자·분모에는 포함하지 않습니다.
 

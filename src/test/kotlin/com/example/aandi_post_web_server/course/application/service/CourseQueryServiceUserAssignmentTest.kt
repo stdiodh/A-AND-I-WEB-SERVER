@@ -425,6 +425,34 @@ class CourseQueryServiceUserAssignmentTest : StringSpec({
             .findAllByAssignmentIdIn(Mockito.anyCollection())
     }
 
+    "사용자 과제 상세 조회는 비공개 과제를 숨기고 child document를 조회하지 않는다" {
+        val fixture = CourseQueryServiceTestFixture()
+        val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val enrollment = CourseEnrollment(id = "enroll-1", courseId = "course-1", userId = userId)
+        val draft = queryAssignment(id = assignmentId, courseId = "course-1")
+            .copy(status = AssignmentStatus.DRAFT, publishedAt = null)
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", userId))
+            .thenReturn(Mono.just(enrollment))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(draft))
+
+        StepVerifier.create(fixture.service.getAssignmentDetail("back-basic", assignmentId, userId))
+            .expectErrorSatisfies { error ->
+                (error as ResponseStatusException).statusCode shouldBe HttpStatus.NOT_FOUND
+                error.reason shouldBe "과제를 찾을 수 없습니다: $assignmentId"
+            }
+            .verify()
+
+        Mockito.verify(fixture.assignmentRequirementRepository, Mockito.never())
+            .findAllByAssignmentIdOrderBySortOrder(Mockito.anyString())
+        Mockito.verify(fixture.assignmentTestCaseRepository, Mockito.never())
+            .findAllByAssignmentIdOrderBySeq(Mockito.anyString())
+    }
+
     "잘못된 weekNo는 BAD_REQUEST를 반환한다" {
         val fixture = CourseQueryServiceTestFixture()
 

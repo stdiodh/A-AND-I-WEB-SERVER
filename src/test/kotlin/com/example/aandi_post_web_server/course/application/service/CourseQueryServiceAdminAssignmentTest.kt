@@ -11,6 +11,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import org.mockito.Mockito
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
@@ -240,6 +242,22 @@ class CourseQueryServiceAdminAssignmentTest : StringSpec({
                 detail.metadata.testCases.map { it.outputText }.shouldContainExactly("visible", "secret", "internal")
             }
             .verifyComplete()
+    }
+
+    "관리자 과제 목록 조회는 없는 코스를 NOT_FOUND로 분류하고 과제를 조회하지 않는다" {
+        val fixture = CourseQueryServiceTestFixture()
+        Mockito.`when`(fixture.courseRepository.findBySlug("missing-course")).thenReturn(Mono.empty())
+
+        StepVerifier.create(fixture.service.getAdminAssignments("missing-course", null, null))
+            .expectErrorSatisfies { error ->
+                (error as ResponseStatusException).statusCode shouldBe HttpStatus.NOT_FOUND
+                error.reason shouldBe "코스를 찾을 수 없습니다: missing-course"
+            }
+            .verify()
+
+        Mockito.verify(fixture.assignmentRepository, Mockito.never()).findAllByCourseId(Mockito.anyString())
+        Mockito.verify(fixture.assignmentRepository, Mockito.never())
+            .findAllByCourseIdAndWeekNo(Mockito.anyString(), Mockito.anyInt())
     }
 
     "관리자 과제 목록 week 필터는 주차별 repository 조회를 사용한다" {

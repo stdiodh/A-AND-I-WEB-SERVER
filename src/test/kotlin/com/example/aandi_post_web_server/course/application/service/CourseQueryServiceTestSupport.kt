@@ -10,12 +10,14 @@ import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
+import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryService
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
+import com.example.aandi_post_web_server.course.infrastructure.adapter.AssignmentCourseQueryAdapter
 import org.mockito.Mockito
 import reactor.core.publisher.Flux
 import java.time.Clock
@@ -98,6 +100,13 @@ internal class CourseQueryServiceTestFixture(
     val assignmentRepository: AssignmentRepository = Mockito.mock(AssignmentRepository::class.java)
     val assignmentRequirementRepository: AssignmentRequirementRepository = Mockito.mock(AssignmentRequirementRepository::class.java)
     val assignmentTestCaseRepository: AssignmentTestCaseRepository = Mockito.mock(AssignmentTestCaseRepository::class.java)
+    private val assignmentQueryService = AssignmentQueryService(
+        assignmentCourseQueryPort = AssignmentCourseQueryAdapter(courseRepository, courseEnrollmentRepository),
+        assignmentRepository = assignmentRepository,
+        assignmentRequirementRepository = assignmentRequirementRepository,
+        assignmentTestCaseRepository = assignmentTestCaseRepository,
+        clock = clock,
+    )
 
     init {
         stubBatchChildren()
@@ -108,8 +117,7 @@ internal class CourseQueryServiceTestFixture(
         courseEnrollmentRepository = courseEnrollmentRepository,
         courseWeekRepository = courseWeekRepository,
         assignmentRepository = assignmentRepository,
-        assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentTestCaseRepository,
+        assignmentQueryService = assignmentQueryService,
         clock = clock,
     )
 
