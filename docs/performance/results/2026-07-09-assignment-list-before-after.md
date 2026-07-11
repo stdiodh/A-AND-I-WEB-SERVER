@@ -119,5 +119,5 @@ Repository interaction characterization test used for this recorded measurement:
 The test layout was later split by query boundary. The current equivalent command is:
 
 ```bash
-./gradlew test --tests 'com.example.aandi_post_web_server.course.application.service.CourseQueryServiceUserAssignmentTest'
+./gradlew test --tests 'com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryServiceUserTest'
 ```

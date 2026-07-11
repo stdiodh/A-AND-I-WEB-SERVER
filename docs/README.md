@@ -10,7 +10,7 @@
 | [운영 배포](./DEPLOYMENT.md) | 태그 배포 기준, 볼륨 보존, 검증·복구 절차 |
 | [MongoDB 인덱스 운영](./MONGODB_INDEX_RUNBOOK.md) | 인덱스 사전 점검, 적용, 검증과 안전한 재실행 절차 |
 | [과제 이벤트 계약과 outbox 전환 기준](./ASSIGNMENT_EVENT_CONTRACT_RUNBOOK.md) | 현재 wire/ACK 보장, 미보장 범위와 전환 차단조건 |
-| [안정적 리팩터링 완료 기록](./refactoring/2026-07-stable-refactoring.md) | PR #68 완료 단계, 보존 계약, 별도 후속 작업 |
+| [안정적 리팩터링 완료 기록](./refactoring/2026-07-stable-refactoring.md) | 최초 PR #68부터 현재까지 누적한 완료 단계, 보존 계약, 별도 후속 작업 |
 | [레거시 정리 기록](./refactoring/2026-07-legacy-cleanup.md) | 미사용 구현·테스트 호환 별칭·패키지 경로 정리와 검증 결과 |
 | [과제 이벤트 일관성 ADR](./adr/0001-assignment-event-consistency.md) | 전제조건 충족 뒤 도입할 transactional outbox 목표 결정안 |
 | [테스트와 성능 측정](./MEASUREMENT.md) | 테스트·성능 측정 방법과 과거 기준 |

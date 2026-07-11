@@ -23,6 +23,7 @@ import com.example.aandi_post_web_server.course.infrastructure.repository.Course
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
 
@@ -146,10 +147,10 @@ class CourseCommandService(
     }
 
     private fun deleteCourseRelations(courseId: String): Mono<Void> =
-        Mono.whenDelayError(
+        Flux.concatDelayError(
             courseWeekRepository.deleteAllByCourseId(courseId).then(),
             courseEnrollmentRepository.deleteAllByCourseId(courseId).then(),
-        )
+        ).then()
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> =
         courseRepository.findBySlug(slug.value)

@@ -4,11 +4,12 @@
 
 외부 API와 애플리케이션의 publisher 호출 순서를 유지하면서 전역 상태, 중복 정책, 서비스 경계, 배포 위험을 작은 단계로 줄입니다. 각 단계는 독립적인 테스트 checkpoint를 통과한 뒤 다음 단계로 넘어갑니다.
 
-- 상태: 완료 — [PR #68](https://github.com/Team-AnI/A-AND-I-WEB-SERVER/pull/68)로 `main` 병합
-- 기준 commit: `14a283a`
-- 작업 branch(기록): `develop/stable-refactoring`
-- 병합 commit: `c2c542d`
+- 상태: 누적 완료 기록 — 최초 범위는 [PR #68](https://github.com/Team-AnI/A-AND-I-WEB-SERVER/pull/68)로 `main` 병합, 이후 완료 단계는 아래 표에 누적
+- 최초 기준 commit: `14a283a`
+- 최초 작업 branch(기록): `develop/stable-refactoring`
+- 최초 병합 commit: `c2c542d`
 - PR #68 checkpoint: 306 tests, failures/errors/skipped 0, Line 85.67%, Branch 63.37%
+- 현재 checkpoint: 388 tests, failures/errors/skipped 0, Line 88.87%, Branch 63.74%
 
 보존하는 핵심 계약:
 
@@ -29,6 +30,7 @@
 | 3. 배포 안전화 | 완료 | 테스트된 단일 JAR 이미지, secret 비영속화, candidate readiness, 직전 이미지 rollback 추가 |
 | 4. 서비스 경계 seam | 완료 | 요청 검증과 `testCases` 교체 판정을 `AssignmentCommandRequestResolver`로 이동 |
 | 5. 과제 명령 서비스 분리 | 완료 | CRUD·복사·`deleteAllByCourseId`를 `AssignmentCommandService`로 이동하고 기존 Course facade는 delegate 유지 |
+| 5A. Course 관계 삭제 순차화 | 완료 | assignment cascade 뒤 week → enrollment → course 삭제 구독 순서와 delayed-error 계약을 고정 |
 | 6. Course 의존 포트 | 완료 | 코스 조회·주차 보장 port/adapter 도입, assignment application의 Course persistence 직접 의존 금지 |
 | 6A. 과제 조회 서비스 경계 | 완료 | 목록·상세·outline·과제 course 참조를 `AssignmentQueryService`로 이동하고 Course→Assignment infrastructure 의존 제거 |
 | 6B. 과제 조회 테스트 소유권 | 완료 | 사용자·관리자 조회 테스트를 Assignment 패키지와 query port mock 기반 직접 서비스 테스트로 이동 |
@@ -55,6 +57,16 @@
 - assignment cascade 완료 → 삭제 이벤트 완료 → course relation 삭제 → course 삭제 순서 테스트 추가
 - assignment application의 Course command facade 역참조를 금지하는 구조 테스트 추가
 - 기존 `CourseCommandServiceTest`와 전체 회귀 테스트 통과
+
+### Course 관계 삭제 순차화
+
+코스 삭제는 assignment cascade 완료 뒤 CourseWeek와 enrollment를 삭제하고 마지막에 course 문서를 삭제합니다. 관계 삭제 두 작업은 `Flux.concatDelayError`로 순차 구독하되, week 삭제가 실패해도 enrollment 삭제를 시도한 뒤 오류를 전파합니다.
+
+- 실제 구독 순서: assignment cascade → week → enrollment → course
+- week·enrollment가 모두 실패하면 두 원본 오류를 모아 전파
+- 관계 삭제 오류가 하나라도 있으면 course 문서 삭제는 시작하지 않음
+- `TestPublisher`로 각 이전 단계가 끝나기 전 다음 delete가 구독되지 않는 동작을 검증
+- 전체 388개 테스트, Line 88.87%, Branch 63.74%, JaCoCo gate와 bootJar 통과
 
 ### Course 의존 포트 도입
 

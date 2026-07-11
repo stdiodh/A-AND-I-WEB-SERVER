@@ -44,7 +44,7 @@ publisher 호출에 retry만 추가해도 프로세스 종료와 장기 장애 �
 1. 외부 Online Judge의 schema 호환성과 persistent `eventId` dedupe·순서 정책 확인
 2. 운영 MongoDB의 transaction 지원과 replica 상태 확인
 3. 실제 replica set에서 transaction commit·rollback 통합 테스트 추가
-4. transaction 내부 MongoDB write를 순차 실행하도록 변경
+4. transaction 내부 MongoDB write를 순차 실행하도록 변경 — 현재 assignment·course command write 선행 준비 완료
 5. outbox collection과 versioned index migration 추가
 6. relay, lease, 지수 backoff, metrics·alert 추가
 7. 생성·수정·삭제와 relay 장애 주입 테스트 추가

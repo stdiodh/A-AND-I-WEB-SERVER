@@ -77,11 +77,11 @@ JaCoCo HTML report는 `build/reports/jacoco/test/html/index.html`에서 확인�
 
 ### 2026-07-11 현재 checkpoint
 
-서비스 경계, MongoDB 인덱스 계약, 사용자 tombstone 이벤트 순서, 과제 조회 경계, child·삭제 write 순차화와 CourseWeek 동시 생성 수렴 테스트를 추가한 뒤 같은 expanded scope와 gate로 다시 측정했습니다.
+서비스 경계, MongoDB 인덱스 계약, 사용자 tombstone 이벤트 순서, 과제 조회 경계, child·삭제 write 순차화, CourseWeek 동시 생성 수렴과 Course 관계 삭제 순서 테스트를 추가한 뒤 같은 expanded scope와 gate로 다시 측정했습니다.
 
 | 테스트 수 | Line coverage | Branch coverage | CI gate |
 | ---: | ---: | ---: | :--- |
-| 387 | 4,431 / 4,986 = **88.87%** | 1,141 / 1,790 = **63.74%** | Line 86%, Branch 62% |
+| 388 | 4,431 / 4,986 = **88.87%** | 1,141 / 1,790 = **63.74%** | Line 86%, Branch 62% |
 
 MongoDB 인덱스 migration JavaScript의 12개 단위 테스트는 `node --test`로 별도 실행하며 위 Gradle 테스트 수와 JaCoCo 분자·분모에는 포함하지 않습니다.
 
@@ -204,7 +204,7 @@ fixed 100 RPS 시나리오의 처리량은 부하 발생기가 고정한 값이�
 
 Before 구조는 assignment 30개 기준 requirement 단건 조회 30회와 testcase 단건 조회 30회로 예상되는 `2N` child lookup입니다.
 
-After 구조는 requirement batch 조회 1회와 testcase batch 조회 1회입니다. `CourseQueryServiceUserAssignmentTest`는 0, 1, 30 assignments에서 batch 호출 수와 단건 child 조회 미사용을 검증합니다.
+After 구조는 requirement batch 조회 1회와 testcase batch 조회 1회입니다. `AssignmentQueryServiceUserTest`는 0, 1, 30 assignments에서 batch 호출 수와 단건 child 조회 미사용을 검증합니다.
 
 ### Explain summary
 

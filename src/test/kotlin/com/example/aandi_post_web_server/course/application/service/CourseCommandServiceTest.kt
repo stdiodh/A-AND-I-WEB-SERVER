@@ -18,12 +18,15 @@ import com.example.aandi_post_web_server.course.infrastructure.repository.Course
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.mockito.Mockito
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
+import reactor.core.Exceptions
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
+import reactor.test.publisher.TestPublisher
 import java.time.LocalDate
 
 class CourseCommandServiceTest : StringSpec({
@@ -72,43 +75,95 @@ class CourseCommandServiceTest : StringSpec({
     }
 
     "코스 삭제는 과제 삭제 완료 후 코스 관계를 삭제한다" {
-        var assignmentDeletionCompleted = false
-        var courseRelationsCompleted = 0
         val fixture = CourseCommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentDeletePublisher = TestPublisher.create<Void>()
+        val weekDeletePublisher = TestPublisher.create<Long>()
+        val enrollmentDeletePublisher = TestPublisher.create<Long>()
+        val courseDeletePublisher = TestPublisher.create<Void>()
 
         Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
         Mockito.`when`(fixture.assignmentCommandService.deleteAllByCourseId("course-1"))
-            .thenReturn(Mono.empty<Void>().doOnSuccess { assignmentDeletionCompleted = true })
+            .thenReturn(assignmentDeletePublisher.mono())
         Mockito.`when`(fixture.courseWeekRepository.deleteAllByCourseId("course-1"))
-            .thenAnswer {
-                Mono.defer {
-                    assignmentDeletionCompleted shouldBe true
-                    courseRelationsCompleted++
-                    Mono.just(1L)
-                }
-            }
+            .thenReturn(weekDeletePublisher.mono())
         Mockito.`when`(fixture.courseEnrollmentRepository.deleteAllByCourseId("course-1"))
-            .thenAnswer {
-                Mono.defer {
-                    assignmentDeletionCompleted shouldBe true
-                    courseRelationsCompleted++
-                    Mono.just(1L)
-                }
-            }
+            .thenReturn(enrollmentDeletePublisher.mono())
         Mockito.`when`(fixture.courseRepository.deleteById("course-1"))
-            .thenAnswer {
-                Mono.defer {
-                    courseRelationsCompleted shouldBe 2
-                    Mono.empty<Void>()
-                }
-            }
+            .thenReturn(courseDeletePublisher.mono())
 
         StepVerifier.create(fixture.service.deleteCourse("back-basic"))
+            .then {
+                assignmentDeletePublisher.assertSubscribers(1)
+                weekDeletePublisher.assertNoSubscribers()
+                enrollmentDeletePublisher.assertNoSubscribers()
+                courseDeletePublisher.assertNoSubscribers()
+            }
+            .then { assignmentDeletePublisher.complete() }
+            .then {
+                weekDeletePublisher.assertSubscribers(1)
+                enrollmentDeletePublisher.assertNoSubscribers()
+                courseDeletePublisher.assertNoSubscribers()
+            }
+            .then { weekDeletePublisher.emit(3L) }
+            .then {
+                enrollmentDeletePublisher.assertSubscribers(1)
+                courseDeletePublisher.assertNoSubscribers()
+            }
+            .then { enrollmentDeletePublisher.emit(5L) }
+            .then { courseDeletePublisher.assertSubscribers(1) }
+            .then { courseDeletePublisher.complete() }
             .verifyComplete()
+    }
 
-        assignmentDeletionCompleted shouldBe true
-        courseRelationsCompleted shouldBe 2
+    "코스 관계 삭제는 주차와 수강 삭제가 모두 실패해도 순차 시도 후 오류를 모은다" {
+        val fixture = CourseCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentDeletePublisher = TestPublisher.create<Void>()
+        val weekDeletePublisher = TestPublisher.create<Long>()
+        val enrollmentDeletePublisher = TestPublisher.create<Long>()
+        val courseDeletePublisher = TestPublisher.create<Void>()
+        val weekDeleteFailure = IllegalStateException("week deletion failed")
+        val enrollmentDeleteFailure = IllegalArgumentException("enrollment deletion failed")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentCommandService.deleteAllByCourseId("course-1"))
+            .thenReturn(assignmentDeletePublisher.mono())
+        Mockito.`when`(fixture.courseWeekRepository.deleteAllByCourseId("course-1"))
+            .thenReturn(weekDeletePublisher.mono())
+        Mockito.`when`(fixture.courseEnrollmentRepository.deleteAllByCourseId("course-1"))
+            .thenReturn(enrollmentDeletePublisher.mono())
+        Mockito.`when`(fixture.courseRepository.deleteById("course-1"))
+            .thenReturn(courseDeletePublisher.mono())
+
+        StepVerifier.create(fixture.service.deleteCourse("back-basic"))
+            .then {
+                assignmentDeletePublisher.assertSubscribers(1)
+                weekDeletePublisher.assertNoSubscribers()
+                enrollmentDeletePublisher.assertNoSubscribers()
+                courseDeletePublisher.assertNoSubscribers()
+            }
+            .then { assignmentDeletePublisher.complete() }
+            .then {
+                weekDeletePublisher.assertSubscribers(1)
+                enrollmentDeletePublisher.assertNoSubscribers()
+                courseDeletePublisher.assertNoSubscribers()
+            }
+            .then { weekDeletePublisher.error(weekDeleteFailure) }
+            .then {
+                enrollmentDeletePublisher.assertSubscribers(1)
+                courseDeletePublisher.assertNoSubscribers()
+            }
+            .then { enrollmentDeletePublisher.error(enrollmentDeleteFailure) }
+            .expectErrorSatisfies { error ->
+                val failures = Exceptions.unwrapMultipleExcludingTracebacks(error)
+                failures shouldHaveSize 2
+                failures.contains(weekDeleteFailure) shouldBe true
+                failures.contains(enrollmentDeleteFailure) shouldBe true
+            }
+            .verify()
+
+        courseDeletePublisher.assertNoSubscribers()
     }
 
     "과제 삭제가 실패하면 코스 관계와 코스 삭제를 구독하지 않는다" {
