@@ -2,7 +2,7 @@
 
 > 테스트 개수나 P95 숫자만 강조하지 않고, 어떤 데이터와 조건으로 무엇을 확인했는지 함께 기록합니다.
 
-> 이 문서의 188/277 테스트 수치는 과거 측정 기준입니다. 최신 품질 기준은 아래 `2026-07-10 JaCoCo scope 재조정` checkpoint를 확인합니다.
+> 이 문서의 188/277 테스트 수치는 과거 측정 기준입니다. 최신 품질 기준은 아래 `2026-07-11 현재 checkpoint`를 확인합니다.
 
 [README로 돌아가기](../README.md)
 
@@ -74,6 +74,16 @@ JaCoCo HTML report는 `build/reports/jacoco/test/html/index.html`에서 확인�
 새 gate는 측정값보다 line 2.22%p, branch 1.42%p 낮게 두어 작은 변경의 변동 여유를 확보하면서도 기존 기준보다 강화했습니다. Scope나 제외 규칙이 다시 바뀌면 기존 비율과 직접 비교하지 않고 covered/missed counter를 함께 기록합니다.
 
 관련 블로그 정리: [테스트와 k6로 검증한 과제 목록 N+1 개선기](https://velog.io/@stdiodh/%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%99%80-k6%EB%A1%9C-%EA%B2%80%EC%A6%9D%ED%95%9C-%EA%B3%BC%EC%A0%9C-%EB%AA%A9%EB%A1%9D-N1-%EA%B0%9C%EC%84%A0%EA%B8%B0#%EC%A1%B0%ED%9A%8C-%ED%9A%9F%EC%88%98)
+
+### 2026-07-11 현재 checkpoint
+
+서비스 경계 테스트와 MongoDB 인덱스 계약 테스트를 추가한 뒤 같은 expanded scope와 gate로 다시 측정했습니다.
+
+| 테스트 수 | Line coverage | Branch coverage | CI gate |
+| ---: | ---: | ---: | :--- |
+| 350 | 4,280 / 4,844 = **88.36%** | 1,125 / 1,774 = **63.42%** | Line 86%, Branch 62% |
+
+MongoDB 인덱스 migration JavaScript의 12개 단위 테스트는 `node --test`로 별도 실행하며 위 Gradle 테스트 수와 JaCoCo 분자·분모에는 포함하지 않습니다.
 
 숫자보다 다음 규칙을 우선적으로 테스트합니다.
 

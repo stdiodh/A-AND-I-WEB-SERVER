@@ -11,7 +11,7 @@ import java.time.Instant
 data class ReportUser(
     @Id
     val id: String,
-    @Indexed(unique = true)
+    @Indexed(name = "ux_user_public_code", unique = true)
     val publicCode: String,
     val username: String,
     val role: String,

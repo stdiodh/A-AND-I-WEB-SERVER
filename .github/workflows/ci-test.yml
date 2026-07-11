@@ -96,6 +96,12 @@ jobs:
           node --check performance/fixtures/verify.js
           node --check performance/fixtures/cleanup.js
 
+      - name: Validate MongoDB index migration assets
+        run: |
+          find scripts/mongo/indexes -name '*.js' -print0 |
+            xargs -0 -n1 node --check
+          node --test scripts/mongo/indexes/v001-index-lib.test.js
+
       - name: Validate k6 inspect
         run: |
           k6 inspect performance/k6/preflight.js

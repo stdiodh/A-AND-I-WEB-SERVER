@@ -32,10 +32,10 @@
 | 6. Course 의존 포트 | 완료 | 코스 조회·주차 보장 port/adapter 도입, assignment application의 Course persistence 직접 의존 금지 |
 | 7A. problem sync 발행 경계 | 완료 | 동기 발행 계약을 테스트로 고정하고 application port/direct adapter로 분리 |
 | 7B. transactional outbox | 제안 | replica-set transaction과 소비자 idempotency 확인 후 ADR 0001에 따라 진행 |
-| 8. 데이터 운영 | 예정 | Mongo index migration, replica/backup 복원, Testcontainers 동시성 검증 |
+| 8. 데이터 운영 | 진행 | Mongo index V001과 preflight/apply/verify 절차 마련. replica/backup 복원과 동시성 검증은 운영 환경 확인 후 진행 |
 | 9. 문서·레거시 분류 | 완료 | 현재 문서와 과거 측정 근거를 분류하고 후속 코드·운영 정리는 별도 단계로 분리 |
 
-이 문서의 구현 범위는 PR #68에서 완료했습니다. 7B transactional outbox, 8 데이터 운영, 운영 Compose 단일화는 완료 누락이 아니라 별도 운영 전제와 검증이 필요한 후속 작업입니다.
+이 문서의 최초 구현 범위는 PR #68에서 완료했습니다. 이후 데이터 운영 단계에서 애플리케이션 자동 생성을 사용하지 않는 Mongo index V001과 운영 절차를 추가했습니다. 7B transactional outbox, replica/backup 복원과 동시성 검증, 운영 Compose 단일화는 별도 운영 전제와 검증이 필요한 후속 작업입니다.
 
 ## 완료한 서비스 경계
 

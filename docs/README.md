@@ -8,6 +8,7 @@
 | :--- | :--- |
 | [프로젝트 README](../README.md) | 서비스 역할과 개발 환경 진입점 |
 | [운영 배포](./DEPLOYMENT.md) | 태그 배포 기준, 볼륨 보존, 검증·복구 절차 |
+| [MongoDB 인덱스 운영](./MONGODB_INDEX_RUNBOOK.md) | 인덱스 사전 점검, 적용, 검증과 안전한 재실행 절차 |
 | [안정적 리팩터링 완료 기록](./refactoring/2026-07-stable-refactoring.md) | PR #68 완료 단계, 보존 계약, 별도 후속 작업 |
 | [레거시 정리 기록](./refactoring/2026-07-legacy-cleanup.md) | 미사용 구현·테스트 호환 별칭·패키지 경로 정리와 검증 결과 |
 | [과제 이벤트 일관성 ADR](./adr/0001-assignment-event-consistency.md) | MongoDB 변경과 SNS 발행의 일관성 개선 결정안 |

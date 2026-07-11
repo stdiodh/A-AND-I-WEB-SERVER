@@ -5,6 +5,7 @@ import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.domain.model.CoursePhase
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.TypeAlias
+import org.springframework.data.mongodb.core.index.IndexDirection
 import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
@@ -22,13 +23,14 @@ data class CourseMetadata(
 data class Course(
     @Id
     val id: String? = null,
-    @Indexed(unique = true)
+    @Indexed(name = "ux_course_slug", unique = true)
     val slug: String,
     val fieldTag: CourseTrack,
     val startDate: LocalDate,
     val endDate: LocalDate,
     val metadata: CourseMetadata,
     val status: CourseStatus = CourseStatus.PUBLISHED,
+    @Indexed(name = "ix_course_created_at_desc", direction = IndexDirection.DESCENDING)
     val createdAt: Instant = Instant.now(),
     val updatedAt: Instant = Instant.now(),
 )

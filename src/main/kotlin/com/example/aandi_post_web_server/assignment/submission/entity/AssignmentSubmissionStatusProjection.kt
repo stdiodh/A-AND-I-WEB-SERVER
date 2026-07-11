@@ -4,7 +4,6 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.TypeAlias
 import org.springframework.data.annotation.Version
 import org.springframework.data.mongodb.core.index.CompoundIndex
-import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
 
@@ -14,9 +13,7 @@ import java.time.Instant
 data class AssignmentSubmissionStatusProjection(
     @Id
     val id: String? = null,
-    @Indexed
     val assignmentId: String,
-    @Indexed
     val publicCode: String,
     val submitted: Boolean = true,
     val firstCompletedAt: Instant,
