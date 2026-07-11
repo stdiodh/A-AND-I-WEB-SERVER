@@ -120,10 +120,11 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 | 사용자 동기화 순서 보장 | 358 | 88.45% | 63.66% | Line 86%, Branch 62% |
 | 과제 조회 경계 분리 | 366 | 88.64% | 63.59% | Line 86%, Branch 62% |
 | Course 과제 조회 의존 제거 | 372 | 88.67% | 63.69% | Line 86%, Branch 62% |
+| 과제 child write 순차화 | 377 | 88.78% | 63.74% | Line 86%, Branch 62% |
 
 ![JaCoCo coverage gate summary](./docs/assets/images/jacoco-report-before-after.png)
 
-이미지는 2026-06-23 gate 보강 시점의 기록입니다. Scope 재조정 행은 같은 338개 테스트 실행 데이터를 더 넓은 scope로 재계산한 결과이고, 최신 행은 이후 경계·MongoDB 인덱스 계약·사용자 이벤트 순서·과제 조회 경계 테스트를 포함합니다. 현재 제외 대상은 Spring Boot 진입점과 OpenAPI schema-only 문서 모델뿐이며, 코루틴·controller·service·DTO·validator는 모두 측정합니다. Scope 확장 전후 비율은 직접적인 품질 증감으로 비교하지 않습니다.
+이미지는 2026-06-23 gate 보강 시점의 기록입니다. Scope 재조정 행은 같은 338개 테스트 실행 데이터를 더 넓은 scope로 재계산한 결과이고, 최신 행은 이후 경계·MongoDB 인덱스 계약·사용자 이벤트 순서·과제 조회 경계와 child write 순차화 테스트를 포함합니다. 현재 제외 대상은 Spring Boot 진입점과 OpenAPI schema-only 문서 모델뿐이며, 코루틴·controller·service·DTO·validator는 모두 측정합니다. Scope 확장 전후 비율은 직접적인 품질 증감으로 비교하지 않습니다.
 
 ### 읽기 API 부하 테스트
 
@@ -150,7 +151,7 @@ Resume 문장과 근거 상태는 [Resume Metrics](./docs/resume-metrics.md)에 
 
 | 지표 | 측정 조건 | 근거 |
 | :--- | :--- | :--- |
-| 자동화 테스트 372개, Line 88.67%, Branch 63.69% | 2026-07-11 KST, Course 과제 조회 의존 제거 포함 | `docs/MEASUREMENT.md`, `build/reports/jacoco/test/jacocoTestReport.xml`, `build.gradle.kts` |
+| 자동화 테스트 377개, Line 88.78%, Branch 63.74% | 2026-07-11 KST, 과제 child write 순차화 포함 | `docs/MEASUREMENT.md`, `build/reports/jacoco/test/jacocoTestReport.xml`, `build.gradle.kts` |
 | Child repository calls 60 → 2 | 30 assignments, service-level repository interaction 기준 | `performance/results/assignment-read-query-evidence.json`, `CourseQueryServiceUserAssignmentTest` |
 | HTTP 실패율 0.00%, Check 성공률 100.00%, Dropped iterations 0 | local fixed-load, 100 RPS, 2분 × 3회, 목록 60%·상세 40% | `performance/results/assignment-read-before.aggregate.json`, `performance/results/assignment-read-after.aggregate.json` |
 | Assignment list P95 9.297 ms → 7.565 ms | local fixed-load, 30 assignments, 목록 100%, 100 RPS, 2분 × 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.md` |

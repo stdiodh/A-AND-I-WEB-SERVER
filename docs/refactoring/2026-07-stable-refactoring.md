@@ -33,6 +33,7 @@
 | 6A. 과제 조회 서비스 경계 | 완료 | 목록·상세·outline·과제 course 참조를 `AssignmentQueryService`로 이동하고 Course→Assignment infrastructure 의존 제거 |
 | 6B. 과제 조회 테스트 소유권 | 완료 | 사용자·관리자 조회 테스트를 Assignment 패키지와 query port mock 기반 직접 서비스 테스트로 이동 |
 | 7A. problem sync 발행 경계 | 완료 | 동기 발행 계약을 테스트로 고정하고 application port/direct adapter로 분리 |
+| 7A-1. 과제 child write 순차화 | 완료 | 생성·수정·복사의 requirements → testCases 실제 구독 순서를 고정하고 실패 시 후속 write·event 미실행을 검증 |
 | 7B. transactional outbox | 제안 | [현재 계약과 전환 차단조건](../ASSIGNMENT_EVENT_CONTRACT_RUNBOOK.md)을 확인한 뒤 ADR 0001에 따라 진행 |
 | 8. 데이터 운영 | 진행 | Mongo index V001과 preflight/apply/verify 절차 마련. replica/backup 복원과 동시성 검증은 운영 환경 확인 후 진행 |
 | 8A. 사용자 동기화 순서 | 완료 | hard delete를 동일 문서 tombstone으로 전환하고 stale profile 재삽입과 tombstone 조회 노출 차단 |
@@ -103,6 +104,17 @@
 - `AssignmentCourseQueryAdapterTest`가 course/enrollment repository 매핑 경계를 별도로 검증
 - 전체 372개 테스트 수와 JaCoCo 측정값을 유지하고 gate·bootJar 통과
 
+### 과제 child write 순차화
+
+과제 생성·수정·복사에서 requirements와 testCases 저장을 병렬 `zip`으로 구독하던 경로를 순차 실행으로 바꿨습니다. 현재 direct publisher와 오류 응답 계약은 유지하면서, 앞 단계 저장 실패 뒤에도 다음 MongoDB write가 시작될 수 있는 범위를 줄였습니다.
+
+- 생성은 assignment 저장 뒤 requirements 저장 완료 → testCases 저장 → 응답 조합·problem event 순서로 실행
+- 수정은 requirements 삭제·저장 완료 → testCases 삭제·저장 → 응답 조합·problem event 순서로 실행
+- 복사는 requirements 저장 완료 → testCases 저장 순서를 보장하고 child write 실패의 기존 전체 cleanup과 원본 오류 전파를 유지
+- `TestPublisher`로 실제 subscription 순서, 앞 단계 실패 시 후속 write·event 미실행, cleanup 전체 구독을 검증
+- 모든 삭제를 시도한 뒤 오류를 모으는 세 `Mono.whenDelayError` 경로는 단순 순차화하면 계약이 달라지므로 이번 단계에서 제외
+- 전체 377개 테스트, Line 88.78%, Branch 63.74%, JaCoCo gate와 bootJar 통과
+
 ## 다음 변경의 안전 기준
 
 ### 남은 기능 경계
@@ -112,6 +124,8 @@ assignment application은 Course persistence 구현을 더 이상 직접 사용�
 ### 이벤트 일관성
 
 7A에서는 기존 direct SNS 동기 발행을 유지한 채 교체 경계만 만들었습니다. 단순 retry는 추가하지 않습니다. 현재 payload에는 안정적인 `eventId`, `schemaVersion`, sequence가 없습니다. 7B의 구현·운영 gate, 외부 consumer 확인, cutover·rollback 조건은 [과제 이벤트 계약과 outbox 전환 기준](../ASSIGNMENT_EVENT_CONTRACT_RUNBOOK.md)을 단일 기준으로 사용합니다.
+
+생성·수정·복사의 child write는 transaction 준비를 위해 순차화했습니다. 다만 cascade/cleanup 삭제는 실패해도 나머지 삭제를 모두 시도하는 기존 계약 때문에 아직 병렬 delayed-error 방식입니다. transaction 적용 준비를 완료하려면 이 세 경로를 순차 구독하면서도 전체 시도와 원본 오류 계약을 보존하는 별도 변경과 테스트가 필요합니다.
 
 ### 운영 설정 단일화
 

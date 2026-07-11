@@ -100,19 +100,20 @@ class AssignmentCommandService(
                             .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentSlotConflict() }
                             .flatMap { assignment ->
                                 val assignmentId = parseAssignmentId(requireNotNull(assignment.id))
-                                val requirementsMono = saveRequirements(assignmentId, requirementDrafts)
-                                val testCasesMono = saveTestCases(assignmentId, testCaseDrafts)
-                                Mono.zip(requirementsMono, testCasesMono)
-                                    .flatMap { tuple ->
-                                        val response = toAssignmentDetailResponse(
-                                            courseSlug = course.slug,
-                                            assignment = assignment,
-                                            requirements = tuple.t1,
-                                            testCases = tuple.t2,
-                                        )
-                                        logAssignmentCreatedEvents(assignment)
-                                        publishProblemSyncOnCreate(assignment)
-                                            .thenReturn(response)
+                                saveRequirements(assignmentId, requirementDrafts)
+                                    .flatMap { requirements ->
+                                        saveTestCases(assignmentId, testCaseDrafts)
+                                            .flatMap { testCases ->
+                                                val response = toAssignmentDetailResponse(
+                                                    courseSlug = course.slug,
+                                                    assignment = assignment,
+                                                    requirements = requirements,
+                                                    testCases = testCases,
+                                                )
+                                                logAssignmentCreatedEvents(assignment)
+                                                publishProblemSyncOnCreate(assignment)
+                                                    .thenReturn(response)
+                                            }
                                     }
                             }
                     }
@@ -336,12 +337,14 @@ class AssignmentCommandService(
             .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentSlotConflict() }
             .flatMap { saved ->
                 loadOrReplaceRequirements(parsedAssignmentId, requirementDrafts)
-                    .zipWith(loadOrReplaceTestCases(parsedAssignmentId, testCaseDrafts))
-                    .flatMap { tuple ->
-                        val response = toAssignmentDetailResponse(course.slug, saved, tuple.t1, tuple.t2)
-                        logAssignmentUpdatedEvents(previous = assignment, current = saved)
-                        publishProblemSyncOnUpdate(saved)
-                            .thenReturn(response)
+                    .flatMap { requirements ->
+                        loadOrReplaceTestCases(parsedAssignmentId, testCaseDrafts)
+                            .flatMap { testCases ->
+                                val response = toAssignmentDetailResponse(course.slug, saved, requirements, testCases)
+                                logAssignmentUpdatedEvents(previous = assignment, current = saved)
+                                publishProblemSyncOnUpdate(saved)
+                                    .thenReturn(response)
+                            }
                     }
             }
     }

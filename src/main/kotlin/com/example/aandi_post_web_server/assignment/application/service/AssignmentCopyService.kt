@@ -141,20 +141,21 @@ class AssignmentCopyService(
             .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentCopyConflict() }
             .flatMap { saved ->
                 val savedAssignmentId = parseAssignmentId(requireNotNull(saved.id))
-                Mono.zip(
-                    copyRequirements(savedAssignmentId, sourceRequirements),
-                    copyTestCases(savedAssignmentId, sourceTestCases),
-                )
+                copyRequirements(savedAssignmentId, sourceRequirements)
+                    .flatMap { requirements ->
+                        copyTestCases(savedAssignmentId, sourceTestCases)
+                            .map { testCases -> requirements to testCases }
+                    }
                     .onErrorResume { error ->
                         cleanupCopiedAssignment(savedAssignmentId.value)
                             .then(Mono.error(mapDuplicateAssignmentCopyConflict(error)))
                     }
-                    .flatMap { tuple ->
+                    .flatMap { (requirements, testCases) ->
                         val response = toAssignmentDetailResponse(
                             courseSlug = targetCourse.slug,
                             assignment = saved,
-                            requirements = tuple.t1,
-                            testCases = tuple.t2,
+                            requirements = requirements,
+                            testCases = testCases,
                         )
                         logAssignmentReportEvent(AssignmentReportEventType.ASSIGNMENT_CREATED, saved)
                         publishProblemSyncOnCreate(saved)

@@ -5,12 +5,14 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResp
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentMetadataPayload
 import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import com.example.aandi_post_web_server.assignment.entity.Assignment
+import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEvent
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventMapper
@@ -40,6 +42,7 @@ import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
+import reactor.test.publisher.TestPublisher
 import java.time.Instant
 import java.time.LocalDate
 
@@ -1061,7 +1064,325 @@ class AssignmentCommandServiceTest : StringSpec({
         fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
     }
 
+    "과제 생성은 요구사항 저장 완료 후 테스트케이스 저장을 구독한다" {
+        val fixture = AssignmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val requirementPublisher = TestPublisher.create<AssignmentRequirement>()
+        val testCasePublisher = TestPublisher.create<AssignmentTestCase>()
+        var persistedAssignment: Assignment? = null
+        var pendingRequirement: AssignmentRequirement? = null
+        var pendingTestCase: AssignmentTestCase? = null
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                "course-1",
+                1,
+                1,
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("course-1", 1))
+            .thenReturn(Mono.just(CourseWeek(id = "week-1", courseId = "course-1", weekNo = 1, title = "1주차")))
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                persistedAssignment = assignment
+                Mono.just(assignment)
+            }
+        Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
+            .thenAnswer { invocation ->
+                @Suppress("UNCHECKED_CAST")
+                val requirements = invocation.arguments[0] as List<AssignmentRequirement>
+                pendingRequirement = requirements.single()
+                requirementPublisher.flux()
+            }
+        Mockito.`when`(fixture.assignmentTestCaseRepository.saveAll(ArgumentMatchers.anyList<AssignmentTestCase>()))
+            .thenAnswer { invocation ->
+                @Suppress("UNCHECKED_CAST")
+                val testCases = invocation.arguments[0] as List<AssignmentTestCase>
+                pendingTestCase = testCases.single()
+                testCasePublisher.flux()
+            }
+        Mockito.`when`(fixture.assignmentRepository.findById(ArgumentMatchers.anyString()))
+            .thenAnswer { Mono.just(requireNotNull(persistedAssignment)) }
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(ArgumentMatchers.anyString()))
+            .thenAnswer {
+                pendingTestCase?.let { Flux.just(it) } ?: Flux.empty<AssignmentTestCase>()
+            }
+
+        StepVerifier.create(
+            fixture.service.createAssignment(
+                courseSlug = "back-basic",
+                request = sequentialChildWriteCreateRequest(),
+                createdBy = "admin",
+            )
+        )
+            .then {
+                requirementPublisher.assertSubscribers(1)
+                testCasePublisher.assertNoSubscribers()
+            }
+            .then { requirementPublisher.emit(requireNotNull(pendingRequirement)) }
+            .then { testCasePublisher.assertSubscribers(1) }
+            .then { testCasePublisher.emit(requireNotNull(pendingTestCase)) }
+            .assertNext { response ->
+                response.metadata.requirements.single().requirementText shouldBe "함수 분리 필수"
+                response.metadata.testCases.single().outputText shouldBe "3"
+            }
+            .verifyComplete()
+
+        fixture.assignmentReportTestCaseEventPublisher.events shouldHaveSize 1
+    }
+
+    "과제 생성 요구사항 저장 실패는 테스트케이스 저장과 problem event 발행을 시작하지 않는다" {
+        val fixture = AssignmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val requirementPublisher = TestPublisher.create<AssignmentRequirement>()
+        val testCasePublisher = TestPublisher.create<AssignmentTestCase>()
+        val failure = IllegalStateException("requirement save failed")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                "course-1",
+                1,
+                1,
+            )
+        ).thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("course-1", 1))
+            .thenReturn(Mono.just(CourseWeek(id = "week-1", courseId = "course-1", weekNo = 1, title = "1주차")))
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as Assignment) }
+        Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
+            .thenReturn(requirementPublisher.flux())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.saveAll(ArgumentMatchers.anyList<AssignmentTestCase>()))
+            .thenReturn(testCasePublisher.flux())
+
+        StepVerifier.create(
+            fixture.service.createAssignment(
+                courseSlug = "back-basic",
+                request = sequentialChildWriteCreateRequest(),
+                createdBy = "admin",
+            )
+        )
+            .then {
+                requirementPublisher.assertSubscribers(1)
+                testCasePublisher.assertNoSubscribers()
+                requirementPublisher.error(failure)
+            }
+            .expectErrorSatisfies { error -> error shouldBe failure }
+            .verify()
+
+        testCasePublisher.assertNoSubscribers()
+        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
+    }
+
+    "과제 수정은 요구사항 교체 완료 후 테스트케이스 교체를 구독한다" {
+        val fixture = AssignmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+        val requirementDeletePublisher = TestPublisher.create<Long>()
+        val requirementSavePublisher = TestPublisher.create<AssignmentRequirement>()
+        val testCaseDeletePublisher = TestPublisher.create<Long>()
+        val testCaseSavePublisher = TestPublisher.create<AssignmentTestCase>()
+        var persistedAssignment: Assignment = target
+        var pendingRequirement: AssignmentRequirement? = null
+        var pendingTestCase: AssignmentTestCase? = null
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                "course-1",
+                target.weekNo,
+                target.orderInWeek,
+            )
+        ).thenReturn(Mono.just(target))
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("course-1", target.weekNo))
+            .thenReturn(
+                Mono.just(
+                    CourseWeek(
+                        id = "week-${target.weekNo}",
+                        courseId = "course-1",
+                        weekNo = target.weekNo,
+                        title = "${target.weekNo}주차",
+                    )
+                )
+            )
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation ->
+                val assignment = invocation.arguments[0] as Assignment
+                persistedAssignment = assignment
+                Mono.just(assignment)
+            }
+        Mockito.`when`(fixture.assignmentRepository.findById(assignmentId))
+            .thenAnswer { Mono.just(persistedAssignment) }
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(requirementDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
+            .thenAnswer { invocation ->
+                @Suppress("UNCHECKED_CAST")
+                val requirements = invocation.arguments[0] as List<AssignmentRequirement>
+                pendingRequirement = requirements.single()
+                requirementSavePublisher.flux()
+            }
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(testCaseDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.saveAll(ArgumentMatchers.anyList<AssignmentTestCase>()))
+            .thenAnswer { invocation ->
+                @Suppress("UNCHECKED_CAST")
+                val testCases = invocation.arguments[0] as List<AssignmentTestCase>
+                pendingTestCase = testCases.single()
+                testCaseSavePublisher.flux()
+            }
+        Mockito.`when`(fixture.assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId))
+            .thenAnswer {
+                pendingTestCase?.let { Flux.just(it) } ?: Flux.empty<AssignmentTestCase>()
+            }
+
+        StepVerifier.create(
+            fixture.service.updateAssignment(
+                courseSlug = "back-basic",
+                assignmentId = assignmentId,
+                request = sequentialChildWriteUpdateRequest(),
+            )
+        )
+            .then {
+                requirementDeletePublisher.assertSubscribers(1)
+                requirementSavePublisher.assertNoSubscribers()
+                testCaseDeletePublisher.assertNoSubscribers()
+                testCaseSavePublisher.assertNoSubscribers()
+            }
+            .then { requirementDeletePublisher.emit(1L) }
+            .then {
+                requirementSavePublisher.assertSubscribers(1)
+                testCaseDeletePublisher.assertNoSubscribers()
+                testCaseSavePublisher.assertNoSubscribers()
+            }
+            .then { requirementSavePublisher.emit(requireNotNull(pendingRequirement)) }
+            .then {
+                testCaseDeletePublisher.assertSubscribers(1)
+                testCaseSavePublisher.assertNoSubscribers()
+            }
+            .then { testCaseDeletePublisher.emit(1L) }
+            .then { testCaseSavePublisher.assertSubscribers(1) }
+            .then { testCaseSavePublisher.emit(requireNotNull(pendingTestCase)) }
+            .assertNext { response ->
+                response.metadata.requirements.single().requirementText shouldBe "함수 분리 필수"
+                response.metadata.testCases.single().outputText shouldBe "3"
+            }
+            .verifyComplete()
+
+        fixture.assignmentReportTestCaseEventPublisher.events shouldHaveSize 1
+    }
+
+    "과제 수정 요구사항 저장 실패는 테스트케이스 교체와 problem event 발행을 시작하지 않는다" {
+        val fixture = AssignmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val target = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+        val requirementDeletePublisher = TestPublisher.create<Long>()
+        val requirementSavePublisher = TestPublisher.create<AssignmentRequirement>()
+        val testCaseDeletePublisher = TestPublisher.create<Long>()
+        val testCaseSavePublisher = TestPublisher.create<AssignmentTestCase>()
+        val failure = IllegalStateException("requirement save failed")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(target))
+        Mockito.`when`(
+            fixture.assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+                "course-1",
+                target.weekNo,
+                target.orderInWeek,
+            )
+        ).thenReturn(Mono.just(target))
+        Mockito.`when`(fixture.courseWeekRepository.findByCourseIdAndWeekNo("course-1", target.weekNo))
+            .thenReturn(
+                Mono.just(
+                    CourseWeek(
+                        id = "week-${target.weekNo}",
+                        courseId = "course-1",
+                        weekNo = target.weekNo,
+                        title = "${target.weekNo}주차",
+                    )
+                )
+            )
+        Mockito.`when`(fixture.assignmentRepository.save(ArgumentMatchers.any(Assignment::class.java)))
+            .thenAnswer { invocation -> Mono.just(invocation.arguments[0] as Assignment) }
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(requirementDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
+            .thenReturn(requirementSavePublisher.flux())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(testCaseDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.saveAll(ArgumentMatchers.anyList<AssignmentTestCase>()))
+            .thenReturn(testCaseSavePublisher.flux())
+
+        StepVerifier.create(
+            fixture.service.updateAssignment(
+                courseSlug = "back-basic",
+                assignmentId = assignmentId,
+                request = sequentialChildWriteUpdateRequest(),
+            )
+        )
+            .then {
+                requirementDeletePublisher.assertSubscribers(1)
+                requirementSavePublisher.assertNoSubscribers()
+                testCaseDeletePublisher.assertNoSubscribers()
+                testCaseSavePublisher.assertNoSubscribers()
+            }
+            .then { requirementDeletePublisher.emit(1L) }
+            .then {
+                requirementSavePublisher.assertSubscribers(1)
+                testCaseDeletePublisher.assertNoSubscribers()
+                testCaseSavePublisher.assertNoSubscribers()
+                requirementSavePublisher.error(failure)
+            }
+            .expectErrorSatisfies { error -> error shouldBe failure }
+            .verify()
+
+        testCaseDeletePublisher.assertNoSubscribers()
+        testCaseSavePublisher.assertNoSubscribers()
+        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
+    }
+
 })
+
+private fun sequentialChildWriteCreateRequest(): CreateAssignmentRequest {
+    val startAt = Instant.now().plusSeconds(3600)
+    return CreateAssignmentRequest(
+        weekNo = 1,
+        orderInWeek = 1,
+        startAt = startAt,
+        endAt = startAt.plusSeconds(3600),
+        metadata = sequentialChildWriteMetadata(),
+    )
+}
+
+private fun sequentialChildWriteUpdateRequest(): UpdateAssignmentRequest =
+    UpdateAssignmentRequest(metadata = sequentialChildWriteMetadata())
+
+private fun sequentialChildWriteMetadata(): AssignmentMetadataPayload =
+    AssignmentMetadataPayload(
+        title = "순차 저장 과제",
+        difficulty = AssignmentDifficulty.MID,
+        description = "순차 저장 검증",
+        requirements = listOf(
+            CreateAssignmentRequirementRequest(
+                sortOrder = 1,
+                requirementText = "함수 분리 필수",
+            )
+        ),
+        testCases = listOf(
+            CreateAssignmentTestCaseRequest(
+                seq = 1,
+                inputValues = listOf("1 2"),
+                outputText = "3",
+            )
+        ),
+    )
 
 private class AssignmentCommandFixture(
     val assignmentReportTestCaseEventPublisher: RecordingAssignmentCommandEventPublisher =

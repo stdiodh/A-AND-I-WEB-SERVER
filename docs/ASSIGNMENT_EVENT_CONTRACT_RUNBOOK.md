@@ -22,7 +22,7 @@
 | SNS FIFO group | topic ARN이 `.fifo`일 때 `messageGroupId=problemId` |
 | SNS FIFO dedup ID | publish 호출마다 새 UUID. 논리 이벤트의 안정적인 ID가 아님 |
 | 논리 이벤트 중복 제거 | producer와 이 서버의 Judge consumer 모두 없음 |
-| MongoDB transaction | 코드에 transaction manager/unit of work가 없으며 운영 replica-set 지원도 미확인 |
+| MongoDB transaction | 생성·수정·복사 child write는 순차화했지만 transaction manager/unit of work가 없고, delayed-error 삭제 경로와 운영 replica-set 지원도 미확인 |
 | outbox/relay | 미구현 |
 
 ## Report → Online Judge: problem sync
@@ -133,7 +133,7 @@ consumer는 raw JSON과 SNS envelope의 `Message` JSON을 모두 처리합니다
 3. 동일 assignment의 monotonic sequence 생성·저장과 낮은 sequence 무시 정책을 결정합니다.
 4. Judge producer의 `eventId` 생성·재시도 안정성을 확인합니다.
 5. 운영 MongoDB topology를 확인하고 실제 replica set에서 commit/rollback을 검증합니다.
-6. transaction 안의 MongoDB write를 순차 실행하도록 준비합니다.
+6. transaction 안의 MongoDB write를 순차 실행하도록 준비합니다. 생성·수정·복사의 child write는 완료했으며, delayed-error cascade/cleanup 삭제 세 경로는 별도 전환이 필요합니다.
 7. aggregate 저장과 outbox 저장의 양방향 rollback 통합 테스트를 통과합니다.
 8. relay retry가 동일 `eventId`를 유지하고 다중 인스턴스 claim·lease 만료를 처리하는지 검증합니다.
 9. direct/outbox를 동시에 켤 수 없는 단일 cutover switch와 fail-fast 설정 검증을 둡니다.
@@ -150,6 +150,8 @@ consumer는 raw JSON과 SNS envelope의 `Message` JSON을 모두 처리합니다
 
 ### MongoDB와 relay
 
+- [x] 과제 생성·수정·복사의 requirements → testCases write를 실제 subscription 기준으로 순차화했다.
+- [ ] cascade/cleanup 삭제 세 경로를 전체 시도·오류 보존 계약과 함께 순차 구독으로 전환했다.
 - [ ] 실제 replica set에서 commit과 강제 rollback을 검증했다.
 - [ ] collection/index를 transaction 전에 생성하는 migration 순서를 정했다.
 - [ ] SNS 성공 후 `SENT` 기록 전 종료 시 동일 ID 재발행을 검증했다.

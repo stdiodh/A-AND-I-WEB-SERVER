@@ -44,6 +44,7 @@ import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
+import reactor.test.publisher.TestPublisher
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -455,6 +456,54 @@ class AssignmentCopyServiceTest : StringSpec({
         event.testCases.map { it.caseId } shouldContainExactly listOf(1, 2)
     }
 
+    "child writes subscribe sequentially and publish only after both complete" {
+        val fixture = AssignmentCopyFixture()
+        fixture.stubCopyPath(
+            sourceRequirements = listOf(sourceRequirement()),
+            sourceTestCases = listOf(sourceTestCase()),
+        )
+        val requirementSavePublisher = TestPublisher.create<AssignmentRequirement>()
+        val testCaseSavePublisher = TestPublisher.create<AssignmentTestCase>()
+        var requirementSaveSubscribed = false
+        var testCaseSaveSubscribed = false
+        Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
+            .thenReturn(
+                requirementSavePublisher.flux()
+                    .doOnSubscribe { requirementSaveSubscribed = true }
+            )
+        Mockito.`when`(fixture.assignmentTestCaseRepository.saveAll(ArgumentMatchers.anyList<AssignmentTestCase>()))
+            .thenReturn(
+                testCaseSavePublisher.flux()
+                    .doOnSubscribe { testCaseSaveSubscribed = true }
+            )
+
+        StepVerifier.create(
+            fixture.service.copyAssignment(
+                targetCourseSlug = TARGET_COURSE_SLUG,
+                request = CopyAssignmentRequest(sourceAssignmentId = SOURCE_ASSIGNMENT_ID),
+                createdBy = CREATED_BY,
+            )
+        )
+            .then {
+                requirementSaveSubscribed shouldBe true
+                testCaseSaveSubscribed shouldBe false
+                fixture.eventPublisher.events shouldBe emptyList()
+                requirementSavePublisher.emit(sourceRequirement())
+            }
+            .then {
+                testCaseSaveSubscribed shouldBe true
+                fixture.eventPublisher.events shouldBe emptyList()
+                testCaseSavePublisher.emit(sourceTestCase())
+            }
+            .assertNext { response ->
+                response.metadata.requirements shouldHaveSize 1
+                response.metadata.testCases shouldHaveSize 1
+            }
+            .verifyComplete()
+
+        fixture.eventPublisher.events.single().eventType shouldBe AssignmentReportTestCaseEventType.PROBLEM_CREATED
+    }
+
     "copying an already-copied assignment preserves the first origin assignment and course" {
         val firstOriginAssignmentId = "5e67701e-7671-4f71-92ce-a9a6ce12fbb3"
         val firstOriginCourseSlug = "first-origin-course"
@@ -570,11 +619,28 @@ class AssignmentCopyServiceTest : StringSpec({
             .save(ArgumentMatchers.any(CourseWeek::class.java))
     }
 
-    "requirement copy failure after assignment save performs complete cleanup and propagates original failure" {
+    "requirement copy failure does not subscribe testcase copy and starts complete cleanup" {
         val fixture = AssignmentCopyFixture()
-        fixture.stubCopyPath(sourceRequirements = listOf(sourceRequirement()))
+        fixture.stubCopyPath(
+            sourceRequirements = listOf(sourceRequirement()),
+            sourceTestCases = listOf(sourceTestCase()),
+        )
+        val requirementSavePublisher = TestPublisher.create<AssignmentRequirement>()
+        val testCaseSavePublisher = TestPublisher.create<AssignmentTestCase>()
+        val copyFailure = IllegalStateException("requirement save failed")
+        var requirementSaveSubscribed = false
+        var testCaseSaveSubscribed = false
         Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
-            .thenReturn(Flux.error(IllegalStateException("requirement save failed")))
+            .thenReturn(
+                requirementSavePublisher.flux()
+                    .doOnSubscribe { requirementSaveSubscribed = true }
+            )
+        Mockito.`when`(fixture.assignmentTestCaseRepository.saveAll(ArgumentMatchers.anyList<AssignmentTestCase>()))
+            .thenReturn(
+                testCaseSavePublisher.flux()
+                    .doOnSubscribe { testCaseSaveSubscribed = true }
+            )
+        val cleanupSubscriptions = fixture.trackCleanupSubscriptions()
 
         StepVerifier.create(
             fixture.service.copyAssignment(
@@ -583,20 +649,28 @@ class AssignmentCopyServiceTest : StringSpec({
                 createdBy = CREATED_BY,
             )
         )
+            .then {
+                requirementSaveSubscribed shouldBe true
+                testCaseSaveSubscribed shouldBe false
+                requirementSavePublisher.error(copyFailure)
+            }
             .expectErrorSatisfies { error ->
-                error::class shouldBe IllegalStateException::class
-                error.message shouldBe "requirement save failed"
+                error shouldBe copyFailure
             }
             .verify()
 
+        testCaseSaveSubscribed shouldBe false
+        cleanupSubscriptions.allSubscribed() shouldBe true
         fixture.verifyCleanupForSavedAssignment()
     }
 
     "testcase copy failure after assignment save performs complete cleanup" {
         val fixture = AssignmentCopyFixture()
         fixture.stubCopyPath(sourceTestCases = listOf(sourceTestCase()))
+        val copyFailure = IllegalStateException("testcase save failed")
         Mockito.`when`(fixture.assignmentTestCaseRepository.saveAll(ArgumentMatchers.anyList<AssignmentTestCase>()))
-            .thenReturn(Flux.error(IllegalStateException("testcase save failed")))
+            .thenReturn(Flux.error(copyFailure))
+        val cleanupSubscriptions = fixture.trackCleanupSubscriptions()
 
         StepVerifier.create(
             fixture.service.copyAssignment(
@@ -606,11 +680,11 @@ class AssignmentCopyServiceTest : StringSpec({
             )
         )
             .expectErrorSatisfies { error ->
-                error::class shouldBe IllegalStateException::class
-                error.message shouldBe "testcase save failed"
+                error shouldBe copyFailure
             }
             .verify()
 
+        cleanupSubscriptions.allSubscribed() shouldBe true
         fixture.verifyCleanupForSavedAssignment()
     }
 
@@ -639,10 +713,13 @@ class AssignmentCopyServiceTest : StringSpec({
     "cleanup failure does not hide the original copy failure" {
         val fixture = AssignmentCopyFixture()
         fixture.stubCopyPath(sourceRequirements = listOf(sourceRequirement()))
+        val copyFailure = IllegalStateException("requirement save failed")
+        val cleanupFailure = IllegalStateException("cleanup failed")
         Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
-            .thenReturn(Flux.error(IllegalStateException("requirement save failed")))
-        Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
-            .thenReturn(Mono.error(IllegalStateException("cleanup failed")))
+            .thenReturn(Flux.error(copyFailure))
+        val cleanupSubscriptions = fixture.trackCleanupSubscriptions(
+            deliveryDeleteResult = Mono.error(cleanupFailure),
+        )
 
         StepVerifier.create(
             fixture.service.copyAssignment(
@@ -652,11 +729,11 @@ class AssignmentCopyServiceTest : StringSpec({
             )
         )
             .expectErrorSatisfies { error ->
-                error::class shouldBe IllegalStateException::class
-                error.message shouldBe "requirement save failed"
+                error shouldBe copyFailure
             }
             .verify()
 
+        cleanupSubscriptions.allSubscribed() shouldBe true
         fixture.verifyCleanupForSavedAssignment()
     }
 
@@ -863,6 +940,42 @@ private class AssignmentCopyFixture {
         Mockito.verify(assignmentDeliveryRepository).deleteAllByAssignmentIdIn(ids)
         Mockito.verify(assignmentRepository).deleteById(assignmentId)
     }
+
+    fun trackCleanupSubscriptions(
+        deliveryDeleteResult: Mono<Long> = Mono.just(0L),
+    ): CleanupSubscriptions {
+        val subscriptions = CleanupSubscriptions()
+        Mockito.`when`(assignmentRequirementRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
+            .thenReturn(
+                Mono.just(0L)
+                    .doOnSubscribe { subscriptions.requirements = true }
+            )
+        Mockito.`when`(assignmentTestCaseRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
+            .thenReturn(
+                Mono.just(0L)
+                    .doOnSubscribe { subscriptions.testCases = true }
+            )
+        Mockito.`when`(assignmentDeliveryRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
+            .thenReturn(
+                deliveryDeleteResult
+                    .doOnSubscribe { subscriptions.deliveries = true }
+            )
+        Mockito.`when`(assignmentRepository.deleteById(ArgumentMatchers.anyString()))
+            .thenReturn(
+                Mono.empty<Void>()
+                    .doOnSubscribe { subscriptions.assignment = true }
+            )
+        return subscriptions
+    }
+}
+
+private data class CleanupSubscriptions(
+    var requirements: Boolean = false,
+    var testCases: Boolean = false,
+    var deliveries: Boolean = false,
+    var assignment: Boolean = false,
+) {
+    fun allSubscribed(): Boolean = requirements && testCases && deliveries && assignment
 }
 
 private class RecordingAssignmentReportTestCaseEventPublisher : AssignmentReportTestCaseEventPublisher {
