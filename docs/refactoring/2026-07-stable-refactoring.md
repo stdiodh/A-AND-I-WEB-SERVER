@@ -2,20 +2,20 @@
 
 ## 목표와 원칙
 
-외부 API와 이벤트 순서를 유지하면서 전역 상태, 중복 정책, 서비스 경계, 배포 위험을 작은 단계로 줄입니다. 각 단계는 독립적인 테스트 checkpoint를 통과한 뒤 다음 단계로 넘어갑니다.
+외부 API와 애플리케이션의 publisher 호출 순서를 유지하면서 전역 상태, 중복 정책, 서비스 경계, 배포 위험을 작은 단계로 줄입니다. 각 단계는 독립적인 테스트 checkpoint를 통과한 뒤 다음 단계로 넘어갑니다.
 
 - 상태: 완료 — [PR #68](https://github.com/Team-AnI/A-AND-I-WEB-SERVER/pull/68)로 `main` 병합
 - 기준 commit: `14a283a`
 - 작업 branch(기록): `develop/stable-refactoring`
 - 병합 commit: `c2c542d`
-- 최종 checkpoint: 306 tests, failures/errors/skipped 0, Line 85.67%, Branch 63.37%
+- PR #68 checkpoint: 306 tests, failures/errors/skipped 0, Line 85.67%, Branch 63.37%
 
 보존하는 핵심 계약:
 
 - 과제 PATCH에서 `testCases` 생략은 기존 값 유지
 - `testCases: []`는 기존과 동일하게 400
 - 예약 공개 과제는 저장 상태가 `PUBLISHED`여도 시작 전 응답은 `DRAFT`
-- 생성·수정·삭제 후 problem sync 이벤트 발행 순서 유지
+- 생성·수정·삭제 후 problem sync publisher 호출 순서 유지
 - 운영 MongoDB의 기존 `mongo_data` 볼륨 유지
 - 실제 Docker volume 이름을 자동 추정하지 않고 기존 container mount 또는 명시된 `MONGO_VOLUME_NAME`으로 확인
 
@@ -33,7 +33,7 @@
 | 6A. 과제 조회 서비스 경계 | 완료 | 목록·상세·outline·과제 course 참조를 `AssignmentQueryService`로 이동하고 Course→Assignment infrastructure 의존 제거 |
 | 6B. 과제 조회 테스트 소유권 | 완료 | 사용자·관리자 조회 테스트를 Assignment 패키지와 query port mock 기반 직접 서비스 테스트로 이동 |
 | 7A. problem sync 발행 경계 | 완료 | 동기 발행 계약을 테스트로 고정하고 application port/direct adapter로 분리 |
-| 7B. transactional outbox | 제안 | replica-set transaction과 소비자 idempotency 확인 후 ADR 0001에 따라 진행 |
+| 7B. transactional outbox | 제안 | [현재 계약과 전환 차단조건](../ASSIGNMENT_EVENT_CONTRACT_RUNBOOK.md)을 확인한 뒤 ADR 0001에 따라 진행 |
 | 8. 데이터 운영 | 진행 | Mongo index V001과 preflight/apply/verify 절차 마련. replica/backup 복원과 동시성 검증은 운영 환경 확인 후 진행 |
 | 8A. 사용자 동기화 순서 | 완료 | hard delete를 동일 문서 tombstone으로 전환하고 stale profile 재삽입과 tombstone 조회 노출 차단 |
 | 9. 문서·레거시 분류 | 완료 | 현재 문서와 과거 측정 근거를 분류하고 후속 코드·운영 정리는 별도 단계로 분리 |
@@ -111,7 +111,7 @@ assignment application은 Course persistence 구현을 더 이상 직접 사용�
 
 ### 이벤트 일관성
 
-7A에서는 기존 direct SNS 동기 발행을 유지한 채 교체 경계만 만들었습니다. 단순 retry는 추가하지 않습니다. 7B 전환 전에는 외부 replica-set MongoDB의 실제 rollback 테스트, Judge 소비자의 `eventId` 중복 제거, 동일 assignment 내 순서 정책, direct/outbox 상호 배타 전환을 먼저 확인합니다.
+7A에서는 기존 direct SNS 동기 발행을 유지한 채 교체 경계만 만들었습니다. 단순 retry는 추가하지 않습니다. 현재 payload에는 안정적인 `eventId`, `schemaVersion`, sequence가 없습니다. 7B의 구현·운영 gate, 외부 consumer 확인, cutover·rollback 조건은 [과제 이벤트 계약과 outbox 전환 기준](../ASSIGNMENT_EVENT_CONTRACT_RUNBOOK.md)을 단일 기준으로 사용합니다.
 
 ### 운영 설정 단일화
 

@@ -77,12 +77,14 @@ Do not use:
 
 Web Server와 Online Judge Server 사이의 이벤트 구조는 현재 repo에서 다음 범위까지 확인했습니다.
 
+현재 wire/ACK 보장과 outbox 전환 차단조건의 기준은 [과제 이벤트 계약과 outbox 전환 기준](./ASSIGNMENT_EVENT_CONTRACT_RUNBOOK.md)입니다.
+
 | 흐름 | 확인된 동작 | 근거 | 사용 여부 |
 | :--- | :--- | :--- | :--- |
-| Assignment problem sync publish | assignment 생성/수정/삭제 후 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED` snapshot을 SNS로 발행 | `AssignmentReportTestCaseEvent.kt`, `AssignmentReportTestCaseEventMapper.kt`, `SnsAssignmentReportTestCaseEventPublisher.kt`, `AssignmentCommandService.kt` | 사용 가능 |
+| Assignment problem sync publish | 기능 활성화 환경에서 assignment 생성/수정/삭제 후 `PROBLEM_CREATED`, `PROBLEM_UPDATED`, `PROBLEM_DELETED` snapshot을 SNS로 발행 | `AssignmentReportTestCaseEvent.kt`, `AssignmentReportTestCaseEventMapper.kt`, `SnsAssignmentReportTestCaseEventPublisher.kt`, `AssignmentCommandService.kt` | 조건부 사용 |
 | Problem sync schema | `eventType`, `problemId`, `testCases[]`, `caseId`, `input`, `output` | `AssignmentReportTestCaseEvent.kt` | 사용 가능 |
-| Judge completed consume | raw JSON 또는 SNS envelope의 `JUDGE_COMPLETED`를 파싱해 projection upsert 후 SQS message 삭제 | `JudgeCompletedEventParser.kt`, `SqsJudgeSubmissionEventConsumer.kt`, `SqsJudgeSubmissionEventConsumerTest` | 사용 가능 |
-| Submission projection | `assignmentId + publicCode` unique index 기반으로 projection 저장, 최고 점수 기준 필드 갱신 | `AssignmentSubmissionStatusProjection.kt`, `AssignmentSubmissionStatusProjectionService.kt`, `AssignmentSubmissionStatusProjectionServiceTest` | 사용 가능 |
+| Judge completed consume | consumer 활성화 환경에서 raw JSON 또는 SNS envelope의 `JUDGE_COMPLETED`를 파싱해 projection upsert 후 SQS message 삭제 | `JudgeCompletedEventParser.kt`, `SqsJudgeSubmissionEventConsumer.kt`, `SqsJudgeSubmissionEventConsumerTest` | 조건부 사용 |
+| Submission projection | V001 unique index가 적용·검증된 환경에서 `assignmentId + publicCode` 중복 문서를 차단하고, 최고 점수 기준 필드를 갱신 | `scripts/mongo/indexes/v001-index-catalog.js`, `AssignmentSubmissionStatusProjectionService.kt`, `AssignmentSubmissionStatusProjectionServiceTest` | 조건부 사용 |
 | Admin read path | 관리자 제출 현황은 Online Judge 동기 호출 대신 MongoDB projection과 enrollment를 join | `AdminAssignmentSubmissionStatusesV2Service.kt`, `CourseAdminAssignmentSubmissionStatusesV2Controller.kt`, `README.md` | 사용 가능 |
 
 Approved sentence candidates:
@@ -104,6 +106,7 @@ Do not use:
 | 300/1000 assignment list-only before/after latency | 확인 필요 | 30개 fixture 외에 큰 fixture에서 같은 commit pair로 재측정 | 제외 |
 | SNS/SQS DLQ redrive policy | 확인 필요 | AWS console/IaC/queue attribute 확인 | 제외 |
 | Outbox 기반 no-lost-event | 미구현 | outbox table/collection 및 publisher relay 구현 확인 | 제외 |
-| eventId deduplication/exactly-once | 미구현 | eventId, processed-event store, dedup test 확인 | 제외 |
+| eventId consumer deduplication | 미구현 | 안정적인 eventId, processed-event store, dedup test 확인 | 제외 |
+| exactly-once 처리 | 미보장 | at-least-once 재전달과 부작용 검증. exactly-once 성과 표현 금지 | 제외 |
 | Online Judge consumer | 확인 필요 | Online Judge Server repo에서 SQS consumer 확인 | 제외 |
 | CloudWatch 운영 지표 | 확인 필요 | log group, alarm, metric filter, sample logs 확인 | 제외 |

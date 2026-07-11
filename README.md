@@ -1,12 +1,12 @@
 # A&I Assignment & Report Server
 
-> 과제를 만들고 공개하는 순간부터 Online Judge의 채점 결과가 운영 화면에 반영되기까지를 담당하는 교육 운영 백엔드입니다.
+> 과제 원본을 운영하고, 기능 활성화 시 problem sync를 발행하며, 수신한 채점 결과를 운영 화면용 projection으로 저장하는 교육 운영 백엔드입니다.
 
 저장소 이름은 `WEB-SERVER`지만 화면을 렌더링하는 서버는 아닙니다.
 
 코스·수강·과제·요구사항·테스트케이스의 원본 데이터를 관리하고, 수강생과 운영자에게 필요한 API를 제공합니다.
 
-과제가 변경되면 Online Judge가 사용할 problem snapshot을 이벤트로 전달하고, 채점 완료 이벤트는 관리자 조회에 적합한 submission projection으로 저장합니다.
+problem sync 기능이 활성화된 환경에서는 과제 변경 시 Online Judge용 snapshot을 SNS에 발행합니다. Judge consumer가 활성화된 환경에서는 수신한 채점 완료 이벤트를 관리자 조회에 적합한 submission projection으로 저장합니다.
 
 ![Architecture](./docs/assets/diagrams/architecture.png)
 
@@ -17,11 +17,11 @@
 | 코스 운영 | 코스, 주차, 수강 정보와 접근 권한을 관리합니다. |
 | 과제 운영 | 과제, 요구사항, 공개 시각, 테스트케이스를 관리합니다. |
 | 수강생 조회 | 수강 여부와 공개 상태를 확인하고 공개 가능한 데이터만 반환합니다. |
-| 문제 동기화 | 과제 변경 내용을 SNS/SQS 이벤트로 Online Judge에 전달합니다. |
+| 문제 동기화 | 기능 활성화 시 과제 변경 snapshot을 SNS에 발행합니다. 이후 전달·반영은 외부 구성 확인이 필요합니다. |
 | 제출 현황 | 채점 완료 이벤트를 과제·사용자 단위 projection으로 저장합니다. |
 | 운영 추적 | 요청 ID, 상태 코드, 오류 코드, 지연시간을 구조화 로그로 남깁니다. |
 
-## 과제가 Online Judge에 반영되는 흐름
+## 과제 problem snapshot 발행 흐름
 
 ```mermaid
 sequenceDiagram
@@ -37,13 +37,14 @@ sequenceDiagram
     API->>API: 입력값·공개 상태·테스트케이스 검증
     API->>DB: Assignment · Requirement · TestCase 저장
     DB-->>API: 저장 결과
-    API->>SNS: Problem snapshot 발행
-    SNS->>SQS: Judge 구독 큐로 전달
-    SQS->>Judge: Problem sync event
-    Judge->>Judge: 문제와 테스트케이스 반영
+    API->>SNS: 기능 활성화 시 Problem snapshot 발행
+    Note over SNS,Judge: 이후 단계는 외부 저장소와 AWS 운영 설정 확인 필요
+    SNS-->>SQS: 구독 구성 시 전달
+    SQS-->>Judge: Consumer 구현 시 수신
+    Judge-->>Judge: 외부 계약에 따라 반영
 ```
 
-서버가 Online Judge API를 동기 호출하지 않기 때문에 과제 운영과 채점 서버의 배포·장애 범위를 분리할 수 있습니다.
+`APP_EVENTS_REPORT_TEST_CASE_ENABLED`는 기본값이 `false`이며, 비활성 환경에서는 no-op publisher 단계가 성공 완료되어 publish 때문에 command가 실패하지 않습니다. 활성 환경에서 이 저장소가 확인하는 범위는 command 경로가 SNS publish 완료를 기다리고 성공·실패를 호출자에게 전파하는 지점까지입니다. Online Judge API를 직접 호출하지는 않지만 SNS 장애는 API 실패로 이어질 수 있으며, SNS 이후 SQS 전달과 Online Judge 반영은 외부 저장소·AWS 설정에서 별도로 확인해야 합니다.
 
 ## 수강생 조회와 채점 결과 반영
 
@@ -76,6 +77,8 @@ sequenceDiagram
 공개 전 과제는 수강생 응답에서 존재 여부까지 드러나지 않도록 처리하고, 공개된 과제에서도 `PUBLIC` 테스트케이스만 반환합니다.
 
 관리자 제출 현황은 Online Judge를 매번 호출하지 않고 MongoDB projection을 바로 조회해 읽기 경로를 짧게 유지합니다.
+
+`REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED`도 기본값이 `false`입니다. 활성 환경에서 이 저장소가 확인하는 수신 범위는 `JUDGE_COMPLETED` 파싱, projection 저장, 성공 후 SQS 메시지 삭제까지입니다. Online Judge producer와 실제 queue/DLQ 설정은 외부 확인이 필요합니다.
 
 ## 데이터 구조
 
@@ -184,6 +187,7 @@ http://localhost:8080/actuator/health/readiness
 - [문서 안내와 상태 분류](./docs/README.md)
 - [운영 배포와 복구](./docs/DEPLOYMENT.md)
 - [안정적 리팩터링 계획](./docs/refactoring/2026-07-stable-refactoring.md)
+- [과제 이벤트 계약과 outbox 전환 기준](./docs/ASSIGNMENT_EVENT_CONTRACT_RUNBOOK.md)
 - [과제 이벤트 일관성 ADR](./docs/adr/0001-assignment-event-consistency.md)
 - [테스트와 성능 측정](./docs/MEASUREMENT.md)
 - [성능 결과 재현](./docs/performance/results/README.md)

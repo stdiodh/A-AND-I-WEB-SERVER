@@ -310,5 +310,5 @@ before/after 비교는 다음 조건이 같을 때만 유효합니다.
 
 - [미구현] Outbox 도입 후 SNS 장애 상황의 유실 이벤트 건수
 - [확인 필요] event publish lag P95
-- [확인 필요] duplicate event 재전달 시 projection 중복 건수
+- [선행 필요] 안정적인 `eventId` 도입 후 동일 ID 재전달의 projection write/update 기대값 0건 검증
 - [확인 필요] SQS oldest message age와 DLQ 유입 건수
