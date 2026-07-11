@@ -106,28 +106,18 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 
 ### 자동화 테스트
 
-테스트 결과는 일회성 수치가 아니라 CI에서 유지해야 하는 기준으로 관리합니다.
+| 구분 | 테스트 | Line coverage | Branch coverage | CI 기준 | 직전 기준 대비 |
+| :--- | ---: | ---: | ---: | :--- | :--- |
+| 초기 기준 | 188 | 78.07% | 54.71% | Line 70% | - |
+| 1차 리팩터링 | 277 | 85.04% | 62.59% | Line 83%, Branch 61% | +89 tests, Line +6.97%p, Branch +7.88%p |
+| 2차 리팩터링 | 338 | 88.22% | 63.42% | Line 86%, Branch 62% | +61 tests, 측정 scope 확장 |
+| 3차 리팩터링 | 388 | 88.87% | 63.74% | Line 86%, Branch 62% | +50 tests, Line +0.65%p, Branch +0.32%p |
 
-| 기준 | 테스트 | Line coverage | Branch coverage | CI 기준 |
-| :--- | ---: | ---: | ---: | :--- |
-| 초기 기준 | 188 | 78.07% | 54.71% | Line 70% |
-| 1차 보강 | 220 | 81.57% | 59.35% | Line 70% |
-| 2026-06-23 기준 | 277 | 85.04% | 62.59% | Line 83%, Branch 61% |
-| 레거시 정리 (#69) | 306 | 89.47% | 63.37% | Line 83%, Branch 61% |
-| 실패 경로 보강 (#71, 이전 scope) | 338 | 89.98% | 63.91% | Line 83%, Branch 61% |
-| JaCoCo scope 재조정 | 338 | 88.22% | 63.42% | Line 86%, Branch 62% |
-| MongoDB 인덱스 계약 | 350 | 88.36% | 63.42% | Line 86%, Branch 62% |
-| 사용자 동기화 순서 보장 | 358 | 88.45% | 63.66% | Line 86%, Branch 62% |
-| 과제 조회 경계 분리 | 366 | 88.64% | 63.59% | Line 86%, Branch 62% |
-| Course 과제 조회 의존 제거 | 372 | 88.67% | 63.69% | Line 86%, Branch 62% |
-| 과제 child write 순차화 | 377 | 88.78% | 63.74% | Line 86%, Branch 62% |
-| 과제 삭제 write 순차화 | 380 | 88.78% | 63.74% | Line 86%, Branch 62% |
-| CourseWeek 동시 생성 수렴 | 387 | 88.87% | 63.74% | Line 86%, Branch 62% |
-| Course 관계 삭제 순차화 | 388 | 88.87% | 63.74% | Line 86%, Branch 62% |
+초기 대비 테스트는 **188 → 388개(+200개, +106.4%)**, CI Line gate는 **70% → 86%(+16%p)**로 강화했습니다. 전체 coverage 수치는 Line **+10.80%p**, Branch **+9.03%p** 높아졌지만, 2차에서 측정 범위를 확장했으므로 동일 scope의 직접 개선치는 2차 → 3차의 Line **+0.65%p**, Branch **+0.32%p**를 기준으로 봅니다.
 
 ![JaCoCo coverage gate summary](./docs/assets/images/jacoco-report-before-after.png)
 
-이미지는 2026-06-23 gate 보강 시점의 기록입니다. Scope 재조정 행은 같은 338개 테스트 실행 데이터를 더 넓은 scope로 재계산한 결과이고, 최신 행은 이후 경계·MongoDB 인덱스 계약·사용자 이벤트 순서·과제 조회 경계, MongoDB write 순차화, CourseWeek 동시 생성 수렴과 Course 관계 삭제 순서 테스트를 포함합니다. 현재 제외 대상은 Spring Boot 진입점과 OpenAPI schema-only 문서 모델뿐이며, 코루틴·controller·service·DTO·validator는 모두 측정합니다. Scope 확장 전후 비율은 직접적인 품질 증감으로 비교하지 않습니다.
+이미지는 2026-06-23 gate 보강 시점의 기록입니다. 과거 checkpoint와 scope 변경 이력은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 보존합니다. 현재 제외 대상은 Spring Boot 진입점과 OpenAPI schema-only 문서 모델뿐이며, 코루틴·controller·service·DTO·validator는 모두 측정합니다.
 
 ### 읽기 API 부하 테스트
 
