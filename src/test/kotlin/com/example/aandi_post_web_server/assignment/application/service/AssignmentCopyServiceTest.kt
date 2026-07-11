@@ -688,6 +688,55 @@ class AssignmentCopyServiceTest : StringSpec({
         fixture.verifyCleanupForSavedAssignment()
     }
 
+    "cleanup deletes subscribe sequentially after a child copy failure" {
+        val fixture = AssignmentCopyFixture()
+        fixture.stubCopyPath(sourceRequirements = listOf(sourceRequirement()))
+        val copyFailure = IllegalStateException("requirement save failed")
+        val requirementDeletePublisher = TestPublisher.create<Long>()
+        val testCaseDeletePublisher = TestPublisher.create<Long>()
+        val deliveryDeletePublisher = TestPublisher.create<Long>()
+        val assignmentDeletePublisher = TestPublisher.create<Void>()
+        Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
+            .thenReturn(Flux.error(copyFailure))
+        val cleanupSubscriptions = fixture.trackCleanupSubscriptions(
+            requirementDeleteResult = requirementDeletePublisher.mono(),
+            testCaseDeleteResult = testCaseDeletePublisher.mono(),
+            deliveryDeleteResult = deliveryDeletePublisher.mono(),
+            assignmentDeleteResult = assignmentDeletePublisher.mono(),
+        )
+
+        StepVerifier.create(
+            fixture.service.copyAssignment(
+                targetCourseSlug = TARGET_COURSE_SLUG,
+                request = CopyAssignmentRequest(sourceAssignmentId = SOURCE_ASSIGNMENT_ID),
+                createdBy = CREATED_BY,
+            )
+        )
+            .then {
+                cleanupSubscriptions.order shouldContainExactly listOf("requirements")
+                requirementDeletePublisher.emit(0L)
+            }
+            .then {
+                cleanupSubscriptions.order shouldContainExactly listOf("requirements", "testCases")
+                testCaseDeletePublisher.emit(0L)
+            }
+            .then {
+                cleanupSubscriptions.order shouldContainExactly listOf("requirements", "testCases", "deliveries")
+                deliveryDeletePublisher.emit(0L)
+            }
+            .then {
+                cleanupSubscriptions.order shouldContainExactly
+                    listOf("requirements", "testCases", "deliveries", "assignment")
+                assignmentDeletePublisher.complete()
+            }
+            .expectErrorSatisfies { error ->
+                error shouldBe copyFailure
+            }
+            .verify()
+
+        fixture.verifyCleanupForSavedAssignment()
+    }
+
     "DuplicateKeyException during child document save maps to copy CONFLICT and still cleans up" {
         val fixture = AssignmentCopyFixture()
         fixture.stubCopyPath(sourceRequirements = listOf(sourceRequirement()))
@@ -710,15 +759,17 @@ class AssignmentCopyServiceTest : StringSpec({
         fixture.verifyCleanupForSavedAssignment()
     }
 
-    "cleanup failure does not hide the original copy failure" {
+    "multiple cleanup failures attempt every delete and do not hide the original copy failure" {
         val fixture = AssignmentCopyFixture()
         fixture.stubCopyPath(sourceRequirements = listOf(sourceRequirement()))
         val copyFailure = IllegalStateException("requirement save failed")
-        val cleanupFailure = IllegalStateException("cleanup failed")
+        val testCaseCleanupFailure = IllegalStateException("testcase cleanup failed")
+        val deliveryCleanupFailure = IllegalStateException("delivery cleanup failed")
         Mockito.`when`(fixture.assignmentRequirementRepository.saveAll(ArgumentMatchers.anyList<AssignmentRequirement>()))
             .thenReturn(Flux.error(copyFailure))
         val cleanupSubscriptions = fixture.trackCleanupSubscriptions(
-            deliveryDeleteResult = Mono.error(cleanupFailure),
+            testCaseDeleteResult = Mono.error(testCaseCleanupFailure),
+            deliveryDeleteResult = Mono.error(deliveryCleanupFailure),
         )
 
         StepVerifier.create(
@@ -734,6 +785,8 @@ class AssignmentCopyServiceTest : StringSpec({
             .verify()
 
         cleanupSubscriptions.allSubscribed() shouldBe true
+        cleanupSubscriptions.order shouldContainExactly
+            listOf("requirements", "testCases", "deliveries", "assignment")
         fixture.verifyCleanupForSavedAssignment()
     }
 
@@ -942,28 +995,43 @@ private class AssignmentCopyFixture {
     }
 
     fun trackCleanupSubscriptions(
+        requirementDeleteResult: Mono<Long> = Mono.just(0L),
+        testCaseDeleteResult: Mono<Long> = Mono.just(0L),
         deliveryDeleteResult: Mono<Long> = Mono.just(0L),
+        assignmentDeleteResult: Mono<Void> = Mono.empty(),
     ): CleanupSubscriptions {
         val subscriptions = CleanupSubscriptions()
         Mockito.`when`(assignmentRequirementRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
             .thenReturn(
-                Mono.just(0L)
-                    .doOnSubscribe { subscriptions.requirements = true }
+                requirementDeleteResult
+                    .doOnSubscribe {
+                        subscriptions.requirements = true
+                        subscriptions.order += "requirements"
+                    }
             )
         Mockito.`when`(assignmentTestCaseRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
             .thenReturn(
-                Mono.just(0L)
-                    .doOnSubscribe { subscriptions.testCases = true }
+                testCaseDeleteResult
+                    .doOnSubscribe {
+                        subscriptions.testCases = true
+                        subscriptions.order += "testCases"
+                    }
             )
         Mockito.`when`(assignmentDeliveryRepository.deleteAllByAssignmentIdIn(ArgumentMatchers.anyCollection()))
             .thenReturn(
                 deliveryDeleteResult
-                    .doOnSubscribe { subscriptions.deliveries = true }
+                    .doOnSubscribe {
+                        subscriptions.deliveries = true
+                        subscriptions.order += "deliveries"
+                    }
             )
         Mockito.`when`(assignmentRepository.deleteById(ArgumentMatchers.anyString()))
             .thenReturn(
-                Mono.empty<Void>()
-                    .doOnSubscribe { subscriptions.assignment = true }
+                assignmentDeleteResult
+                    .doOnSubscribe {
+                        subscriptions.assignment = true
+                        subscriptions.order += "assignment"
+                    }
             )
         return subscriptions
     }
@@ -974,6 +1042,7 @@ private data class CleanupSubscriptions(
     var testCases: Boolean = false,
     var deliveries: Boolean = false,
     var assignment: Boolean = false,
+    val order: MutableList<String> = mutableListOf(),
 ) {
     fun allSubscribed(): Boolean = requirements && testCases && deliveries && assignment
 }

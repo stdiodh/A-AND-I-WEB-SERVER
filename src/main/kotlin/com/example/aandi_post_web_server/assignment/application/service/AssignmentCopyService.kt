@@ -26,6 +26,7 @@ import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
 import java.util.UUID
@@ -331,7 +332,7 @@ class AssignmentCopyService(
             }
 
     private fun deleteCopiedAssignmentDocuments(assignmentId: String): Mono<Void> =
-        Mono.whenDelayError(
+        Flux.concatDelayError(
             assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),

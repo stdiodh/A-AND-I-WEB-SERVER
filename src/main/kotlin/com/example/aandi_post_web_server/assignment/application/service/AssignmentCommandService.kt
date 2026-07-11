@@ -267,7 +267,7 @@ class AssignmentCommandService(
                 if (assignmentIds.isEmpty()) {
                     Mono.empty<Void>()
                 } else {
-                    Mono.whenDelayError(
+                    Flux.concatDelayError(
                         assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentTestCaseRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
                         assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
@@ -423,7 +423,7 @@ class AssignmentCommandService(
         )
 
     private fun deleteAssignmentCascade(assignmentId: String): Mono<Void> {
-        return Mono.whenDelayError(
+        return Flux.concatDelayError(
             assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
             assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),

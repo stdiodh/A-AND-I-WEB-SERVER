@@ -39,6 +39,7 @@ import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
+import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
@@ -228,6 +229,114 @@ class AssignmentCommandServiceTest : StringSpec({
 
         publishAttempt shouldBe 2
         publisher.events.map { it.problemId } shouldBe assignmentIds.take(2)
+    }
+
+    "과제 삭제는 중간 삭제가 실패해도 나머지 저장소를 순서대로 삭제하고 이벤트를 발행하지 않는다" {
+        val fixture = AssignmentCommandFixture()
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val assignmentId = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111"
+        val assignment = commandAssignment(id = assignmentId, courseId = "course-1", status = AssignmentStatus.DRAFT)
+        val requirementDeletePublisher = TestPublisher.create<Long>()
+        val testCaseDeletePublisher = TestPublisher.create<Long>()
+        val deliveryDeletePublisher = TestPublisher.create<Long>()
+        val assignmentDeletePublisher = TestPublisher.create<Void>()
+        val failure = IllegalStateException("testcase delete failed")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.assignmentRepository.findByIdAndCourseId(assignmentId, "course-1"))
+            .thenReturn(Mono.just(assignment))
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(requirementDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(testCaseDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)))
+            .thenReturn(deliveryDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentRepository.deleteById(assignmentId))
+            .thenReturn(assignmentDeletePublisher.mono())
+
+        StepVerifier.create(fixture.service.deleteAssignment("back-basic", assignmentId))
+            .then {
+                requirementDeletePublisher.assertSubscribers(1)
+                testCaseDeletePublisher.assertNoSubscribers()
+                deliveryDeletePublisher.assertNoSubscribers()
+                assignmentDeletePublisher.assertNoSubscribers()
+            }
+            .then { requirementDeletePublisher.emit(1L) }
+            .then {
+                testCaseDeletePublisher.assertSubscribers(1)
+                deliveryDeletePublisher.assertNoSubscribers()
+                assignmentDeletePublisher.assertNoSubscribers()
+            }
+            .then { testCaseDeletePublisher.error(failure) }
+            .then {
+                deliveryDeletePublisher.assertSubscribers(1)
+                assignmentDeletePublisher.assertNoSubscribers()
+            }
+            .then { deliveryDeletePublisher.emit(1L) }
+            .then { assignmentDeletePublisher.assertSubscribers(1) }
+            .then { assignmentDeletePublisher.complete() }
+            .expectErrorSatisfies { error -> error shouldBe failure }
+            .verify()
+
+        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
+    }
+
+    "코스 과제 삭제는 복수 실패를 모아 전파하면서 모든 저장소를 순서대로 시도한다" {
+        val fixture = AssignmentCommandFixture()
+        val assignment = commandAssignment(
+            id = "8f7f8a47-3f5e-4f59-9f2d-a9a9e7b6f111",
+            courseId = "course-1",
+            status = AssignmentStatus.PUBLISHED,
+        )
+        val assignmentIds = listOf(requireNotNull(assignment.id))
+        val requirementDeletePublisher = TestPublisher.create<Long>()
+        val testCaseDeletePublisher = TestPublisher.create<Long>()
+        val deliveryDeletePublisher = TestPublisher.create<Long>()
+        val assignmentDeletePublisher = TestPublisher.create<Void>()
+        val requirementFailure = IllegalStateException("requirement delete failed")
+        val deliveryFailure = IllegalArgumentException("delivery delete failed")
+
+        Mockito.`when`(fixture.assignmentRepository.findAllByCourseId("course-1"))
+            .thenReturn(Flux.just(assignment))
+        Mockito.`when`(fixture.assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds))
+            .thenReturn(requirementDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentTestCaseRepository.deleteAllByAssignmentIdIn(assignmentIds))
+            .thenReturn(testCaseDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds))
+            .thenReturn(deliveryDeletePublisher.mono())
+        Mockito.`when`(fixture.assignmentRepository.deleteAllById(assignmentIds))
+            .thenReturn(assignmentDeletePublisher.mono())
+
+        StepVerifier.create(fixture.service.deleteAllByCourseId("course-1"))
+            .then {
+                requirementDeletePublisher.assertSubscribers(1)
+                testCaseDeletePublisher.assertNoSubscribers()
+                deliveryDeletePublisher.assertNoSubscribers()
+                assignmentDeletePublisher.assertNoSubscribers()
+            }
+            .then { requirementDeletePublisher.error(requirementFailure) }
+            .then {
+                testCaseDeletePublisher.assertSubscribers(1)
+                deliveryDeletePublisher.assertNoSubscribers()
+                assignmentDeletePublisher.assertNoSubscribers()
+            }
+            .then { testCaseDeletePublisher.emit(1L) }
+            .then {
+                deliveryDeletePublisher.assertSubscribers(1)
+                assignmentDeletePublisher.assertNoSubscribers()
+            }
+            .then { deliveryDeletePublisher.error(deliveryFailure) }
+            .then { assignmentDeletePublisher.assertSubscribers(1) }
+            .then { assignmentDeletePublisher.complete() }
+            .expectErrorSatisfies { error ->
+                val failures = Exceptions.unwrapMultipleExcludingTracebacks(error)
+                failures shouldHaveSize 2
+                failures.contains(requirementFailure) shouldBe true
+                failures.contains(deliveryFailure) shouldBe true
+            }
+            .verify()
+
+        fixture.assignmentReportTestCaseEventPublisher.events shouldBe emptyList()
     }
 
     "과제 복사는 요청을 복사 서비스에 그대로 위임한다" {
