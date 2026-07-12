@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.assignment.infrastructure.submission.event
+package com.example.aandi_post_web_server.assignment.application.submission.model
 
 import java.time.Instant
 

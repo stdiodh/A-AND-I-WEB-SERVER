@@ -1,7 +1,7 @@
 package com.example.aandi_post_web_server.assignment.application.submission.service
 
+import com.example.aandi_post_web_server.assignment.application.submission.model.JudgeCompletedEvent
 import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
-import com.example.aandi_post_web_server.assignment.infrastructure.submission.event.JudgeCompletedEvent
 import reactor.core.publisher.Mono
 import java.time.Clock
 import java.time.Instant

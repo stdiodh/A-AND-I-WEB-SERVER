@@ -1,5 +1,6 @@
 package com.example.aandi_post_web_server.assignment.infrastructure.submission.event
 
+import com.example.aandi_post_web_server.assignment.application.submission.model.JudgeCompletedEvent
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.JsonNode

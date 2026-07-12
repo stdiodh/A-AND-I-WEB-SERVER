@@ -107,10 +107,11 @@ class LayerDependencyRegressionTest {
     @Test
     fun `assignment application does not depend on event infrastructure`() {
         val assignmentApplication = "$basePackage.assignment.application"
-        val eventInfrastructure = "$basePackage.assignment.infrastructure.event."
+        val assignmentInfrastructure = "$basePackage.assignment.infrastructure."
         val violations = scanMainSourceImports { packageName, importName, relativePath ->
             if (!isSameOrChildPackage(packageName, assignmentApplication)) return@scanMainSourceImports null
-            if (!importName.startsWith(eventInfrastructure)) return@scanMainSourceImports null
+            if (!importName.startsWith(assignmentInfrastructure)) return@scanMainSourceImports null
+            if (!importName.contains(".event.")) return@scanMainSourceImports null
 
             "$relativePath -> assignment application depends on event infrastructure: $importName"
         }
