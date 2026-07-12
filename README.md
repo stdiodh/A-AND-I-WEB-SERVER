@@ -119,6 +119,16 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 
 이미지는 2026-06-23 gate 보강 시점의 기록입니다. 과거 checkpoint와 scope 변경 이력은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 보존합니다. 현재 제외 대상은 Spring Boot 진입점과 OpenAPI schema-only 문서 모델뿐이며, 코루틴·controller·service·DTO·validator는 모두 측정합니다.
 
+### CI/CD 실행 시간
+
+| 단계 | 기존 중앙값 | 개선 후 중앙값 | 단축 | 개선율 | 측정 범위 |
+| :--- | ---: | ---: | ---: | ---: | :--- |
+| 1차 동일 범위 CI | 140.0초 | 109.0초 | 31.0초 | 22.1% | GitHub Actions 성공 5회 중앙값 |
+| 2차 문서-only CI 분기 | 124.0초 | 28.0초 | 96.0초 | 77.4% | 실제 README-only push 성공 5회 중앙값 |
+| 1차 CD dry-run 전체 경로 | 211.0초 | 82.0초 | 129.0초 | 61.1% | `push: false`, 성공 5회 중앙값 |
+
+개선율은 `(기존 - 개선 후) / 기존 × 100`으로 계산합니다. 2차 표본은 [개선 전 실행](https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/29148359466)과 [개선 후 실행](https://github.com/Team-AnI/A-AND-I-WEB-SERVER/actions/runs/29149660905)의 첫 job 시작부터 `full-gate-ci` 완료까지를 비교했으며, 각 실행과 재실행 5회가 모두 성공했습니다. 단계별 변경 범위가 다르므로 수치를 누적해서 해석하지 않습니다. CD 수치는 AWS·ECR·EC2 SSH·운영 URL을 사용하지 않은 dry-run이며 실제 운영 배포 시간을 뜻하지 않습니다. 1차 지표의 상세 표본과 제약은 [CI/CD 최적화 측정](./docs/cicd-optimization.md)에 보존합니다.
+
 ### 읽기 API 부하 테스트
 
 과제 목록 조회에서 assignment마다 requirement와 testcase를 따로 조회하던 구조를 batch 조회로 변경했습니다.

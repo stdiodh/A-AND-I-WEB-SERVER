@@ -24,12 +24,30 @@ env:
 jobs:
   backend-test:
     runs-on: ubuntu-latest
+    outputs:
+      validation_scope: ${{ steps.backend-scope.outputs.scope }}
+      validation_executed: ${{ steps.backend-scope.outputs.run_backend }}
+      duration_seconds: ${{ steps.backend-duration.outputs.seconds }}
 
     steps:
+      - name: Start backend timer
+        id: backend-timer
+        run: echo "started_at=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Classify backend validation scope
+        id: backend-scope
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: bash scripts/ci/classify-backend-scope.sh
 
       - name: Set up JDK 21
+        if: steps.backend-scope.outputs.run_backend == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -37,17 +55,45 @@ jobs:
           cache: gradle
 
       - name: Make Gradle wrapper executable
+        if: steps.backend-scope.outputs.run_backend == 'true'
         run: chmod +x ./gradlew
 
       - name: Run backend tests and coverage verification
+        if: steps.backend-scope.outputs.run_backend == 'true'
         run: ./gradlew test jacocoTestCoverageVerification --build-cache --no-daemon
+
+      - name: Record backend duration
+        id: backend-duration
+        if: always()
+        env:
+          STARTED_AT: ${{ steps.backend-timer.outputs.started_at }}
+        run: echo "seconds=$(( $(date +%s) - STARTED_AT ))" >> "$GITHUB_OUTPUT"
 
   performance-assets:
     runs-on: ubuntu-latest
+    outputs:
+      duration_seconds: ${{ steps.performance-duration.outputs.seconds }}
 
     steps:
+      - name: Start performance timer
+        id: performance-timer
+        run: echo "started_at=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Validate CI shell scripts
+        run: |
+          bash -n scripts/ci/*.sh
+          bash scripts/ci/ci-scripts.test.sh
+
+      - name: Validate changed-file whitespace
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: bash scripts/ci/check-changed-whitespace.sh
 
       - name: Cache k6 binary
         id: cache-k6
@@ -132,8 +178,12 @@ jobs:
       - name: Validate resume metrics state
         run: python3 scripts/validate-web-cicd-metrics.py --allow-pending docs/metrics/web-cicd-remeasure.json
 
-      - name: Validate git whitespace
-        run: git diff --check
+      - name: Record performance duration
+        id: performance-duration
+        if: always()
+        env:
+          STARTED_AT: ${{ steps.performance-timer.outputs.started_at }}
+        run: echo "seconds=$(( $(date +%s) - STARTED_AT ))" >> "$GITHUB_OUTPUT"
 
   full-gate-ci:
     runs-on: ubuntu-latest
@@ -143,7 +193,7 @@ jobs:
     if: always()
 
     steps:
-      - name: Require same-scope CI jobs
+      - name: Require CI jobs
         run: |
           test "${{ needs.backend-test.result }}" = "success"
           test "${{ needs.performance-assets.result }}" = "success"
@@ -153,10 +203,10 @@ jobs:
           {
             echo "## CI gate summary"
             echo
-            echo "| Job | Result | Scope |"
-            echo "| :--- | :--- | :--- |"
-            echo "| backend-test | ${{ needs.backend-test.result }} | same-scope |"
-            echo "| performance-assets | ${{ needs.performance-assets.result }} | same-scope |"
+            echo "| Job | Result | Scope | Duration |"
+            echo "| :--- | :--- | :--- | ---: |"
+            echo "| backend-test | ${{ needs.backend-test.result }} | ${{ needs.backend-test.outputs.validation_scope }} | ${{ needs.backend-test.outputs.duration_seconds }}s |"
+            echo "| performance-assets | ${{ needs.performance-assets.result }} | always | ${{ needs.performance-assets.outputs.duration_seconds }}s |"
             echo
             echo "build-jar is intentionally excluded from the PR gate and measured in the CD dry-run path."
           } >> "$GITHUB_STEP_SUMMARY"
