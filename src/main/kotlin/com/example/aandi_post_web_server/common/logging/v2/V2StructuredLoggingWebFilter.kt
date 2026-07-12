@@ -186,9 +186,8 @@ class V2StructuredLoggingWebFilter(
                 return
             }
 
-            val byteBuffer = dataBuffer.toReadOnlyByteBuffer()
-            val bytes = ByteArray(byteBuffer.remaining())
-            byteBuffer.get(bytes)
+            val bytes = ByteArray(dataBuffer.readableByteCount())
+            dataBuffer.toByteBuffer(ByteBuffer.wrap(bytes))
 
             totalBytes += bytes.size
             if (buffer.size >= maxBodyBytes) {
@@ -225,9 +224,6 @@ class V2StructuredLoggingWebFilter(
                 omittedReason = omittedReason,
             )
         }
-
-        private fun DataBuffer.toReadOnlyByteBuffer(): ByteBuffer =
-            asByteBuffer().asReadOnlyBuffer()
 
         companion object {
             private fun isUnsupported(contentType: MediaType?): Boolean {
