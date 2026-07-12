@@ -6,6 +6,7 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryRes
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.application.mapper.toDetailResponse
 import com.example.aandi_post_web_server.assignment.application.mapper.toResponse
+import com.example.aandi_post_web_server.assignment.application.mapper.toSummaryResponse
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentContentQueryStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
@@ -223,22 +224,21 @@ class AssignmentQueryService(
     ): Mono<AssignmentDetailResponse> =
         assignmentContentQueryStore
             .findOrderedRequirementsByAssignmentId(assignmentId.value)
-            .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
+            .map { it.toResponse() }
             .collectList()
             .zipWith(
                 assignmentContentQueryStore
                     .findOrderedTestCasesByAssignmentId(assignmentId.value)
                     .filter { includeHidden || it.visibility == AssignmentTestCaseVisibility.PUBLIC }
-                    .map { AssignmentTestCaseResponse(it.seq, it.inputValues, it.outputText, it.visibility) }
+                    .map { it.toResponse() }
                     .collectList()
             )
             .map { tuple ->
-                toAssignmentDetailResponse(
-                    courseSlug,
-                    assignment,
-                    effectiveAssignment(assignment),
-                    tuple.t1,
-                    tuple.t2,
+                assignment.toDetailResponse(
+                    courseSlug = courseSlug,
+                    publication = effectivePublication(assignment),
+                    requirements = tuple.t1,
+                    testCases = tuple.t2,
                 )
             }
 
@@ -277,25 +277,16 @@ class AssignmentQueryService(
                         val assignmentId = requireNotNull(assignment.id)
                         val requirements = tuple.t1[assignmentId].orEmpty()
                             .map { requirement ->
-                                AssignmentRequirementResponse(
-                                    requirement.sortOrder,
-                                    requirement.requirementText,
-                                )
+                                requirement.toResponse()
                             }
                         val testCases = tuple.t2[assignmentId].orEmpty()
                             .map { testCase ->
-                                AssignmentTestCaseResponse(
-                                    testCase.seq,
-                                    testCase.inputValues,
-                                    testCase.outputText,
-                                    testCase.visibility,
-                                )
+                                testCase.toResponse()
                             }
-                        toAssignmentSummaryResponse(
-                            assignment,
-                            effectiveAssignment(assignment, now),
-                            requirements,
-                            testCases,
+                        assignment.toSummaryResponse(
+                            publication = effectivePublication(assignment, now),
+                            requirements = requirements,
+                            testCases = testCases,
                         )
                     }
                 )
@@ -331,17 +322,6 @@ class AssignmentQueryService(
     private fun isVisibleToUser(assignment: Assignment): Boolean =
         effectivePublication(assignment).status == AssignmentStatus.PUBLISHED
 
-    private fun effectiveAssignment(
-        assignment: Assignment,
-        now: Instant = assignmentPublicationPolicy.now(),
-    ): Assignment {
-        val publication = effectivePublication(assignment, now)
-        return assignment.copy(
-            status = publication.status,
-            publishedAt = publication.publishedAt,
-        )
-    }
-
     private fun effectivePublication(
         assignment: Assignment,
         now: Instant = assignmentPublicationPolicy.now(),
@@ -352,37 +332,4 @@ class AssignmentQueryService(
         now = now,
     )
 
-    private fun toAssignmentSummaryResponse(
-        assignment: Assignment,
-        effectiveAssignment: Assignment,
-        requirements: List<AssignmentRequirementResponse>,
-        testCases: List<AssignmentTestCaseResponse>,
-    ): AssignmentSummaryResponse = AssignmentSummaryResponse(
-        id = requireNotNull(assignment.id),
-        weekNo = assignment.weekNo,
-        orderInWeek = assignment.orderInWeek,
-        startAt = assignment.startAt,
-        endAt = assignment.endAt,
-        status = effectiveAssignment.status,
-        publishedAt = effectiveAssignment.publishedAt,
-        metadata = assignment.metadata.toResponse(requirements, testCases),
-    )
-
-    private fun toAssignmentDetailResponse(
-        courseSlug: String,
-        assignment: Assignment,
-        effectiveAssignment: Assignment,
-        requirements: List<AssignmentRequirementResponse>,
-        testCases: List<AssignmentTestCaseResponse>,
-    ): AssignmentDetailResponse = AssignmentDetailResponse(
-        id = requireNotNull(assignment.id),
-        courseSlug = courseSlug,
-        weekNo = assignment.weekNo,
-        orderInWeek = assignment.orderInWeek,
-        startAt = assignment.startAt,
-        endAt = assignment.endAt,
-        status = effectiveAssignment.status,
-        publishedAt = effectiveAssignment.publishedAt,
-        metadata = assignment.metadata.toDetailResponse(requirements, testCases),
-    )
 }

@@ -3,6 +3,7 @@ package com.example.aandi_post_web_server.assignment.application.service
 import com.example.aandi_post_web_server.assignment.application.mapper.toDetailResponse
 import com.example.aandi_post_web_server.assignment.application.mapper.toDraft
 import com.example.aandi_post_web_server.assignment.application.mapper.toEntity
+import com.example.aandi_post_web_server.assignment.application.mapper.toResponse
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseDrafts
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPublicationPolicy
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentRequirementDrafts
@@ -103,9 +104,9 @@ class AssignmentCommandService(
                                     .flatMap { requirements ->
                                         saveTestCases(assignmentId, testCaseDrafts)
                                             .flatMap { testCases ->
-                                                val response = toAssignmentDetailResponse(
+                                                val response = assignment.toDetailResponse(
                                                     courseSlug = course.slug,
-                                                    assignment = assignment,
+                                                    publication = effectivePublication(assignment),
                                                     requirements = requirements,
                                                     testCases = testCases,
                                                 )
@@ -239,7 +240,7 @@ class AssignmentCommandService(
             drafts.toEntities(assignmentId.value, Instant.now())
         )
             .sort(compareBy<AssignmentRequirement> { it.sortOrder })
-            .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
+            .map { it.toResponse() }
             .collectList()
     }
 
@@ -253,7 +254,7 @@ class AssignmentCommandService(
             drafts.toEntities(assignmentId.value, Instant.now())
         )
             .sort(compareBy<AssignmentTestCase> { it.seq })
-            .map { AssignmentTestCaseResponse(it.seq, it.inputValues, it.outputText, it.visibility) }
+            .map { it.toResponse() }
             .collectList()
     }
 
@@ -336,7 +337,12 @@ class AssignmentCommandService(
                     .flatMap { requirements ->
                         loadOrReplaceTestCases(parsedAssignmentId, testCaseDrafts)
                             .flatMap { testCases ->
-                                val response = toAssignmentDetailResponse(course.slug, saved, requirements, testCases)
+                                val response = saved.toDetailResponse(
+                                    courseSlug = course.slug,
+                                    publication = effectivePublication(saved),
+                                    requirements = requirements,
+                                    testCases = testCases,
+                                )
                                 logAssignmentUpdatedEvents(previous = assignment, current = saved)
                                 publishProblemSyncOnUpdate(saved)
                                     .thenReturn(response)
@@ -351,7 +357,7 @@ class AssignmentCommandService(
     ): Mono<List<AssignmentRequirementResponse>> {
         if (drafts == null) {
             return assignmentCommandContentStore.findOrderedRequirementsByAssignmentId(assignmentId.value)
-                .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
+                .map { it.toResponse() }
                 .collectList()
         }
         return assignmentCommandContentStore.deleteRequirementsByAssignmentId(assignmentId.value)
@@ -364,7 +370,7 @@ class AssignmentCommandService(
     ): Mono<List<AssignmentTestCaseResponse>> {
         if (drafts == null) {
             return assignmentCommandContentStore.findOrderedTestCasesByAssignmentId(assignmentId.value)
-                .map { AssignmentTestCaseResponse(it.seq, it.inputValues, it.outputText, it.visibility) }
+                .map { it.toResponse() }
                 .collectList()
         }
         return assignmentCommandContentStore.deleteTestCasesByAssignmentId(assignmentId.value)
@@ -497,26 +503,6 @@ class AssignmentCommandService(
         return runCatching(block).getOrElse { error ->
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, error.message ?: "잘못된 요청입니다.")
         }
-    }
-
-    private fun toAssignmentDetailResponse(
-        courseSlug: String,
-        assignment: Assignment,
-        requirements: List<AssignmentRequirementResponse>,
-        testCases: List<AssignmentTestCaseResponse>,
-    ): AssignmentDetailResponse {
-        val publication = effectivePublication(assignment)
-        return AssignmentDetailResponse(
-            id = requireNotNull(assignment.id),
-            courseSlug = courseSlug,
-            weekNo = assignment.weekNo,
-            orderInWeek = assignment.orderInWeek,
-            startAt = assignment.startAt,
-            endAt = assignment.endAt,
-            status = publication.status,
-            publishedAt = publication.publishedAt,
-            metadata = assignment.metadata.toDetailResponse(requirements, testCases),
-        )
     }
 
     private fun effectivePublication(assignment: Assignment, now: Instant = assignmentPublicationPolicy.now()) =

@@ -5,6 +5,7 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentRequiremen
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.application.mapper.toDetailResponse
+import com.example.aandi_post_web_server.assignment.application.mapper.toResponse
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCopyContentStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCopyStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCoursePort
@@ -151,9 +152,9 @@ class AssignmentCopyService(
                             .then(Mono.error(mapDuplicateAssignmentCopyConflict(error)))
                     }
                     .flatMap { (requirements, testCases) ->
-                        val response = toAssignmentDetailResponse(
+                        val response = saved.toDetailResponse(
                             courseSlug = targetCourse.slug,
-                            assignment = saved,
+                            publication = effectivePublication(saved),
                             requirements = requirements,
                             testCases = testCases,
                         )
@@ -220,7 +221,7 @@ class AssignmentCopyService(
             }
         )
             .sort(compareBy<AssignmentRequirement> { it.sortOrder })
-            .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
+            .map { it.toResponse() }
             .collectList()
     }
 
@@ -251,7 +252,7 @@ class AssignmentCopyService(
             }
         )
             .sort(compareBy<AssignmentTestCase> { it.seq })
-            .map { AssignmentTestCaseResponse(it.seq, it.inputValues, it.outputText, it.visibility) }
+            .map { it.toResponse() }
             .collectList()
     }
 
@@ -346,26 +347,6 @@ class AssignmentCopyService(
 
     private fun publishProblemSyncOnCreate(assignment: Assignment): Mono<Void> =
         assignmentProblemSyncPort.publishCreated(requireNotNull(assignment.id))
-
-    private fun toAssignmentDetailResponse(
-        courseSlug: String,
-        assignment: Assignment,
-        requirements: List<AssignmentRequirementResponse>,
-        testCases: List<AssignmentTestCaseResponse>,
-    ): AssignmentDetailResponse {
-        val publication = effectivePublication(assignment)
-        return AssignmentDetailResponse(
-            id = requireNotNull(assignment.id),
-            courseSlug = courseSlug,
-            weekNo = assignment.weekNo,
-            orderInWeek = assignment.orderInWeek,
-            startAt = assignment.startAt,
-            endAt = assignment.endAt,
-            status = publication.status,
-            publishedAt = publication.publishedAt,
-            metadata = assignment.metadata.toDetailResponse(requirements, testCases),
-        )
-    }
 
     private fun logAssignmentReportEvent(
         eventType: AssignmentReportEventType,
