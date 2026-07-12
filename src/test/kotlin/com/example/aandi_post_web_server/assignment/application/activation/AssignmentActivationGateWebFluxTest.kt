@@ -126,6 +126,7 @@ class AssignmentActivationGateWebFluxTest : StringSpec() {
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.error.code").isEqualTo("ASSIGNMENT_DEACTIVATED")
+                .jsonPath("$.error.message").isEqualTo("현재 과제 기능이 비활성화되어 있습니다.")
         }
 
         "게이트 대상이 아닌 경로(/v2/courses/{slug}/outline) 는 비활성 상태에서도 통과한다" {

@@ -4,7 +4,6 @@ import com.example.aandi_post_web_server.common.openapi.ApiEnvelope
 import com.example.aandi_post_web_server.common.api.envelope.V2ApiEnvelope
 import com.example.aandi_post_web_server.common.api.factory.V2ApiResponseFactory
 import com.example.aandi_post_web_server.common.error.v2.AssignmentDeactivatedException
-import com.example.aandi_post_web_server.common.error.v2.V2ErrorCode
 import com.example.aandi_post_web_server.common.error.v2.V2ExceptionMapper
 import com.example.aandi_post_web_server.common.security.v2.V2PathMatcher
 import org.springframework.http.HttpStatus
@@ -116,7 +115,7 @@ class GlobalApiExceptionHandler(
         }
         val body = ApiEnvelope.failure(
             code = ErrorCode.ASSIGNMENT_DEACTIVATED.name,
-            message = ex.message ?: V2ErrorCode.ASSIGNMENT_DEACTIVATED.messageTemplate,
+            message = ex.message,
         )
         val result = ApiErrorResult(status = HttpStatus.SERVICE_UNAVAILABLE, body = body)
         logWarn(exchange, result, ex)
