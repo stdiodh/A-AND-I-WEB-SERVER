@@ -20,7 +20,9 @@ import com.example.aandi_post_web_server.course.infrastructure.repository.Course
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.Exceptions
@@ -51,6 +53,34 @@ class CourseCommandServiceTest : StringSpec({
         )
             .expectErrorSatisfies { error ->
                 (error as ResponseStatusException).statusCode shouldBe HttpStatus.CONFLICT
+            }
+            .verify()
+    }
+
+    "코스 생성 중 slug unique 충돌이 발생하면 CONFLICT를 반환한다" {
+        val fixture = CourseCommandFixture()
+        val duplicate = DuplicateKeyException("course slug race")
+        val request = CreateCourseRequest(
+            slug = "back-basic",
+            fieldTag = CourseTrack.FL,
+            startDate = LocalDate.parse("2026-03-01"),
+            endDate = LocalDate.parse("2026-03-28"),
+            metadata = CourseMetadataPayload(
+                title = "BACK 기초",
+                description = "desc",
+                phase = CoursePhase.BASIC,
+            ),
+        )
+        Mockito.`when`(fixture.courseRepository.existsBySlug("back-basic")).thenReturn(Mono.just(false))
+        Mockito.`when`(fixture.courseRepository.save(ArgumentMatchers.any(Course::class.java)))
+            .thenReturn(Mono.error(duplicate))
+
+        StepVerifier.create(fixture.service.createCourse(request))
+            .expectErrorSatisfies { error ->
+                val exception = error as ResponseStatusException
+                exception.statusCode shouldBe HttpStatus.CONFLICT
+                exception.reason shouldBe "이미 존재하는 코스 slug입니다: back-basic"
+                exception.cause shouldBe duplicate
             }
             .verify()
     }

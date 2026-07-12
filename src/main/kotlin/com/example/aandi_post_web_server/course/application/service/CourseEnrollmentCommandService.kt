@@ -16,6 +16,7 @@ import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -160,17 +161,15 @@ class CourseEnrollmentCommandService(
     ): Mono<CourseEnrollmentResponse> {
         return courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, reportUser.id)
             .flatMap<CourseEnrollmentResponse> { existing ->
-                val message = if (existing.status == EnrollmentStatus.BANNED) {
-                    "차단된 사용자는 재등록할 수 없습니다: ${reportUser.publicCode}"
-                } else {
-                    "이미 등록된 사용자입니다. courseId=${courseId.value}, userId=${reportUser.id}"
-                }
-                Mono.error(
+                val conflict = if (existing.status == EnrollmentStatus.BANNED) {
                     ResponseStatusException(
                         HttpStatus.CONFLICT,
-                        message,
+                        "차단된 사용자는 재등록할 수 없습니다: ${reportUser.publicCode}",
                     )
-                )
+                } else {
+                    duplicateEnrollmentConflict(courseId.value, reportUser.id)
+                }
+                Mono.error(conflict)
             }
             .switchIfEmpty(
                 Mono.defer {
@@ -186,6 +185,9 @@ class CourseEnrollmentCommandService(
                             updatedAt = now,
                         )
                     )
+                        .onErrorMap(DuplicateKeyException::class.java) { error ->
+                            duplicateEnrollmentConflict(courseId.value, reportUser.id, error)
+                        }
                         .map { enrollment -> toEnrollmentResponse(courseSlug, enrollment) }
                 }
             )
@@ -215,6 +217,17 @@ class CourseEnrollmentCommandService(
 
     private fun parsePublicCode(raw: String): PublicCode =
         parseOrBadRequest { PublicCode.from(raw) }
+
+    private fun duplicateEnrollmentConflict(
+        courseId: String,
+        userId: String,
+        cause: Throwable? = null,
+    ): ResponseStatusException =
+        ResponseStatusException(
+            HttpStatus.CONFLICT,
+            "이미 등록된 사용자입니다. courseId=$courseId, userId=$userId",
+            cause,
+        )
 
     private fun <T> parseOrBadRequest(block: () -> T): T {
         return runCatching(block).getOrElse { error ->

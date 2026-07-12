@@ -20,6 +20,7 @@ import com.example.aandi_post_web_server.course.entity.CourseMetadata
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -40,7 +41,7 @@ class CourseCommandService(
         return courseRepository.existsBySlug(slug.value)
             .flatMap { exists ->
                 if (exists) {
-                    return@flatMap Mono.error(ResponseStatusException(HttpStatus.CONFLICT, "이미 존재하는 코스 slug입니다: ${slug.value}"))
+                    return@flatMap Mono.error(duplicateCourseSlugConflict(slug.value))
                 }
                 createCourseEntity(request, slug)
             }
@@ -143,7 +144,11 @@ class CourseCommandService(
             createdAt = now,
             updatedAt = now,
         )
-        return courseRepository.save(course).map(::toCourseResponse)
+        return courseRepository.save(course)
+            .onErrorMap(DuplicateKeyException::class.java) { error ->
+                duplicateCourseSlugConflict(slug.value, error)
+            }
+            .map(::toCourseResponse)
     }
 
     private fun deleteCourseRelations(courseId: String): Mono<Void> =
@@ -161,6 +166,12 @@ class CourseCommandService(
 
     private fun parseCourseId(raw: String): CourseId =
         parseOrBadRequest { CourseId.from(raw) }
+
+    private fun duplicateCourseSlugConflict(
+        slug: String,
+        cause: Throwable? = null,
+    ): ResponseStatusException =
+        ResponseStatusException(HttpStatus.CONFLICT, "이미 존재하는 코스 slug입니다: $slug", cause)
 
     private fun <T> parseOrBadRequest(block: () -> T): T =
         runCatching(block).getOrElse { error ->

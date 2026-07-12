@@ -16,6 +16,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Mono
@@ -24,6 +25,34 @@ import java.time.Instant
 import java.time.LocalDate
 
 class CourseEnrollmentCommandServiceTest : StringSpec({
+    "수강 등록 중 사용자 unique 충돌이 발생하면 CONFLICT를 반환한다" {
+        val fixture = CourseEnrollmentCommandFixture()
+        val duplicate = DuplicateKeyException("course enrollment race")
+        val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
+        val reportUser = enrollmentUser(id = "user-1", publicCode = "#FL301", role = "USER")
+
+        Mockito.`when`(fixture.courseRepository.findBySlug("back-basic")).thenReturn(Mono.just(course))
+        Mockito.`when`(fixture.userQueryPort.findByPublicCode("#FL301")).thenReturn(Mono.just(reportUser))
+        Mockito.`when`(fixture.courseEnrollmentRepository.findByCourseIdAndUserId("course-1", "user-1"))
+            .thenReturn(Mono.empty())
+        Mockito.`when`(fixture.courseEnrollmentRepository.save(ArgumentMatchers.any(CourseEnrollment::class.java)))
+            .thenReturn(Mono.error(duplicate))
+
+        StepVerifier.create(
+            fixture.service.enrollMember(
+                courseSlug = "back-basic",
+                request = EnrollCourseRequest(publicCode = "FL301"),
+            )
+        )
+            .expectErrorSatisfies { error ->
+                val exception = error as ResponseStatusException
+                exception.statusCode shouldBe HttpStatus.CONFLICT
+                exception.reason shouldBe "이미 등록된 사용자입니다. courseId=course-1, userId=user-1"
+                exception.cause shouldBe duplicate
+            }
+            .verify()
+    }
+
     "BANNED 상태 변경은 banReason이 필수다" {
         val fixture = CourseEnrollmentCommandFixture()
         val course = queryCourse(id = "course-1", slug = "back-basic", title = "BACK 기초")
