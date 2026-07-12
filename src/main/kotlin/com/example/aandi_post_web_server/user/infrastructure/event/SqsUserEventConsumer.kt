@@ -25,6 +25,7 @@ class SqsUserEventConsumer(
 ) : SmartLifecycle {
 
     private val log = LoggerFactory.getLogger(SqsUserEventConsumer::class.java)
+    private val lifecycleMonitor = Any()
     private val running = AtomicBoolean(false)
     private var pollingSubscription: Disposable? = null
 
@@ -37,44 +38,48 @@ class SqsUserEventConsumer(
             "app.events.user-sync.queue-url must not be blank when enabled=true"
         }
 
-        if (!running.compareAndSet(false, true)) {
-            return
-        }
+        synchronized(lifecycleMonitor) {
+            if (!running.compareAndSet(false, true)) {
+                return
+            }
 
-        pollingSubscription = Flux.defer { pollBatch() }
-            .repeat()
-            .retryWhen(
-                Retry.backoff(Long.MAX_VALUE, Duration.ofSeconds(1))
-                    .maxBackoff(Duration.ofSeconds(30))
-                    .doBeforeRetry { signal ->
-                        log.warn(
-                            "user-sync SQS polling failed; retrying consumer loop (attempt={})",
-                            signal.totalRetries() + 1,
-                            signal.failure(),
-                        )
+            pollingSubscription = Flux.defer { pollBatch() }
+                .repeat()
+                .retryWhen(
+                    Retry.backoff(Long.MAX_VALUE, Duration.ofSeconds(1))
+                        .maxBackoff(Duration.ofSeconds(30))
+                        .doBeforeRetry { signal ->
+                            log.warn(
+                                "user-sync SQS polling failed; retrying consumer loop (attempt={})",
+                                signal.totalRetries() + 1,
+                                signal.failure(),
+                            )
+                        }
+                )
+                .subscribe(
+                    {},
+                    { ex ->
+                        running.set(false)
+                        log.error("user-sync SQS consumer terminated unexpectedly", ex)
                     }
-            )
-            .subscribe(
-                {},
-                { ex ->
-                    running.set(false)
-                    log.error("user-sync SQS consumer terminated unexpectedly", ex)
-                }
-            )
+                )
 
-        log.info(
-            "user-sync SQS consumer started: queueUrl={}, waitTimeSeconds={}, maxNumberOfMessages={}",
-            properties.queueUrl,
-            properties.waitTimeSeconds,
-            properties.maxNumberOfMessages,
-        )
+            log.info(
+                "user-sync SQS consumer started: queueUrl={}, waitTimeSeconds={}, maxNumberOfMessages={}",
+                properties.queueUrl,
+                properties.waitTimeSeconds,
+                properties.maxNumberOfMessages,
+            )
+        }
     }
 
     override fun stop() {
-        pollingSubscription?.dispose()
-        pollingSubscription = null
-        if (running.compareAndSet(true, false)) {
-            log.info("user-sync SQS consumer stopped")
+        synchronized(lifecycleMonitor) {
+            pollingSubscription?.dispose()
+            pollingSubscription = null
+            if (running.compareAndSet(true, false)) {
+                log.info("user-sync SQS consumer stopped")
+            }
         }
     }
 

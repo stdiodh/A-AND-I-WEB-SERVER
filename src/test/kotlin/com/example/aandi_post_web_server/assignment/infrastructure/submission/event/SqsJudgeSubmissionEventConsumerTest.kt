@@ -24,6 +24,9 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageResponse
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 class SqsJudgeSubmissionEventConsumerTest : StringSpec({
     val queueUrl = JUDGE_QUEUE_URL
@@ -95,6 +98,78 @@ class SqsJudgeSubmissionEventConsumerTest : StringSpec({
         consumer.isRunning shouldBe false
         callbackCount shouldBe 1
         runningAtCallback shouldBe false
+    }
+
+    "시작 도중 중지해도 polling subscription 을 남기지 않는다" {
+        val sqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
+        val consumer = judgeSubmissionEventConsumer(
+            sqsAsyncClient,
+            InMemoryAssignmentSubmissionStatusProjectionStore(),
+        )
+        val receiveEntered = CountDownLatch(1)
+        val allowReceiveReturn = CountDownLatch(1)
+        val stopCompleted = CountDownLatch(1)
+        val pendingReceive = CompletableFuture<ReceiveMessageResponse>()
+        val startFailure = AtomicReference<Throwable?>()
+        val stopFailure = AtomicReference<Throwable?>()
+        Mockito.`when`(sqsAsyncClient.receiveMessage(ArgumentMatchers.any(ReceiveMessageRequest::class.java)))
+            .thenAnswer {
+                receiveEntered.countDown()
+                allowReceiveReturn.await()
+                pendingReceive
+            }
+        val startThread = Thread(
+            { runCatching { consumer.start() }.onFailure(startFailure::set) },
+            "judge-consumer-start",
+        ).apply { isDaemon = true }
+        val stopThread = Thread(
+            {
+                try {
+                    consumer.stop()
+                } catch (error: Throwable) {
+                    stopFailure.set(error)
+                } finally {
+                    stopCompleted.countDown()
+                }
+            },
+            "judge-consumer-stop",
+        ).apply { isDaemon = true }
+
+        startThread.start()
+        try {
+            receiveEntered.await(5, TimeUnit.SECONDS) shouldBe true
+            stopThread.start()
+            awaitStopBlockedOrCompleted(stopThread, stopCompleted) shouldBe true
+            allowReceiveReturn.countDown()
+            startThread.join(5_000)
+            stopThread.join(5_000)
+
+            startThread.isAlive shouldBe false
+            stopThread.isAlive shouldBe false
+            startFailure.get() shouldBe null
+            stopFailure.get() shouldBe null
+            consumer.isRunning shouldBe false
+            pendingReceive.isCancelled shouldBe true
+        } finally {
+            allowReceiveReturn.countDown()
+            if (stopThread.state == Thread.State.NEW) {
+                stopThread.start()
+            }
+            startThread.join(5_000)
+            stopThread.join(5_000)
+            if (startThread.isAlive) {
+                startThread.interrupt()
+            }
+            if (stopThread.isAlive) {
+                stopThread.interrupt()
+            }
+            startThread.join(2_000)
+            stopThread.join(2_000)
+            if (!startThread.isAlive && !stopThread.isAlive) {
+                consumer.stop()
+            }
+            pendingReceive.cancel(true)
+        }
     }
 
     "메시지 처리 성공 시 projection 저장 후 deleteMessage 를 호출한다" {
@@ -416,6 +491,19 @@ class SqsJudgeSubmissionEventConsumerTest : StringSpec({
             .deleteMessage(ArgumentMatchers.any(DeleteMessageRequest::class.java))
     }
 })
+
+private fun awaitStopBlockedOrCompleted(
+    stopThread: Thread,
+    stopCompleted: CountDownLatch,
+): Boolean {
+    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+    while (System.nanoTime() < deadline) {
+        if (stopCompleted.await(10, TimeUnit.MILLISECONDS) || stopThread.state == Thread.State.BLOCKED) {
+            return true
+        }
+    }
+    return false
+}
 
 private const val JUDGE_QUEUE_URL = "https://example.com/queues/judge-submission-events"
 

@@ -21,6 +21,9 @@ import software.amazon.awssdk.services.sqs.model.Message
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageResponse
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 class SqsUserEventConsumerTest : StringSpec({
     "활성화된 consumer 의 queue URL 이 비어 있으면 실행 상태를 남기지 않는다" {
@@ -80,6 +83,75 @@ class SqsUserEventConsumerTest : StringSpec({
         fixture.consumer.isRunning shouldBe false
         callbackCount shouldBe 1
         runningAtCallback shouldBe false
+    }
+
+    "시작 도중 중지해도 polling subscription 을 남기지 않는다" {
+        val fixture = UserEventConsumerFixture()
+        val receiveEntered = CountDownLatch(1)
+        val allowReceiveReturn = CountDownLatch(1)
+        val stopCompleted = CountDownLatch(1)
+        val pendingReceive = CompletableFuture<ReceiveMessageResponse>()
+        val startFailure = AtomicReference<Throwable?>()
+        val stopFailure = AtomicReference<Throwable?>()
+        Mockito.`when`(
+            fixture.sqsAsyncClient.receiveMessage(ArgumentMatchers.any(ReceiveMessageRequest::class.java))
+        ).thenAnswer {
+            receiveEntered.countDown()
+            allowReceiveReturn.await()
+            pendingReceive
+        }
+        val startThread = Thread(
+            { runCatching { fixture.consumer.start() }.onFailure(startFailure::set) },
+            "user-consumer-start",
+        ).apply { isDaemon = true }
+        val stopThread = Thread(
+            {
+                try {
+                    fixture.consumer.stop()
+                } catch (error: Throwable) {
+                    stopFailure.set(error)
+                } finally {
+                    stopCompleted.countDown()
+                }
+            },
+            "user-consumer-stop",
+        ).apply { isDaemon = true }
+
+        startThread.start()
+        try {
+            receiveEntered.await(5, TimeUnit.SECONDS) shouldBe true
+            stopThread.start()
+            awaitStopBlockedOrCompleted(stopThread, stopCompleted) shouldBe true
+            allowReceiveReturn.countDown()
+            startThread.join(5_000)
+            stopThread.join(5_000)
+
+            startThread.isAlive shouldBe false
+            stopThread.isAlive shouldBe false
+            startFailure.get() shouldBe null
+            stopFailure.get() shouldBe null
+            fixture.consumer.isRunning shouldBe false
+            pendingReceive.isCancelled shouldBe true
+        } finally {
+            allowReceiveReturn.countDown()
+            if (stopThread.state == Thread.State.NEW) {
+                stopThread.start()
+            }
+            startThread.join(5_000)
+            stopThread.join(5_000)
+            if (startThread.isAlive) {
+                startThread.interrupt()
+            }
+            if (stopThread.isAlive) {
+                stopThread.interrupt()
+            }
+            startThread.join(2_000)
+            stopThread.join(2_000)
+            if (!startThread.isAlive && !stopThread.isAlive) {
+                fixture.consumer.stop()
+            }
+            pendingReceive.cancel(true)
+        }
     }
 
     "메시지 처리 성공 시 deleteMessage 를 호출한다" {
@@ -205,6 +277,19 @@ class SqsUserEventConsumerTest : StringSpec({
             .deleteMessage(ArgumentMatchers.any(DeleteMessageRequest::class.java))
     }
 })
+
+private fun awaitStopBlockedOrCompleted(
+    stopThread: Thread,
+    stopCompleted: CountDownLatch,
+): Boolean {
+    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+    while (System.nanoTime() < deadline) {
+        if (stopCompleted.await(10, TimeUnit.MILLISECONDS) || stopThread.state == Thread.State.BLOCKED) {
+            return true
+        }
+    }
+    return false
+}
 
 private class UserEventConsumerFixture(
     properties: UserSyncEventProperties = UserSyncEventProperties(

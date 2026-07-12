@@ -28,6 +28,7 @@ class SqsJudgeSubmissionEventConsumer(
 ) : SmartLifecycle {
 
     private val log = LoggerFactory.getLogger(SqsJudgeSubmissionEventConsumer::class.java)
+    private val lifecycleMonitor = Any()
     private val running = AtomicBoolean(false)
     private var pollingSubscription: Disposable? = null
 
@@ -43,47 +44,51 @@ class SqsJudgeSubmissionEventConsumer(
             "AWS_REGION must not be blank when REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED=true"
         }
 
-        if (!running.compareAndSet(false, true)) {
-            return
-        }
+        synchronized(lifecycleMonitor) {
+            if (!running.compareAndSet(false, true)) {
+                return
+            }
 
-        pollingSubscription = Mono.defer { pollBatch().then() }
-            .repeatWhen { repeatSignal -> repeatSignal.delayElements(properties.pollDelay) }
-            .retryWhen(
-                Retry.backoff(Long.MAX_VALUE, Duration.ofSeconds(1))
-                    .maxBackoff(Duration.ofSeconds(30))
-                    .doBeforeRetry { signal ->
-                        log.warn(
-                            "judge-submission SQS polling failed; retrying consumer loop (attempt={})",
-                            signal.totalRetries() + 1,
-                            signal.failure(),
-                        )
+            pollingSubscription = Mono.defer { pollBatch().then() }
+                .repeatWhen { repeatSignal -> repeatSignal.delayElements(properties.pollDelay) }
+                .retryWhen(
+                    Retry.backoff(Long.MAX_VALUE, Duration.ofSeconds(1))
+                        .maxBackoff(Duration.ofSeconds(30))
+                        .doBeforeRetry { signal ->
+                            log.warn(
+                                "judge-submission SQS polling failed; retrying consumer loop (attempt={})",
+                                signal.totalRetries() + 1,
+                                signal.failure(),
+                            )
+                        }
+                )
+                .subscribe(
+                    {},
+                    { ex ->
+                        running.set(false)
+                        log.error("judge-submission SQS consumer terminated unexpectedly", ex)
                     }
-            )
-            .subscribe(
-                {},
-                { ex ->
-                    running.set(false)
-                    log.error("judge-submission SQS consumer terminated unexpectedly", ex)
-                }
-            )
+                )
 
-        log.info(
-            "judge-submission SQS consumer started: region={}, queueUrl={}, waitTimeSeconds={}, maxNumberOfMessages={}, visibilityTimeoutSeconds={}, pollDelay={}",
-            properties.region,
-            properties.queueUrl,
-            properties.waitTimeSeconds,
-            properties.maxNumberOfMessages,
-            properties.visibilityTimeoutSeconds,
-            properties.pollDelay,
-        )
+            log.info(
+                "judge-submission SQS consumer started: region={}, queueUrl={}, waitTimeSeconds={}, maxNumberOfMessages={}, visibilityTimeoutSeconds={}, pollDelay={}",
+                properties.region,
+                properties.queueUrl,
+                properties.waitTimeSeconds,
+                properties.maxNumberOfMessages,
+                properties.visibilityTimeoutSeconds,
+                properties.pollDelay,
+            )
+        }
     }
 
     override fun stop() {
-        pollingSubscription?.dispose()
-        pollingSubscription = null
-        if (running.compareAndSet(true, false)) {
-            log.info("judge-submission SQS consumer stopped")
+        synchronized(lifecycleMonitor) {
+            pollingSubscription?.dispose()
+            pollingSubscription = null
+            if (running.compareAndSet(true, false)) {
+                log.info("judge-submission SQS consumer stopped")
+            }
         }
     }
 
