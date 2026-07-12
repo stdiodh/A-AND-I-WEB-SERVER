@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.assignment.domain.model
+package com.example.aandi_post_web_server.assignment.application.mapper
 
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentCodeTemplatePayload
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentCodeTemplateResponse

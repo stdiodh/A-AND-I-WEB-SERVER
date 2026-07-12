@@ -4,13 +4,13 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentDetailResp
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentRequirementResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryResponse
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
+import com.example.aandi_post_web_server.assignment.application.mapper.toDetailResponse
+import com.example.aandi_post_web_server.assignment.application.mapper.toResponse
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPublicationPolicy
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
-import com.example.aandi_post_web_server.assignment.domain.model.toDetailResponse
-import com.example.aandi_post_web_server.assignment.domain.model.toResponse
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
