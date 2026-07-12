@@ -13,13 +13,13 @@ import com.example.aandi_post_web_server.course.api.dto.UpdateCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.UpdateEnrollmentRequest
 import com.example.aandi_post_web_server.course.application.mapper.toResponse
 import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentStore
+import com.example.aandi_post_web_server.course.application.port.CourseStore
 import com.example.aandi_post_web_server.course.application.port.CourseWeekStore
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
 import com.example.aandi_post_web_server.course.domain.model.CourseStatus
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
-import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -30,7 +30,7 @@ import java.time.Instant
 
 @Service
 class CourseCommandService(
-    private val courseRepository: CourseRepository,
+    private val courseStore: CourseStore,
     private val courseEnrollmentStore: CourseEnrollmentStore,
     private val courseWeekStore: CourseWeekStore,
     private val courseEnrollmentCommandService: CourseEnrollmentCommandService,
@@ -38,7 +38,7 @@ class CourseCommandService(
 ) {
     fun createCourse(request: CreateCourseRequest): Mono<CourseResponse> {
         val slug = parseCourseSlug(request.slug)
-        return courseRepository.existsBySlug(slug.value)
+        return courseStore.existsBySlug(slug.value)
             .flatMap { exists ->
                 if (exists) {
                     return@flatMap Mono.error(duplicateCourseSlugConflict(slug.value))
@@ -71,7 +71,7 @@ class CourseCommandService(
                     status = request.status ?: course.status,
                     updatedAt = Instant.now(),
                 )
-                courseRepository.save(updated).map { saved -> saved.toResponse() }
+                courseStore.save(updated).map { saved -> saved.toResponse() }
             }
     }
 
@@ -82,7 +82,7 @@ class CourseCommandService(
                 val courseId = parseCourseId(requireNotNull(course.id))
                 assignmentCommandService.deleteAllByCourseId(courseId.value)
                     .then(deleteCourseRelations(courseId.value))
-                    .then(courseRepository.deleteById(courseId.value))
+                    .then(courseStore.deleteById(courseId.value))
             }
             .then()
     }
@@ -144,7 +144,7 @@ class CourseCommandService(
             createdAt = now,
             updatedAt = now,
         )
-        return courseRepository.save(course)
+        return courseStore.save(course)
             .onErrorMap(DuplicateKeyException::class.java) { error ->
                 duplicateCourseSlugConflict(slug.value, error)
             }
@@ -158,7 +158,7 @@ class CourseCommandService(
         ).then()
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> =
-        courseRepository.findBySlug(slug.value)
+        courseStore.findBySlug(slug.value)
             .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다: ${slug.value}")))
 
     private fun parseCourseSlug(raw: String): CourseSlug =

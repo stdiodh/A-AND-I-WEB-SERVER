@@ -15,6 +15,7 @@ import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
 import com.example.aandi_post_web_server.course.infrastructure.adapter.RepositoryCourseEnrollmentStore
+import com.example.aandi_post_web_server.course.infrastructure.adapter.RepositoryCourseStore
 import com.example.aandi_post_web_server.course.infrastructure.adapter.RepositoryCourseWeekStore
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
@@ -336,7 +337,7 @@ private class CourseCommandFixture {
         Mockito.mock(CourseEnrollmentCommandService::class.java)
     val assignmentCommandService: AssignmentCommandService = Mockito.mock(AssignmentCommandService::class.java)
     val service = CourseCommandService(
-        courseRepository = courseRepository,
+        courseStore = RepositoryCourseStore(courseRepository),
         courseEnrollmentStore = RepositoryCourseEnrollmentStore(courseEnrollmentRepository),
         courseWeekStore = RepositoryCourseWeekStore(courseWeekRepository),
         courseEnrollmentCommandService = courseEnrollmentCommandService,

@@ -17,14 +17,13 @@ import com.example.aandi_post_web_server.course.api.dto.CourseResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseWeekResponse
 import com.example.aandi_post_web_server.course.application.mapper.toResponse
 import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentStore
+import com.example.aandi_post_web_server.course.application.port.CourseStore
 import com.example.aandi_post_web_server.course.application.port.CourseWeekStore
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseWeek
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
-import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import org.springframework.http.HttpStatus
-import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
@@ -34,7 +33,7 @@ import java.time.Instant
 
 @Service
 class CourseQueryService(
-    private val courseRepository: CourseRepository,
+    private val courseStore: CourseStore,
     private val courseEnrollmentStore: CourseEnrollmentStore,
     private val courseWeekStore: CourseWeekStore,
     private val assignmentQueryService: AssignmentQueryService,
@@ -42,7 +41,7 @@ class CourseQueryService(
 ) {
 
     fun getAdminCourses(): Flux<CourseResponse> =
-        courseRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+        courseStore.findAllNewestFirst()
             .map { course -> course.toResponse() }
 
     fun getCourse(courseSlug: String, userId: String): Mono<CourseResponse> {
@@ -138,7 +137,7 @@ class CourseQueryService(
         val parsedUserId = parseUserId(userId)
         return assignmentQueryService.getVisibleAssignmentCourseId(parsedAssignmentId)
             .flatMap { courseId ->
-                courseRepository.findById(courseId)
+                courseStore.findById(courseId)
                     .switchIfEmpty(
                         Mono.error(
                             ResponseStatusException(
@@ -163,12 +162,12 @@ class CourseQueryService(
                 if (enrolledCourseIds.isEmpty()) {
                     return@flatMapMany Flux.empty()
                 }
-                courseRepository.findAllById(enrolledCourseIds)
+                courseStore.findAllByIds(enrolledCourseIds)
             }
     }
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> {
-        return courseRepository.findBySlug(slug.value)
+        return courseStore.findBySlug(slug.value)
             .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다: ${slug.value}")))
     }
 

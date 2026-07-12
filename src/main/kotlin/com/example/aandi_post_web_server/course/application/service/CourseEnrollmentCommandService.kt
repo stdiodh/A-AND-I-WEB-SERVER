@@ -8,6 +8,7 @@ import com.example.aandi_post_web_server.course.application.mapper.toResponse
 import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentStore
 import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserQueryPort
 import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserReference
+import com.example.aandi_post_web_server.course.application.port.CourseStore
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
@@ -16,7 +17,6 @@ import com.example.aandi_post_web_server.course.domain.model.PublicCode
 import com.example.aandi_post_web_server.course.domain.model.UserId
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
-import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -26,7 +26,7 @@ import java.time.Instant
 
 @Service
 class CourseEnrollmentCommandService(
-    private val courseRepository: CourseRepository,
+    private val courseStore: CourseStore,
     private val courseEnrollmentStore: CourseEnrollmentStore,
     private val userQueryPort: CourseEnrollmentUserQueryPort,
 ) {
@@ -120,7 +120,7 @@ class CourseEnrollmentCommandService(
     }
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> {
-        return courseRepository.findBySlug(slug.value)
+        return courseStore.findBySlug(slug.value)
             .switchIfEmpty(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다: ${slug.value}")))
     }
 

@@ -105,6 +105,20 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
+    fun `course application does not depend on infrastructure`() {
+        val courseApplication = "$basePackage.course.application"
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            if (!isSameOrChildPackage(packageName, courseApplication)) return@scanMainSourceImports null
+            if (!importName.startsWith("$basePackage.")) return@scanMainSourceImports null
+            if (!importName.contains(".infrastructure.")) return@scanMainSourceImports null
+
+            "$relativePath -> course application depends on infrastructure: $importName"
+        }
+
+        assertNoViolations("Course application boundary is broken", violations)
+    }
+
+    @Test
     fun `assignment application does not depend on event infrastructure`() {
         val assignmentApplication = "$basePackage.assignment.application"
         val assignmentInfrastructure = "$basePackage.assignment.infrastructure."
