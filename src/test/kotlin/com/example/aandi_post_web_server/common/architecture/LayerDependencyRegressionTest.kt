@@ -13,6 +13,24 @@ class LayerDependencyRegressionTest {
     private val basePackage = "com.example.aandi_post_web_server"
 
     @Test
+    fun `feature domains do not depend on api packages`() {
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            val feature = featureName(packageName) ?: return@scanMainSourceImports null
+            if (!isSameOrChildPackage(packageName, "$basePackage.$feature.domain")) {
+                return@scanMainSourceImports null
+            }
+            val importedFeature = featureName(importName) ?: return@scanMainSourceImports null
+            if (!importName.startsWith("$basePackage.$importedFeature.api.")) {
+                return@scanMainSourceImports null
+            }
+
+            "$relativePath -> domain depends on api: $importName"
+        }
+
+        assertNoViolations("Domain layer dependencies are broken", violations)
+    }
+
+    @Test
     fun `feature application does not depend on api controllers`() {
         val violations = scanMainSourceImports { packageName, importName, relativePath ->
             val feature = featureName(packageName) ?: return@scanMainSourceImports null

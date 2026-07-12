@@ -1,9 +1,6 @@
 package com.example.aandi_post_web_server.assignment.domain.model
 
-import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
-import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
-import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
@@ -11,11 +8,11 @@ import io.kotest.matchers.shouldBe
 import java.time.Instant
 
 class AssignmentDraftCollectionsTest : StringSpec({
-    "AssignmentRequirementDrafts는 요청을 엔티티로 변환한다" {
-        val drafts = AssignmentRequirementDrafts.fromRequests(
+    "AssignmentRequirementDrafts는 draft를 엔티티로 변환한다" {
+        val drafts = AssignmentRequirementDrafts.from(
             listOf(
-                CreateAssignmentRequirementRequest(sortOrder = 1, requirementText = "함수 분리"),
-                CreateAssignmentRequirementRequest(sortOrder = 2, requirementText = "예외 처리"),
+                AssignmentRequirementDraft(sortOrder = 1, requirementText = "함수 분리"),
+                AssignmentRequirementDraft(sortOrder = 2, requirementText = "예외 처리"),
             )
         )
         val now = Instant.parse("2026-03-01T00:00:00Z")
@@ -30,19 +27,19 @@ class AssignmentDraftCollectionsTest : StringSpec({
 
     "AssignmentTestCaseDrafts는 seq 중복을 거부한다" {
         shouldThrow<IllegalArgumentException> {
-            AssignmentTestCaseDrafts.fromRequests(
+            AssignmentTestCaseDrafts.from(
                 listOf(
-                    CreateAssignmentTestCaseRequest(seq = 1, inputValues = listOf("1"), outputText = "1"),
-                    CreateAssignmentTestCaseRequest(seq = 1, inputValues = listOf("2"), outputText = "2"),
+                    AssignmentTestCaseDraft(1, listOf("1"), "1", AssignmentTestCaseVisibility.PUBLIC),
+                    AssignmentTestCaseDraft(1, listOf("2"), "2", AssignmentTestCaseVisibility.PUBLIC),
                 )
             )
         }
     }
 
-    "AssignmentTestCaseDrafts는 요청을 엔티티로 변환한다" {
-        val drafts = AssignmentTestCaseDrafts.fromRequests(
+    "AssignmentTestCaseDrafts는 draft를 엔티티로 변환한다" {
+        val drafts = AssignmentTestCaseDrafts.from(
             listOf(
-                CreateAssignmentTestCaseRequest(seq = 1, inputValues = listOf("ADD 1"), outputText = "+1"),
+                AssignmentTestCaseDraft(1, listOf("ADD 1"), "+1", AssignmentTestCaseVisibility.PUBLIC),
             )
         )
         val now = Instant.parse("2026-03-01T00:00:00Z")

@@ -4,6 +4,7 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentMetadataPa
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.application.mapper.toDraft
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseValidator
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -59,7 +60,7 @@ class AssignmentCommandRequestResolver(
 
     private fun validateTestCases(requests: List<CreateAssignmentTestCaseRequest>) {
         runCatching {
-            assignmentTestCaseValidator.validate(requests)
+            assignmentTestCaseValidator.validate(requests.map { it.toDraft() })
         }.getOrElse { error ->
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, error.message ?: "잘못된 요청입니다.")
         }

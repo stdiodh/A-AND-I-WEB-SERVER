@@ -1,7 +1,5 @@
 package com.example.aandi_post_web_server.assignment.domain.model
 
-import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
-import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -12,13 +10,13 @@ class AssignmentTestCaseValidatorTest : StringSpec({
     "빈 문자열 입력과 허용된 개행 문자는 통과한다" {
         validator.validate(
             listOf(
-                CreateAssignmentTestCaseRequest(
+                AssignmentTestCaseDraft(
                     seq = 1,
                     inputValues = emptyList(),
                     outputText = "line1\nline2\tend",
                     visibility = AssignmentTestCaseVisibility.PUBLIC,
                 ),
-                CreateAssignmentTestCaseRequest(
+                AssignmentTestCaseDraft(
                     seq = 2,
                     inputValues = listOf("hidden\r\ncase"),
                     outputText = "ok",
@@ -32,8 +30,8 @@ class AssignmentTestCaseValidatorTest : StringSpec({
         val error = shouldThrow<IllegalArgumentException> {
             validator.validate(
                 listOf(
-                    CreateAssignmentTestCaseRequest(1, listOf("a"), "b", AssignmentTestCaseVisibility.PUBLIC),
-                    CreateAssignmentTestCaseRequest(1, listOf("c"), "d", AssignmentTestCaseVisibility.HIDDEN),
+                    AssignmentTestCaseDraft(1, listOf("a"), "b", AssignmentTestCaseVisibility.PUBLIC),
+                    AssignmentTestCaseDraft(1, listOf("c"), "d", AssignmentTestCaseVisibility.HIDDEN),
                 )
             )
         }
@@ -45,7 +43,7 @@ class AssignmentTestCaseValidatorTest : StringSpec({
         val error = shouldThrow<IllegalArgumentException> {
             validator.validate(
                 listOf(
-                    CreateAssignmentTestCaseRequest(1, listOf("a"), "b", AssignmentTestCaseVisibility.EXCLUDED),
+                    AssignmentTestCaseDraft(1, listOf("a"), "b", AssignmentTestCaseVisibility.EXCLUDED),
                 )
             )
         }
@@ -57,7 +55,7 @@ class AssignmentTestCaseValidatorTest : StringSpec({
         val error = shouldThrow<IllegalArgumentException> {
             validator.validate(
                 listOf(
-                    CreateAssignmentTestCaseRequest(
+                    AssignmentTestCaseDraft(
                         seq = 1,
                         inputValues = listOf("입력이 존재하지 않습니다."),
                         outputText = "result",
@@ -74,7 +72,7 @@ class AssignmentTestCaseValidatorTest : StringSpec({
         val error = shouldThrow<IllegalArgumentException> {
             validator.validate(
                 listOf(
-                    CreateAssignmentTestCaseRequest(
+                    AssignmentTestCaseDraft(
                         seq = 1,
                         inputValues = listOf("bad\u0000input"),
                         outputText = "result",

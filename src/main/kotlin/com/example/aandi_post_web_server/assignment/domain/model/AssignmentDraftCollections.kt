@@ -1,11 +1,8 @@
 package com.example.aandi_post_web_server.assignment.domain.model
 
-import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
-import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequirementRequest
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
-import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import java.time.Instant
 
 data class AssignmentRequirementDraft(
@@ -24,10 +21,8 @@ class AssignmentRequirementDrafts private constructor(
     private val values: List<AssignmentRequirementDraft>,
 ) {
     companion object {
-        fun fromRequests(requests: List<CreateAssignmentRequirementRequest>): AssignmentRequirementDrafts {
-            val drafts = requests.map { AssignmentRequirementDraft(it.sortOrder, it.requirementText) }
-            return AssignmentRequirementDrafts(drafts)
-        }
+        fun from(drafts: List<AssignmentRequirementDraft>): AssignmentRequirementDrafts =
+            AssignmentRequirementDrafts(drafts.toList())
     }
 
     fun isEmpty(): Boolean = values.isEmpty()
@@ -48,17 +43,9 @@ class AssignmentTestCaseDrafts private constructor(
     private val values: List<AssignmentTestCaseDraft>,
 ) {
     companion object {
-        fun fromRequests(requests: List<CreateAssignmentTestCaseRequest>): AssignmentTestCaseDrafts {
-            val drafts = requests.map {
-                AssignmentTestCaseDraft(
-                    seq = it.seq,
-                    inputValues = it.inputValues,
-                    outputText = it.outputText,
-                    visibility = it.visibility,
-                )
-            }
+        fun from(drafts: List<AssignmentTestCaseDraft>): AssignmentTestCaseDrafts {
             validateUniqueSeq(drafts)
-            return AssignmentTestCaseDrafts(drafts)
+            return AssignmentTestCaseDrafts(drafts.toList())
         }
 
         private fun validateUniqueSeq(drafts: List<AssignmentTestCaseDraft>) {

@@ -1,13 +1,11 @@
 package com.example.aandi_post_web_server.assignment.domain.model
 
-import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
-import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import org.springframework.stereotype.Component
 
 @Component
 class AssignmentTestCaseValidator {
 
-    fun validate(testCases: List<CreateAssignmentTestCaseRequest>) {
+    fun validate(testCases: List<AssignmentTestCaseDraft>) {
         require(testCases.isNotEmpty()) { "testCases must not be empty" }
 
         val seenSeq = mutableSetOf<Int>()

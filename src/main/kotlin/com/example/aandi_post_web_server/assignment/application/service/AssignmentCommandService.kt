@@ -1,6 +1,7 @@
 package com.example.aandi_post_web_server.assignment.application.service
 
 import com.example.aandi_post_web_server.assignment.application.mapper.toDetailResponse
+import com.example.aandi_post_web_server.assignment.application.mapper.toDraft
 import com.example.aandi_post_web_server.assignment.application.mapper.toEntity
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseDrafts
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPublicationPolicy
@@ -499,10 +500,10 @@ class AssignmentCommandService(
         parseOrBadRequest { AssignmentId.from(raw) }
 
     private fun parseRequirementDrafts(requests: List<CreateAssignmentRequirementRequest>): AssignmentRequirementDrafts =
-        parseOrBadRequest { AssignmentRequirementDrafts.fromRequests(requests) }
+        parseOrBadRequest { AssignmentRequirementDrafts.from(requests.map { it.toDraft() }) }
 
     private fun parseTestCaseDrafts(requests: List<CreateAssignmentTestCaseRequest>): AssignmentTestCaseDrafts =
-        parseOrBadRequest { AssignmentTestCaseDrafts.fromRequests(requests) }
+        parseOrBadRequest { AssignmentTestCaseDrafts.from(requests.map { it.toDraft() }) }
 
     private fun <T> parseOrBadRequest(block: () -> T): T {
         return runCatching(block).getOrElse { error ->
