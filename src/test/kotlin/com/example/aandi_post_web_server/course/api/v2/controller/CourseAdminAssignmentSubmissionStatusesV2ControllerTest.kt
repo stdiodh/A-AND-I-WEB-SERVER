@@ -3,9 +3,9 @@
 package com.example.aandi_post_web_server.course.api.v2.controller
 
 import com.example.aandi_post_web_server.assignment.application.activation.TestAssignmentActivationConfig
-import com.example.aandi_post_web_server.assignment.application.service.AdminAssignmentSubmissionStatusesV2Service
 import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusItemResult
 import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusesResult
+import com.example.aandi_post_web_server.assignment.application.submission.service.AdminAssignmentSubmissionStatusesService
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.error.GlobalApiExceptionHandler
@@ -44,7 +44,7 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
     private lateinit var webTestClient: WebTestClient
 
     @MockBean
-    private lateinit var adminAssignmentSubmissionStatusesV2Service: AdminAssignmentSubmissionStatusesV2Service
+    private lateinit var adminAssignmentSubmissionStatusesService: AdminAssignmentSubmissionStatusesService
 
     private val courseSlug = "back-basic"
     private val assignmentId = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001"
@@ -53,7 +53,7 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
 
     init {
         beforeTest {
-            Mockito.reset(adminAssignmentSubmissionStatusesV2Service)
+            Mockito.reset(adminAssignmentSubmissionStatusesService)
         }
 
         "관리자 제출 현황 API는 토큰이 없으면 401을 반환한다" {
@@ -74,7 +74,7 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
         }
 
         "관리자 제출 현황 API는 제출자와 미제출자를 함께 반환한다" {
-            Mockito.`when`(adminAssignmentSubmissionStatusesV2Service.getSubmissionStatuses(courseSlug, assignmentId))
+            Mockito.`when`(adminAssignmentSubmissionStatusesService.getSubmissionStatuses(courseSlug, assignmentId))
                 .thenReturn(Mono.just(sampleResponse()))
 
             adminClient().get()
@@ -106,7 +106,7 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
         }
 
         "존재하지 않는 코스 또는 과제면 404를 반환한다" {
-            Mockito.`when`(adminAssignmentSubmissionStatusesV2Service.getSubmissionStatuses(courseSlug, assignmentId))
+            Mockito.`when`(adminAssignmentSubmissionStatusesService.getSubmissionStatuses(courseSlug, assignmentId))
                 .thenReturn(Mono.error(ResponseStatusException(HttpStatus.NOT_FOUND, "과제를 찾을 수 없습니다.")))
 
             adminClient().get()

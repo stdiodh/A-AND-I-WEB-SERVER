@@ -88,7 +88,7 @@ Web Server와 Online Judge Server 사이의 이벤트 구조는 현재 repo에�
 | Problem sync schema | `eventType`, `problemId`, `testCases[]`, `caseId`, `input`, `output` | `AssignmentReportTestCaseEvent.kt` | 사용 가능 |
 | Judge completed consume | consumer 활성화 환경에서 raw JSON 또는 SNS envelope의 `JUDGE_COMPLETED`를 파싱해 projection upsert 후 SQS message 삭제 | `JudgeCompletedEventParser.kt`, `SqsJudgeSubmissionEventConsumer.kt`, `SqsJudgeSubmissionEventConsumerTest` | 조건부 사용 |
 | Submission projection | V001 unique index가 적용·검증된 환경에서 `assignmentId + publicCode` 중복 문서를 차단하고, 최고 점수 기준 필드를 갱신 | `scripts/mongo/indexes/v001-index-catalog.js`, `AssignmentSubmissionStatusProjectionService.kt`, `AssignmentSubmissionStatusProjectionServiceTest` | 조건부 사용 |
-| Admin read path | 관리자 제출 현황은 Online Judge 동기 호출 대신 MongoDB projection과 enrollment를 join | `AdminAssignmentSubmissionStatusesV2Service.kt`, `CourseAdminAssignmentSubmissionStatusesV2Controller.kt`, `README.md` | 사용 가능 |
+| Admin read path | 관리자 제출 현황은 Online Judge 동기 호출 대신 MongoDB projection과 enrollment를 join | `AdminAssignmentSubmissionStatusesService.kt`, `CourseAdminAssignmentSubmissionStatusesV2Controller.kt`, `README.md` | 사용 가능 |
 
 Approved sentence candidates:
 

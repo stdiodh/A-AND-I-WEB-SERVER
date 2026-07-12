@@ -87,19 +87,17 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
-    fun `admin submission status application result does not depend on api`() {
-        val submissionModel = "$basePackage.assignment.application.submission.model"
-        val targetService = "assignment/application/service/AdminAssignmentSubmissionStatusesV2Service.kt"
+    fun `assignment submission application does not depend on api`() {
+        val submissionApplication = "$basePackage.assignment.application.submission"
         val assignmentApi = "$basePackage.assignment.api."
         val violations = scanMainSourceImports { packageName, importName, relativePath ->
-            val isSubmissionModel = isSameOrChildPackage(packageName, submissionModel)
-            if (!isSubmissionModel && relativePath != targetService) return@scanMainSourceImports null
+            if (!isSameOrChildPackage(packageName, submissionApplication)) return@scanMainSourceImports null
             if (!importName.startsWith(assignmentApi)) return@scanMainSourceImports null
 
-            "$relativePath -> admin submission status result depends on api: $importName"
+            "$relativePath -> assignment submission application depends on api: $importName"
         }
 
-        assertNoViolations("Admin submission status response boundary is broken", violations)
+        assertNoViolations("Assignment submission response boundary is broken", violations)
     }
 
     @Test
