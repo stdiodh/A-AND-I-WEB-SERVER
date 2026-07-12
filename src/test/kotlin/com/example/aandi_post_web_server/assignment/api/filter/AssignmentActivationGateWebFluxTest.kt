@@ -1,9 +1,9 @@
 @file:Suppress("DEPRECATION")
 
-package com.example.aandi_post_web_server.assignment.application.activation
+package com.example.aandi_post_web_server.assignment.api.filter
 
+import com.example.aandi_post_web_server.assignment.application.activation.AssignmentActivationService
 import com.example.aandi_post_web_server.assignment.application.service.AdminAssignmentSubmissionStatusesV2Service
-import com.example.aandi_post_web_server.common.config.AssignmentActivationGateFilterConfig
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.error.GlobalApiExceptionHandler

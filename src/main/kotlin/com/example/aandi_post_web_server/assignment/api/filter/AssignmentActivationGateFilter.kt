@@ -1,5 +1,6 @@
-package com.example.aandi_post_web_server.assignment.application.activation
+package com.example.aandi_post_web_server.assignment.api.filter
 
+import com.example.aandi_post_web_server.assignment.application.activation.AssignmentActivationService
 import com.example.aandi_post_web_server.common.error.v2.AssignmentDeactivatedException
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.ReactiveSecurityContextHolder

@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.assignment.application.activation
+package com.example.aandi_post_web_server.assignment.api.filter
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe

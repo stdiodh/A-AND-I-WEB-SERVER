@@ -1,6 +1,5 @@
-package com.example.aandi_post_web_server.common.config
+package com.example.aandi_post_web_server.assignment.api.filter
 
-import com.example.aandi_post_web_server.assignment.application.activation.AssignmentActivationGateFilter
 import com.example.aandi_post_web_server.assignment.application.activation.AssignmentActivationService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

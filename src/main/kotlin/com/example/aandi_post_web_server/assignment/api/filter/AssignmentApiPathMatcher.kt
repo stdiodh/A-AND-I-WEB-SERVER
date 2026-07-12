@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.assignment.application.activation
+package com.example.aandi_post_web_server.assignment.api.filter
 
 import org.springframework.util.AntPathMatcher
 
