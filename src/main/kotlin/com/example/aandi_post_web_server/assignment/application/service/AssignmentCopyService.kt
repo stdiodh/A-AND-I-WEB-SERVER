@@ -5,6 +5,7 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentRequiremen
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.application.mapper.toDetailResponse
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentCopyContentStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCopyStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCoursePort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
@@ -15,8 +16,6 @@ import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPubli
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.course.domain.model.AssignmentId
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
@@ -34,8 +33,7 @@ import java.util.UUID
 class AssignmentCopyService(
     private val assignmentCoursePort: AssignmentCoursePort,
     private val assignmentCopyStore: AssignmentCopyStore,
-    private val assignmentRequirementRepository: AssignmentRequirementRepository,
-    private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
+    private val assignmentCopyContentStore: AssignmentCopyContentStore,
     private val assignmentDocumentCleanupPort: AssignmentDocumentCleanupPort,
     private val assignmentProblemSyncPort: AssignmentProblemSyncPort,
     private val assignmentCopyFingerprintCalculator: AssignmentCopyFingerprintCalculator,
@@ -69,8 +67,8 @@ class AssignmentCopyService(
                     .flatMap { sourceAssignment ->
                         Mono.zip(
                             resolveAssignmentCourseSlug(sourceAssignment),
-                            assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(sourceAssignmentId.value).collectList(),
-                            assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(sourceAssignmentId.value).collectList(),
+                            assignmentCopyContentStore.findOrderedRequirementsByAssignmentId(sourceAssignmentId.value).collectList(),
+                            assignmentCopyContentStore.findOrderedTestCasesByAssignmentId(sourceAssignmentId.value).collectList(),
                         )
                             .flatMap { tuple ->
                                 copyAssignmentInternal(
@@ -211,7 +209,7 @@ class AssignmentCopyService(
         if (sorted.isEmpty()) return Mono.just(emptyList())
 
         val now = Instant.now()
-        return assignmentRequirementRepository.saveAll(
+        return assignmentCopyContentStore.saveRequirements(
             sorted.map {
                 AssignmentRequirement(
                     assignmentId = assignmentId.value,
@@ -239,7 +237,7 @@ class AssignmentCopyService(
         if (sorted.isEmpty()) return Mono.just(emptyList())
 
         val now = Instant.now()
-        return assignmentTestCaseRepository.saveAll(
+        return assignmentCopyContentStore.saveTestCases(
             sorted.map {
                 AssignmentTestCase(
                     assignmentId = assignmentId.value,

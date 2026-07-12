@@ -17,6 +17,7 @@ import com.example.aandi_post_web_server.assignment.infrastructure.event.Assignm
 import com.example.aandi_post_web_server.assignment.infrastructure.event.DirectAssignmentProblemSyncAdapter
 import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentDocumentCleanupAdapter
 import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentCopyStore
+import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentCopyContentStore
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
@@ -885,8 +886,10 @@ private class AssignmentCopyFixture {
     val service = AssignmentCopyService(
         assignmentCoursePort = assignmentCoursePort,
         assignmentCopyStore = RepositoryAssignmentCopyStore(assignmentRepository),
-        assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentTestCaseRepository,
+        assignmentCopyContentStore = RepositoryAssignmentCopyContentStore(
+            assignmentRequirementRepository,
+            assignmentTestCaseRepository,
+        ),
         assignmentDocumentCleanupPort = RepositoryAssignmentDocumentCleanupAdapter(
             assignmentRepository,
             assignmentRequirementRepository,
