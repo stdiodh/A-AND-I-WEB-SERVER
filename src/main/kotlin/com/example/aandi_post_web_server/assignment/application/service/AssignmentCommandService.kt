@@ -14,6 +14,7 @@ import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequ
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentCommandContentStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCommandStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCoursePort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
@@ -23,8 +24,6 @@ import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.course.domain.model.AssignmentId
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
@@ -43,8 +42,7 @@ import java.util.UUID
 class AssignmentCommandService(
     private val assignmentCoursePort: AssignmentCoursePort,
     private val assignmentCommandStore: AssignmentCommandStore,
-    private val assignmentRequirementRepository: AssignmentRequirementRepository,
-    private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
+    private val assignmentCommandContentStore: AssignmentCommandContentStore,
     private val assignmentDocumentCleanupPort: AssignmentDocumentCleanupPort,
     private val assignmentProblemSyncPort: AssignmentProblemSyncPort,
     private val assignmentCopyService: AssignmentCopyService,
@@ -237,7 +235,7 @@ class AssignmentCommandService(
     ): Mono<List<AssignmentRequirementResponse>> {
         if (drafts.isEmpty()) return Mono.just(emptyList())
 
-        return assignmentRequirementRepository.saveAll(
+        return assignmentCommandContentStore.saveRequirements(
             drafts.toEntities(assignmentId.value, Instant.now())
         )
             .sort(compareBy<AssignmentRequirement> { it.sortOrder })
@@ -251,7 +249,7 @@ class AssignmentCommandService(
     ): Mono<List<AssignmentTestCaseResponse>> {
         if (drafts.isEmpty()) return Mono.just(emptyList())
 
-        return assignmentTestCaseRepository.saveAll(
+        return assignmentCommandContentStore.saveTestCases(
             drafts.toEntities(assignmentId.value, Instant.now())
         )
             .sort(compareBy<AssignmentTestCase> { it.seq })
@@ -352,11 +350,11 @@ class AssignmentCommandService(
         drafts: AssignmentRequirementDrafts?,
     ): Mono<List<AssignmentRequirementResponse>> {
         if (drafts == null) {
-            return assignmentRequirementRepository.findAllByAssignmentIdOrderBySortOrder(assignmentId.value)
+            return assignmentCommandContentStore.findOrderedRequirementsByAssignmentId(assignmentId.value)
                 .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
                 .collectList()
         }
-        return assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId.value))
+        return assignmentCommandContentStore.deleteRequirementsByAssignmentId(assignmentId.value)
             .then(saveRequirements(assignmentId, drafts))
     }
 
@@ -365,11 +363,11 @@ class AssignmentCommandService(
         drafts: AssignmentTestCaseDrafts?,
     ): Mono<List<AssignmentTestCaseResponse>> {
         if (drafts == null) {
-            return assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId.value)
+            return assignmentCommandContentStore.findOrderedTestCasesByAssignmentId(assignmentId.value)
                 .map { AssignmentTestCaseResponse(it.seq, it.inputValues, it.outputText, it.visibility) }
                 .collectList()
         }
-        return assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId.value))
+        return assignmentCommandContentStore.deleteTestCasesByAssignmentId(assignmentId.value)
             .then(saveTestCases(assignmentId, drafts))
     }
 

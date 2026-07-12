@@ -21,6 +21,7 @@ import com.example.aandi_post_web_server.assignment.infrastructure.event.Assignm
 import com.example.aandi_post_web_server.assignment.infrastructure.event.DirectAssignmentProblemSyncAdapter
 import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentDocumentCleanupAdapter
 import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentCommandStore
+import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentCommandContentStore
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
@@ -1643,8 +1644,10 @@ private class AssignmentCommandFixture(
     val service = AssignmentCommandService(
         assignmentCoursePort = assignmentCoursePort,
         assignmentCommandStore = RepositoryAssignmentCommandStore(assignmentRepository),
-        assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentTestCaseRepository,
+        assignmentCommandContentStore = RepositoryAssignmentCommandContentStore(
+            assignmentRequirementRepository,
+            assignmentTestCaseRepository,
+        ),
         assignmentDocumentCleanupPort = RepositoryAssignmentDocumentCleanupAdapter(
             assignmentRepository,
             assignmentRequirementRepository,
