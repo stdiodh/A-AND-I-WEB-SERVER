@@ -118,6 +118,7 @@ com.example.aandi_post_web_server
 └─ user
    ├─ application
    │  ├─ model
+   │  ├─ port
    │  └─ service
    ├─ entity
    └─ infrastructure

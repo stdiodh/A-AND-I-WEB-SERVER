@@ -3,6 +3,7 @@ package com.example.aandi_post_web_server.user.application.service
 import com.example.aandi_post_web_server.user.application.model.AuthUserEvent
 import com.example.aandi_post_web_server.user.application.model.AuthUserEventType
 import com.example.aandi_post_web_server.user.entity.ReportUser
+import com.example.aandi_post_web_server.user.infrastructure.adapter.ReactiveMongoReportUserSyncStore
 import com.mongodb.client.result.UpdateResult
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
@@ -56,6 +57,8 @@ class ReportUserSyncServiceTest : StringSpec({
         set["updatedAt"] shouldBe persistedEventTime
         val unset = update.updateObject["\$unset"] as Document
         unset shouldContainKey "deletedAt"
+        val setOnInsert = update.updateObject["\$setOnInsert"] as Document
+        setOnInsert["_class"] shouldBe "reportUser"
 
         Mockito.verify(fixture.template, Mockito.never()).updateFirst(
             ArgumentMatchers.any(Query::class.java),
@@ -150,6 +153,8 @@ class ReportUserSyncServiceTest : StringSpec({
         val unset = update.updateObject["\$unset"] as Document
         unset shouldContainKey "nickname"
         unset shouldContainKey "profileImageUrl"
+        val setOnInsert = update.updateObject["\$setOnInsert"] as Document
+        setOnInsert["_class"] shouldBe "reportUser"
 
         Mockito.verify(fixture.template, Mockito.never()).remove(
             ArgumentMatchers.any(Query::class.java),
@@ -260,7 +265,7 @@ class ReportUserSyncServiceTest : StringSpec({
 
 private class ReportUserSyncFixture {
     val template: ReactiveMongoTemplate = Mockito.mock(ReactiveMongoTemplate::class.java)
-    val service = ReportUserSyncService(template)
+    val service = ReportUserSyncService(ReactiveMongoReportUserSyncStore(template))
 
     fun stubSuccessfulUpsert(upsertedId: String? = null) {
         val upsertedBsonId = upsertedId?.let(::BsonString)

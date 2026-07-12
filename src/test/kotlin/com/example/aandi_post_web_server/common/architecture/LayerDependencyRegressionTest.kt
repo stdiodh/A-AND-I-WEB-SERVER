@@ -159,18 +159,19 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
-    fun `user application does not depend on event infrastructure`() {
+    fun `user application does not depend on infrastructure`() {
         val userApplication = "$basePackage.user.application"
-        val userInfrastructure = "$basePackage.user.infrastructure."
         val violations = scanMainSourceImports { packageName, importName, relativePath ->
             if (!isSameOrChildPackage(packageName, userApplication)) return@scanMainSourceImports null
-            if (!importName.startsWith(userInfrastructure)) return@scanMainSourceImports null
-            if (!importName.contains(".event.")) return@scanMainSourceImports null
+            val dependsOnInternalInfrastructure =
+                importName.startsWith("$basePackage.") && importName.contains(".infrastructure.")
+            val dependsOnSpringMongo = importName.startsWith("org.springframework.data.mongodb.")
+            if (!dependsOnInternalInfrastructure && !dependsOnSpringMongo) return@scanMainSourceImports null
 
-            "$relativePath -> user application depends on event infrastructure: $importName"
+            "$relativePath -> user application depends on infrastructure: $importName"
         }
 
-        assertNoViolations("User event infrastructure boundary is broken", violations)
+        assertNoViolations("User application boundary is broken", violations)
     }
 
     @Test

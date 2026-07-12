@@ -2,13 +2,10 @@ package com.example.aandi_post_web_server.user.application.service
 
 import com.example.aandi_post_web_server.user.application.model.AuthUserEvent
 import com.example.aandi_post_web_server.user.application.model.AuthUserEventType
+import com.example.aandi_post_web_server.user.application.port.ReportUserSyncStore
 import com.example.aandi_post_web_server.user.entity.ReportUser
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DuplicateKeyException
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import org.springframework.data.mongodb.core.query.Criteria
-import org.springframework.data.mongodb.core.query.Query
-import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import java.time.Instant
@@ -16,7 +13,7 @@ import java.time.temporal.ChronoUnit
 
 @Service
 class ReportUserSyncService(
-    private val reactiveMongoTemplate: ReactiveMongoTemplate,
+    private val reportUserSyncStore: ReportUserSyncStore,
 ) {
 
     private val log = LoggerFactory.getLogger(ReportUserSyncService::class.java)
@@ -41,20 +38,8 @@ class ReportUserSyncService(
             updatedAt = effectiveUpdatedAt,
         )
 
-        val update = Update()
-            .set("publicCode", reportUser.publicCode)
-            .set("username", reportUser.username)
-            .set("role", reportUser.role)
-            .set("nickname", reportUser.nickname)
-            .set("profileImageUrl", reportUser.profileImageUrl)
-            .set("syncedAt", reportUser.syncedAt)
-            .set("updatedAt", reportUser.updatedAt)
-            .setOnInsert("_class", REPORT_USER_TYPE_ALIAS)
-            .unset("deletedAt")
-
         return conditionalUpsert(
-            query = freshnessQuery(userId, effectiveUpdatedAt, AuthUserEventType.UserProfileUpdated),
-            update = update,
+            write = reportUserSyncStore.upsertActive(reportUser),
             userId = userId,
             effectiveUpdatedAt = effectiveUpdatedAt,
             appliedOutcome = ReportUserSyncOutcome.UPSERTED,
@@ -68,20 +53,18 @@ class ReportUserSyncService(
     private fun deleteUser(event: AuthUserEvent): Mono<ReportUserSyncOutcome> {
         val effectiveUpdatedAt = event.requireEffectiveUpdatedAt()
         val userId = event.id.requireNonBlank("id")
-        val update = Update()
-            .set("publicCode", TOMBSTONE_PUBLIC_CODE_PREFIX + userId)
-            .set("username", TOMBSTONE_USERNAME)
-            .set("role", TOMBSTONE_ROLE)
-            .set("syncedAt", Instant.now())
-            .set("updatedAt", effectiveUpdatedAt)
-            .set("deletedAt", effectiveUpdatedAt)
-            .setOnInsert("_class", REPORT_USER_TYPE_ALIAS)
-            .unset("nickname")
-            .unset("profileImageUrl")
+        val tombstone = ReportUser(
+            id = userId,
+            publicCode = TOMBSTONE_PUBLIC_CODE_PREFIX + userId,
+            username = TOMBSTONE_USERNAME,
+            role = TOMBSTONE_ROLE,
+            syncedAt = Instant.now(),
+            updatedAt = effectiveUpdatedAt,
+            deletedAt = effectiveUpdatedAt,
+        )
 
         return conditionalUpsert(
-            query = freshnessQuery(userId, effectiveUpdatedAt, AuthUserEventType.UserDeleted),
-            update = update,
+            write = reportUserSyncStore.upsertTombstone(tombstone),
             userId = userId,
             effectiveUpdatedAt = effectiveUpdatedAt,
             appliedOutcome = ReportUserSyncOutcome.DELETED,
@@ -93,17 +76,16 @@ class ReportUserSyncService(
     }
 
     private fun conditionalUpsert(
-        query: Query,
-        update: Update,
+        write: Mono<Void>,
         userId: String,
         effectiveUpdatedAt: Instant,
         appliedOutcome: ReportUserSyncOutcome,
         event: AuthUserEvent,
     ): Mono<ReportUserSyncOutcome> =
-        reactiveMongoTemplate.upsert(query, update, ReportUser::class.java)
+        write
             .thenReturn(appliedOutcome)
             .onErrorResume(DuplicateKeyException::class.java) { ex ->
-                reactiveMongoTemplate.findById(userId, ReportUser::class.java)
+                reportUserSyncStore.findById(userId)
                     .flatMap { existing ->
                         val isStale = when (event.eventType) {
                             AuthUserEventType.UserProfileUpdated ->
@@ -132,30 +114,6 @@ class ReportUserSyncService(
                         }
                     )
             }
-
-    private fun freshnessQuery(
-        userId: String,
-        effectiveUpdatedAt: Instant,
-        eventType: AuthUserEventType,
-    ): Query =
-        when (eventType) {
-            AuthUserEventType.UserProfileUpdated -> Query.query(
-                Criteria.where("_id").`is`(userId).orOperator(
-                    Criteria.where("updatedAt").lt(effectiveUpdatedAt),
-                    Criteria.where("updatedAt").exists(false),
-                    Criteria().andOperator(
-                        Criteria.where("updatedAt").`is`(effectiveUpdatedAt),
-                        Criteria.where("deletedAt").`is`(null),
-                    ),
-                ),
-            )
-            AuthUserEventType.UserDeleted -> Query.query(
-                Criteria.where("_id").`is`(userId).orOperator(
-                    Criteria.where("updatedAt").lte(effectiveUpdatedAt),
-                    Criteria.where("updatedAt").exists(false),
-                ),
-            )
-        }
 
     private fun logDuplicateKeyConflict(
         event: AuthUserEvent,
@@ -192,7 +150,6 @@ class ReportUserSyncService(
         }
 
     private companion object {
-        const val REPORT_USER_TYPE_ALIAS = "reportUser"
         const val TOMBSTONE_PUBLIC_CODE_PREFIX = "__deleted__:"
         const val TOMBSTONE_USERNAME = "__deleted__"
         const val TOMBSTONE_ROLE = "DELETED"
