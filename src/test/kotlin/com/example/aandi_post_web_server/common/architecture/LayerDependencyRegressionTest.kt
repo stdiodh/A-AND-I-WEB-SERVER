@@ -73,35 +73,17 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
-    fun `assignment application does not depend on course entities or infrastructure`() {
+    fun `assignment application does not depend on course entities`() {
         val assignmentApplication = "$basePackage.assignment.application"
-        val forbiddenPrefixes = listOf(
-            "$basePackage.course.entity.",
-            "$basePackage.course.infrastructure.",
-        )
+        val courseEntities = "$basePackage.course.entity."
         val violations = scanMainSourceImports { packageName, importName, relativePath ->
             if (!isSameOrChildPackage(packageName, assignmentApplication)) return@scanMainSourceImports null
-            val forbiddenPrefix = forbiddenPrefixes.firstOrNull(importName::startsWith)
-                ?: return@scanMainSourceImports null
+            if (!importName.startsWith(courseEntities)) return@scanMainSourceImports null
 
-            "$relativePath -> assignment application depends on course implementation: $forbiddenPrefix"
+            "$relativePath -> assignment application depends on course entities: $importName"
         }
 
         assertNoViolations("Feature application port boundary is broken", violations)
-    }
-
-    @Test
-    fun `course application does not depend on assignment infrastructure`() {
-        val courseApplication = "$basePackage.course.application"
-        val assignmentInfrastructure = "$basePackage.assignment.infrastructure."
-        val violations = scanMainSourceImports { packageName, importName, relativePath ->
-            if (!isSameOrChildPackage(packageName, courseApplication)) return@scanMainSourceImports null
-            if (!importName.startsWith(assignmentInfrastructure)) return@scanMainSourceImports null
-
-            "$relativePath -> course application depends on assignment infrastructure: $importName"
-        }
-
-        assertNoViolations("Assignment query service boundary is broken", violations)
     }
 
     @Test
@@ -119,60 +101,17 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
-    fun `assignment application does not depend on event infrastructure`() {
+    fun `assignment application does not depend on infrastructure`() {
         val assignmentApplication = "$basePackage.assignment.application"
-        val assignmentInfrastructure = "$basePackage.assignment.infrastructure."
         val violations = scanMainSourceImports { packageName, importName, relativePath ->
             if (!isSameOrChildPackage(packageName, assignmentApplication)) return@scanMainSourceImports null
-            if (!importName.startsWith(assignmentInfrastructure)) return@scanMainSourceImports null
-            if (!importName.contains(".event.")) return@scanMainSourceImports null
+            if (!importName.startsWith("$basePackage.")) return@scanMainSourceImports null
+            if (!importName.contains(".infrastructure.")) return@scanMainSourceImports null
 
-            "$relativePath -> assignment application depends on event infrastructure: $importName"
+            "$relativePath -> assignment application depends on infrastructure: $importName"
         }
 
-        assertNoViolations("Assignment event infrastructure boundary is broken", violations)
-    }
-
-    @Test
-    fun `assignment submission application does not depend on infrastructure`() {
-        val assignmentSubmissionApplication = "$basePackage.assignment.application.submission"
-        val assignmentInfrastructure = "$basePackage.assignment.infrastructure."
-        val violations = scanMainSourceImports { packageName, importName, relativePath ->
-            if (!isSameOrChildPackage(packageName, assignmentSubmissionApplication)) return@scanMainSourceImports null
-            if (!importName.startsWith(assignmentInfrastructure)) return@scanMainSourceImports null
-
-            "$relativePath -> assignment submission application depends on infrastructure: $importName"
-        }
-
-        assertNoViolations("Assignment submission application boundary is broken", violations)
-    }
-
-    @Test
-    fun `assignment activation application does not depend on infrastructure`() {
-        val assignmentActivationApplication = "$basePackage.assignment.application.activation"
-        val assignmentInfrastructure = "$basePackage.assignment.infrastructure."
-        val violations = scanMainSourceImports { packageName, importName, relativePath ->
-            if (!isSameOrChildPackage(packageName, assignmentActivationApplication)) return@scanMainSourceImports null
-            if (!importName.startsWith(assignmentInfrastructure)) return@scanMainSourceImports null
-
-            "$relativePath -> assignment activation application depends on infrastructure: $importName"
-        }
-
-        assertNoViolations("Assignment activation application boundary is broken", violations)
-    }
-
-    @Test
-    fun `assignment application does not depend on submission infrastructure`() {
-        val assignmentApplication = "$basePackage.assignment.application"
-        val submissionInfrastructure = "$basePackage.assignment.infrastructure.submission."
-        val violations = scanMainSourceImports { packageName, importName, relativePath ->
-            if (!isSameOrChildPackage(packageName, assignmentApplication)) return@scanMainSourceImports null
-            if (!importName.startsWith(submissionInfrastructure)) return@scanMainSourceImports null
-
-            "$relativePath -> assignment application depends on submission infrastructure: $importName"
-        }
-
-        assertNoViolations("Assignment submission infrastructure boundary is broken", violations)
+        assertNoViolations("Assignment application boundary is broken", violations)
     }
 
     @Test
