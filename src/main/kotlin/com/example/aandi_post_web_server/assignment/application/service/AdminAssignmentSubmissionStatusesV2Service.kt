@@ -1,13 +1,13 @@
 package com.example.aandi_post_web_server.assignment.application.service
 
-import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusItemResponse
-import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionCourseQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionEnrollment
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionProjectionQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionProjectionReference
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserReference
+import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusItemResult
+import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusesResult
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
@@ -21,7 +21,7 @@ class AdminAssignmentSubmissionStatusesV2Service(
     fun getSubmissionStatuses(
         courseSlug: String,
         assignmentId: String,
-    ): Mono<AdminAssignmentSubmissionStatusesResponse> =
+    ): Mono<AdminAssignmentSubmissionStatusesResult> =
         courseQueryPort.ensureAssignmentBelongsToCourse(courseSlug, assignmentId)
             .then(
                 Mono.defer {
@@ -44,10 +44,10 @@ class AdminAssignmentSubmissionStatusesV2Service(
                 val items = enrollments.map { enrollment ->
                     val projection = projectionsByPublicCode[enrollment.publicCode]
                     val reportUser = reportUsersById[enrollment.userId]
-                    toItemResponse(enrollment, projection, reportUser)
+                    toItemResult(enrollment, projection, reportUser)
                 }
                 val submittedCount = items.count { it.submitted }
-                AdminAssignmentSubmissionStatusesResponse(
+                AdminAssignmentSubmissionStatusesResult(
                     assignmentId = assignmentId,
                     courseSlug = courseSlug,
                     totalEnrolled = items.size,
@@ -57,12 +57,12 @@ class AdminAssignmentSubmissionStatusesV2Service(
                 )
             }
 
-    private fun toItemResponse(
+    private fun toItemResult(
         enrollment: AdminAssignmentSubmissionEnrollment,
         projection: AdminAssignmentSubmissionProjectionReference?,
         reportUser: AdminAssignmentSubmissionUserReference?,
-    ): AdminAssignmentSubmissionStatusItemResponse =
-        AdminAssignmentSubmissionStatusItemResponse(
+    ): AdminAssignmentSubmissionStatusItemResult =
+        AdminAssignmentSubmissionStatusItemResult(
             userId = enrollment.userId,
             publicCode = enrollment.publicCode,
             username = reportUser?.nickname?.takeIf { it.isNotBlank() } ?: enrollment.username,

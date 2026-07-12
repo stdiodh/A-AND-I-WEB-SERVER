@@ -2,10 +2,10 @@
 
 package com.example.aandi_post_web_server.course.api.v2.controller
 
-import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusItemResponse
-import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
 import com.example.aandi_post_web_server.assignment.application.activation.TestAssignmentActivationConfig
 import com.example.aandi_post_web_server.assignment.application.service.AdminAssignmentSubmissionStatusesV2Service
+import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusItemResult
+import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusesResult
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.error.GlobalApiExceptionHandler
@@ -84,11 +84,18 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(true)
                 .jsonPath("$.data.assignmentId").isEqualTo(assignmentId)
+                .jsonPath("$.data.courseSlug").isEqualTo(courseSlug)
                 .jsonPath("$.data.totalEnrolled").isEqualTo(2)
                 .jsonPath("$.data.submittedCount").isEqualTo(1)
                 .jsonPath("$.data.notSubmittedCount").isEqualTo(1)
                 .jsonPath("$.data.items[0].submitted").isEqualTo(true)
+                .jsonPath("$.data.items[0].userId").isEqualTo("user-1")
+                .jsonPath("$.data.items[0].publicCode").isEqualTo("A00123")
+                .jsonPath("$.data.items[0].username").isEqualTo("alice")
+                .jsonPath("$.data.items[0].enrollmentStatus").isEqualTo("ENABLED")
                 .jsonPath("$.data.items[0].score").isEqualTo(90)
+                .jsonPath("$.data.items[0].passedCases").isEqualTo(9)
+                .jsonPath("$.data.items[0].totalCases").isEqualTo(10)
                 .jsonPath("$.data.items[0].completedAt").isEqualTo("2026-04-09T02:15:30.123Z")
                 .jsonPath("$.data.items[1].submitted").isEqualTo(false)
                 .jsonPath("$.data.items[1].score").isEmpty
@@ -144,15 +151,15 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
             .defaultHeader("timestamp", "2026-04-13T18:00:00+09:00")
             .build()
 
-    private fun sampleResponse(): AdminAssignmentSubmissionStatusesResponse =
-        AdminAssignmentSubmissionStatusesResponse(
+    private fun sampleResponse(): AdminAssignmentSubmissionStatusesResult =
+        AdminAssignmentSubmissionStatusesResult(
             assignmentId = assignmentId,
             courseSlug = courseSlug,
             totalEnrolled = 2,
             submittedCount = 1,
             notSubmittedCount = 1,
             items = listOf(
-                AdminAssignmentSubmissionStatusItemResponse(
+                AdminAssignmentSubmissionStatusItemResult(
                     userId = "user-1",
                     publicCode = "A00123",
                     username = "alice",
@@ -163,7 +170,7 @@ class CourseAdminAssignmentSubmissionStatusesV2ControllerTest : StringSpec() {
                     totalCases = 10,
                     completedAt = Instant.parse("2026-04-09T02:15:30.123Z"),
                 ),
-                AdminAssignmentSubmissionStatusItemResponse(
+                AdminAssignmentSubmissionStatusItemResult(
                     userId = "user-2",
                     publicCode = "A00124",
                     username = "bob",

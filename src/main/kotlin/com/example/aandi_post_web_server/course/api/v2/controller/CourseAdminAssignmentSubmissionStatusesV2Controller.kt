@@ -1,7 +1,10 @@
 package com.example.aandi_post_web_server.course.api.v2.controller
 
+import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusItemResponse
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
 import com.example.aandi_post_web_server.assignment.application.service.AdminAssignmentSubmissionStatusesV2Service
+import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusItemResult
+import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusesResult
 import com.example.aandi_post_web_server.common.openapi.V2AdminAssignmentSubmissionStatusesEnvelopeDoc
 import com.example.aandi_post_web_server.common.openapi.V2ErrorEnvelopeDoc
 import com.example.aandi_post_web_server.common.api.envelope.V2ApiEnvelope
@@ -58,5 +61,29 @@ class CourseAdminAssignmentSubmissionStatusesV2Controller(
         @PathVariable assignmentId: String,
     ): Mono<V2ApiEnvelope<AdminAssignmentSubmissionStatusesResponse>> =
         adminAssignmentSubmissionStatusesV2Service.getSubmissionStatuses(courseSlug, assignmentId)
+            .map(::toResponse)
             .map(V2ApiResponseFactory::success)
+
+    private fun toResponse(result: AdminAssignmentSubmissionStatusesResult): AdminAssignmentSubmissionStatusesResponse =
+        AdminAssignmentSubmissionStatusesResponse(
+            assignmentId = result.assignmentId,
+            courseSlug = result.courseSlug,
+            totalEnrolled = result.totalEnrolled,
+            submittedCount = result.submittedCount,
+            notSubmittedCount = result.notSubmittedCount,
+            items = result.items.map(::toItemResponse),
+        )
+
+    private fun toItemResponse(item: AdminAssignmentSubmissionStatusItemResult): AdminAssignmentSubmissionStatusItemResponse =
+        AdminAssignmentSubmissionStatusItemResponse(
+            userId = item.userId,
+            publicCode = item.publicCode,
+            username = item.username,
+            enrollmentStatus = item.enrollmentStatus,
+            submitted = item.submitted,
+            score = item.score,
+            passedCases = item.passedCases,
+            totalCases = item.totalCases,
+            completedAt = item.completedAt,
+        )
 }
