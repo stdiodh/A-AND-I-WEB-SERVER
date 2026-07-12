@@ -1,22 +1,19 @@
 package com.example.aandi_post_web_server.assignment.application.activation
 
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentActivationStore
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentActivation
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentActivationRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
-import org.mockito.ArgumentCaptor
-import org.mockito.Mockito
 import reactor.core.publisher.Mono
 import java.time.Instant
 
 class AssignmentActivationServiceTest : StringSpec({
 
-    "no document in repository returns default active=true" {
-        val repository = Mockito.mock(AssignmentActivationRepository::class.java)
-        Mockito.`when`(repository.findById(AssignmentActivation.GLOBAL_ID)).thenReturn(Mono.empty())
-        val service = AssignmentActivationService(repository)
+    "no document in store returns default active=true" {
+        val store = RecordingAssignmentActivationStore()
+        val service = AssignmentActivationService(store)
 
         val active = service.isActive().block()
         active!!.shouldBeTrue()
@@ -25,18 +22,18 @@ class AssignmentActivationServiceTest : StringSpec({
         response.active.shouldBeTrue()
         response.updatedAt shouldBe Instant.EPOCH
         response.updatedBy shouldBe null
+        store.lastFindId shouldBe AssignmentActivation.GLOBAL_ID
     }
 
     "stored deactivated document is returned" {
-        val repository = Mockito.mock(AssignmentActivationRepository::class.java)
         val stored = AssignmentActivation(
             id = AssignmentActivation.GLOBAL_ID,
             active = false,
             updatedAt = Instant.parse("2026-06-10T01:00:00Z"),
             updatedBy = "admin-1",
         )
-        Mockito.`when`(repository.findById(AssignmentActivation.GLOBAL_ID)).thenReturn(Mono.just(stored))
-        val service = AssignmentActivationService(repository)
+        val store = RecordingAssignmentActivationStore(current = stored)
+        val service = AssignmentActivationService(store)
 
         service.isActive().block()!!.shouldBeFalse()
         val response = service.getActivation().block()!!
@@ -45,23 +42,48 @@ class AssignmentActivationServiceTest : StringSpec({
     }
 
     "setActivation saves with caller and updates cache" {
-        val repository = Mockito.mock(AssignmentActivationRepository::class.java)
-        val captor = ArgumentCaptor.forClass(AssignmentActivation::class.java)
-        Mockito.`when`(repository.save(Mockito.any(AssignmentActivation::class.java)))
-            .thenAnswer { Mono.just(it.arguments[0] as AssignmentActivation) }
-        val service = AssignmentActivationService(repository)
+        val store = RecordingAssignmentActivationStore()
+        val service = AssignmentActivationService(store)
 
         val response = service.setActivation(active = false, updatedBy = "admin-9").block()!!
         response.active.shouldBeFalse()
         response.updatedBy shouldBe "admin-9"
 
-        Mockito.verify(repository).save(captor.capture())
-        captor.value.active.shouldBeFalse()
-        captor.value.id shouldBe AssignmentActivation.GLOBAL_ID
-        captor.value.updatedBy shouldBe "admin-9"
+        store.saved!!.active.shouldBeFalse()
+        store.saved!!.id shouldBe AssignmentActivation.GLOBAL_ID
+        store.saved!!.updatedBy shouldBe "admin-9"
+        store.saveCalls shouldBe 1
 
-        Mockito.`when`(repository.findById(AssignmentActivation.GLOBAL_ID))
-            .thenReturn(Mono.error(IllegalStateException("should not hit repository because of cache")))
+        store.findError = IllegalStateException("should not hit store because of cache")
         service.isActive().block()!!.shouldBeFalse()
+        store.findCalls shouldBe 0
     }
 })
+
+private class RecordingAssignmentActivationStore(
+    private var current: AssignmentActivation? = null,
+) : AssignmentActivationStore {
+    var saved: AssignmentActivation? = null
+        private set
+    var saveCalls: Int = 0
+        private set
+    var findCalls: Int = 0
+        private set
+    var lastFindId: String? = null
+        private set
+    var findError: Throwable? = null
+
+    override fun findById(id: String): Mono<AssignmentActivation> {
+        findCalls += 1
+        lastFindId = id
+        findError?.let { return Mono.error(it) }
+        return Mono.justOrEmpty(current)
+    }
+
+    override fun save(activation: AssignmentActivation): Mono<AssignmentActivation> {
+        saveCalls += 1
+        saved = activation
+        current = activation
+        return Mono.just(activation)
+    }
+}

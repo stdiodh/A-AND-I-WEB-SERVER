@@ -1,8 +1,8 @@
 package com.example.aandi_post_web_server.assignment.application.activation
 
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AssignmentActivationResponse
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentActivationStore
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentActivation
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentActivationRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 @Service
 class AssignmentActivationService(
-    private val repository: AssignmentActivationRepository,
+    private val store: AssignmentActivationStore,
 ) {
 
     private val log = LoggerFactory.getLogger(AssignmentActivationService::class.java)
@@ -29,7 +29,7 @@ class AssignmentActivationService(
             updatedAt = Instant.now(),
             updatedBy = updatedBy,
         )
-        return repository.save(updated)
+        return store.save(updated)
             .doOnNext { saved ->
                 cache.set(CachedActivation(saved, Instant.now()))
                 log.info(
@@ -47,7 +47,7 @@ class AssignmentActivationService(
         if (cached != null && !cached.isExpired()) {
             return Mono.just(cached.value)
         }
-        return repository.findById(AssignmentActivation.GLOBAL_ID)
+        return store.findById(AssignmentActivation.GLOBAL_ID)
             .defaultIfEmpty(AssignmentActivation.defaultActive())
             .doOnNext { value -> cache.set(CachedActivation(value, Instant.now())) }
     }

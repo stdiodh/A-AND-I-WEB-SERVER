@@ -134,6 +134,20 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
+    fun `assignment activation application does not depend on infrastructure`() {
+        val assignmentActivationApplication = "$basePackage.assignment.application.activation"
+        val assignmentInfrastructure = "$basePackage.assignment.infrastructure."
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            if (!isSameOrChildPackage(packageName, assignmentActivationApplication)) return@scanMainSourceImports null
+            if (!importName.startsWith(assignmentInfrastructure)) return@scanMainSourceImports null
+
+            "$relativePath -> assignment activation application depends on infrastructure: $importName"
+        }
+
+        assertNoViolations("Assignment activation application boundary is broken", violations)
+    }
+
+    @Test
     fun `assignment application does not depend on submission infrastructure`() {
         val assignmentApplication = "$basePackage.assignment.application"
         val submissionInfrastructure = "$basePackage.assignment.infrastructure.submission."
