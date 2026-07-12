@@ -1,5 +1,6 @@
-package com.example.aandi_post_web_server.assignment.application.submission.service
+package com.example.aandi_post_web_server.assignment.infrastructure.submission.adapter
 
+import com.example.aandi_post_web_server.assignment.application.submission.service.AssignmentSubmissionStatusProjectionStore
 import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
 import com.example.aandi_post_web_server.assignment.infrastructure.submission.repository.AssignmentSubmissionStatusProjectionRepository
 import org.springframework.stereotype.Component
