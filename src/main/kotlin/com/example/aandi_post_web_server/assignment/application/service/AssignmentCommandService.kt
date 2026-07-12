@@ -14,6 +14,7 @@ import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequ
 import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentTestCaseRequest
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentCommandStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCoursePort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentDocumentCleanupPort
@@ -22,7 +23,6 @@ import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.course.domain.model.AssignmentId
@@ -42,7 +42,7 @@ import java.util.UUID
 @Service
 class AssignmentCommandService(
     private val assignmentCoursePort: AssignmentCoursePort,
-    private val assignmentRepository: AssignmentRepository,
+    private val assignmentCommandStore: AssignmentCommandStore,
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
     private val assignmentDocumentCleanupPort: AssignmentDocumentCleanupPort,
@@ -84,7 +84,7 @@ class AssignmentCommandService(
                             )
                             .then(
                                 Mono.defer {
-                                    assignmentRepository.save(
+                                    assignmentCommandStore.save(
                                         createAssignmentEntity(
                                             courseId = courseId.value,
                                             courseSlug = course.slug,
@@ -150,7 +150,7 @@ class AssignmentCommandService(
                 findCourseBySlug(slug)
                     .flatMap { course ->
                         val courseId = parseCourseId(requireNotNull(course.id))
-                        assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
+                        assignmentCommandStore.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
                             .switchIfEmpty(
                                 Mono.error(
                                     ResponseStatusException(
@@ -181,7 +181,7 @@ class AssignmentCommandService(
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
+                assignmentCommandStore.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
                     .switchIfEmpty(
                         Mono.error(
                             ResponseStatusException(
@@ -260,7 +260,7 @@ class AssignmentCommandService(
     }
 
     fun deleteAllByCourseId(courseId: String): Mono<Void> {
-        return assignmentRepository.findAllByCourseId(courseId)
+        return assignmentCommandStore.findAllByCourseId(courseId)
             .collectList()
             .flatMap { assignments ->
                 val deletableAssignments = assignments.filter { it.id != null }
@@ -330,7 +330,7 @@ class AssignmentCommandService(
         return checkDuplicate
             .then(checkWeek)
             .then(
-                Mono.defer { assignmentRepository.save(candidate) }
+                Mono.defer { assignmentCommandStore.save(candidate) }
                     .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentSlotConflict() }
             )
             .flatMap { saved ->
@@ -378,7 +378,7 @@ class AssignmentCommandService(
         assignment: Assignment,
         assignmentId: AssignmentId,
     ): Mono<Void> {
-        return assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(
+        return assignmentCommandStore.findByCourseIdAndWeekNoAndOrderInWeek(
             courseId.value,
             assignment.weekNo,
             assignment.orderInWeek,
@@ -402,7 +402,7 @@ class AssignmentCommandService(
         weekNo: Int,
         orderInWeek: Int,
     ): Mono<Void> {
-        return assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo, orderInWeek)
+        return assignmentCommandStore.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo, orderInWeek)
             .flatMap<Assignment> {
                 Mono.error(
                     ResponseStatusException(

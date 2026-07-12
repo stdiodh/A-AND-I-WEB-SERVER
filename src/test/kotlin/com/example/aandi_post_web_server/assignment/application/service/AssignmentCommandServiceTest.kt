@@ -20,6 +20,7 @@ import com.example.aandi_post_web_server.assignment.infrastructure.event.Assignm
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventType
 import com.example.aandi_post_web_server.assignment.infrastructure.event.DirectAssignmentProblemSyncAdapter
 import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentDocumentCleanupAdapter
+import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentCommandStore
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
@@ -1641,7 +1642,7 @@ private class AssignmentCommandFixture(
     val assignmentCopyService: AssignmentCopyService = Mockito.mock(AssignmentCopyService::class.java)
     val service = AssignmentCommandService(
         assignmentCoursePort = assignmentCoursePort,
-        assignmentRepository = assignmentRepository,
+        assignmentCommandStore = RepositoryAssignmentCommandStore(assignmentRepository),
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentTestCaseRepository = assignmentTestCaseRepository,
         assignmentDocumentCleanupPort = RepositoryAssignmentDocumentCleanupAdapter(
