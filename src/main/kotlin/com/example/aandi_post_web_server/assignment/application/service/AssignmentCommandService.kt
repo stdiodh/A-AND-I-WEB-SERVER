@@ -16,12 +16,12 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseRe
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCoursePort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentDocumentCleanupPort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentProblemSyncPort
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
@@ -45,7 +45,7 @@ class AssignmentCommandService(
     private val assignmentRepository: AssignmentRepository,
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
-    private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
+    private val assignmentDocumentCleanupPort: AssignmentDocumentCleanupPort,
     private val assignmentProblemSyncPort: AssignmentProblemSyncPort,
     private val assignmentCopyService: AssignmentCopyService,
     private val assignmentCommandRequestResolver: AssignmentCommandRequestResolver,
@@ -268,12 +268,7 @@ class AssignmentCommandService(
                 if (assignmentIds.isEmpty()) {
                     Mono.empty<Void>()
                 } else {
-                    Flux.concatDelayError(
-                        assignmentRequirementRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
-                        assignmentTestCaseRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
-                        assignmentDeliveryRepository.deleteAllByAssignmentIdIn(assignmentIds).then(),
-                        assignmentRepository.deleteAllById(assignmentIds).then()
-                    ).then(
+                    assignmentDocumentCleanupPort.deleteAllByAssignmentIds(assignmentIds).then(
                         Flux.fromIterable(deletableAssignments)
                             .concatMap { assignment ->
                                 val assignmentId = requireNotNull(assignment.id)
@@ -425,14 +420,9 @@ class AssignmentCommandService(
             "동일 코스/주차/순번 과제가 이미 존재합니다.",
         )
 
-    private fun deleteAssignmentCascade(assignmentId: String): Mono<Void> {
-        return Flux.concatDelayError(
-            assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
-            assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
-            assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
-            assignmentRepository.deleteById(assignmentId).then(),
-        ).then(publishDeletedTestCases(assignmentId))
-    }
+    private fun deleteAssignmentCascade(assignmentId: String): Mono<Void> =
+        assignmentDocumentCleanupPort.deleteByAssignmentId(assignmentId)
+            .then(publishDeletedTestCases(assignmentId))
 
     private fun publishProblemSyncOnCreate(assignment: Assignment): Mono<Void> =
         assignmentProblemSyncPort.publishCreated(requireNotNull(assignment.id))

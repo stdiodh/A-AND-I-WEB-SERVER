@@ -19,6 +19,7 @@ import com.example.aandi_post_web_server.assignment.infrastructure.event.Assignm
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventPublisher
 import com.example.aandi_post_web_server.assignment.infrastructure.event.AssignmentReportTestCaseEventType
 import com.example.aandi_post_web_server.assignment.infrastructure.event.DirectAssignmentProblemSyncAdapter
+import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentDocumentCleanupAdapter
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
@@ -1643,7 +1644,12 @@ private class AssignmentCommandFixture(
         assignmentRepository = assignmentRepository,
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentTestCaseRepository = assignmentTestCaseRepository,
-        assignmentDeliveryRepository = assignmentDeliveryRepository,
+        assignmentDocumentCleanupPort = RepositoryAssignmentDocumentCleanupAdapter(
+            assignmentRepository,
+            assignmentRequirementRepository,
+            assignmentTestCaseRepository,
+            assignmentDeliveryRepository,
+        ),
         assignmentProblemSyncPort = assignmentProblemSyncPort,
         assignmentCopyService = assignmentCopyService,
         assignmentCommandRequestResolver = assignmentCommandRequestResolver,

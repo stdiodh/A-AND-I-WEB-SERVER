@@ -7,13 +7,13 @@ import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentReques
 import com.example.aandi_post_web_server.assignment.application.mapper.toDetailResponse
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCoursePort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentDocumentCleanupPort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentProblemSyncPort
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPublicationPolicy
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentDeliveryRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
@@ -26,7 +26,6 @@ import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
 import java.util.UUID
@@ -37,7 +36,7 @@ class AssignmentCopyService(
     private val assignmentRepository: AssignmentRepository,
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
-    private val assignmentDeliveryRepository: AssignmentDeliveryRepository,
+    private val assignmentDocumentCleanupPort: AssignmentDocumentCleanupPort,
     private val assignmentProblemSyncPort: AssignmentProblemSyncPort,
     private val assignmentCopyFingerprintCalculator: AssignmentCopyFingerprintCalculator,
     private val assignmentPublicationPolicy: AssignmentPublicationPolicy = AssignmentPublicationPolicy(),
@@ -327,19 +326,11 @@ class AssignmentCopyService(
     }
 
     private fun cleanupCopiedAssignment(assignmentId: String): Mono<Void> =
-        deleteCopiedAssignmentDocuments(assignmentId)
+        assignmentDocumentCleanupPort.deleteByAssignmentId(assignmentId)
             .onErrorResume { cleanupError ->
                 log.warn("Failed to cleanup copied assignment after copy failure. assignmentId={}", assignmentId, cleanupError)
                 Mono.empty()
             }
-
-    private fun deleteCopiedAssignmentDocuments(assignmentId: String): Mono<Void> =
-        Flux.concatDelayError(
-            assignmentRequirementRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
-            assignmentTestCaseRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
-            assignmentDeliveryRepository.deleteAllByAssignmentIdIn(listOf(assignmentId)).then(),
-            assignmentRepository.deleteById(assignmentId).then(),
-        ).then()
 
     private fun resolveAssignmentCourseSlug(assignment: Assignment): Mono<String> {
         val fallbackSlug = assignment.courseSlug.takeIf { it.isNotBlank() }
