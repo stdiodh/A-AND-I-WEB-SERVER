@@ -9,7 +9,7 @@ class V2StructuredLogSanitizerTest : StringSpec({
     val sanitizer = V2StructuredLogSanitizer(jacksonObjectMapper())
 
     "민감 필드는 중첩 JSON과 배열에서도 원문을 남기지 않는다" {
-        val sanitized = sanitizer.sanitize(
+        val sanitized = sanitizer.sanitizeMap(
             mapOf(
                 "password" to "pass-1234",
                 "accessToken" to "access-token-raw",
@@ -33,7 +33,7 @@ class V2StructuredLogSanitizerTest : StringSpec({
                 "sourceCode" to "raw source code",
                 "submittedCode" to "fun main() = println(\"secret\")",
             )
-        ) as Map<*, *>
+        )
 
         sanitized["password"] shouldBe "****"
         sanitized["accessToken"] shouldBe "****"

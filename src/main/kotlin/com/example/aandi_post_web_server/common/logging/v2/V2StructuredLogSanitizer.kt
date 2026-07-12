@@ -18,6 +18,17 @@ class V2StructuredLogSanitizer(
         return sanitizeNode(fieldName = null, node = node, parentHidden = false)
     }
 
+    fun sanitizeMap(value: Map<String, *>): Map<String, Any?> {
+        val sanitized = sanitize(value) as? Map<*, *> ?: return emptyMap()
+        val result = linkedMapOf<String, Any?>()
+        sanitized.forEach { (key, sanitizedValue) ->
+            if (key is String) {
+                result[key] = sanitizedValue
+            }
+        }
+        return result
+    }
+
     private fun sanitizeNode(fieldName: String?, node: JsonNode, parentHidden: Boolean): Any? {
         if (node.isNull) {
             return null

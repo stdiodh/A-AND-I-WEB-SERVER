@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import org.springframework.mock.env.MockEnvironment
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest
 import org.springframework.mock.web.server.MockServerWebExchange
+import org.springframework.web.reactive.HandlerMapping
 import java.time.Instant
 
 class V2StructuredLogFormatterTest : StringSpec({
@@ -30,6 +31,8 @@ class V2StructuredLogFormatterTest : StringSpec({
         payload["trace"]["requestId"].asText() shouldBe "req-test"
         payload["headers"]["Authenticate"].isNull shouldBe true
         payload["headers"]["salt"].isNull shouldBe true
+        payload["request"]["query"]["accessToken"].asText() shouldBe "****"
+        payload["request"]["pathVariables"]["loginId"].asText() shouldBe "han*****"
         payload["@timestamp"].asText().endsWith("+09:00") shouldBe true
         payload["response"]["success"].asBoolean() shouldBe true
         payload["response"]["error"].isNull shouldBe true
@@ -63,6 +66,7 @@ private fun V2StructuredLogFormatter.formatContext(statusCode: Int): JsonNode {
             .build()
     )
     exchange.attributes[RequestIdSupport.ATTRIBUTE_NAME] = "req-test"
+    exchange.attributes[HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE] = mapOf("loginId" to "han12345")
     exchange.response.statusCode = org.springframework.http.HttpStatus.valueOf(statusCode)
 
     val responseBody = if (statusCode < 400) {

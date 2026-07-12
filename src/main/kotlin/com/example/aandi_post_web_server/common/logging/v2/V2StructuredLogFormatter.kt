@@ -70,8 +70,8 @@ class V2StructuredLogFormatter(
             client = buildClient(exchange),
             actor = context.actor,
             request = V2StructuredAccessLog.Request(
-                query = sanitizer.sanitize(resolveQuery(exchange)) as? Map<String, Any?> ?: emptyMap(),
-                pathVariables = sanitizer.sanitize(resolvePathVariables(exchange)) as? Map<String, Any?> ?: emptyMap(),
+                query = sanitizer.sanitizeMap(resolveQuery(exchange)),
+                pathVariables = sanitizer.sanitizeMap(resolvePathVariables(exchange)),
                 body = requestEnvelope,
             ),
             response = responseEnvelope,
