@@ -5,6 +5,7 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentRequiremen
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.api.dto.CopyAssignmentRequest
 import com.example.aandi_post_web_server.assignment.application.mapper.toDetailResponse
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentCopyStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCoursePort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentDocumentCleanupPort
@@ -14,7 +15,6 @@ import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPubli
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.course.domain.model.AssignmentId
@@ -33,7 +33,7 @@ import java.util.UUID
 @Service
 class AssignmentCopyService(
     private val assignmentCoursePort: AssignmentCoursePort,
-    private val assignmentRepository: AssignmentRepository,
+    private val assignmentCopyStore: AssignmentCopyStore,
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
     private val assignmentDocumentCleanupPort: AssignmentDocumentCleanupPort,
@@ -57,7 +57,7 @@ class AssignmentCopyService(
         return findCourseBySlug(slug)
             .flatMap { targetCourse ->
                 val targetCourseId = parseCourseId(requireNotNull(targetCourse.id))
-                assignmentRepository.findById(sourceAssignmentId.value)
+                assignmentCopyStore.findById(sourceAssignmentId.value)
                     .switchIfEmpty(
                         Mono.error(
                             ResponseStatusException(
@@ -138,7 +138,7 @@ class AssignmentCopyService(
                 }
             )
             .then(
-                Mono.defer { assignmentRepository.save(copiedAssignment) }
+                Mono.defer { assignmentCopyStore.save(copiedAssignment) }
                     .onErrorMap(DuplicateKeyException::class.java) { duplicateAssignmentCopyConflict() }
             )
             .flatMap { saved ->
@@ -263,8 +263,8 @@ class AssignmentCopyService(
         sourceAssignmentId: String,
         targetCourseSlug: String,
     ): Mono<Void> {
-        return assignmentRepository.findByCourseIdAndOriginAssignmentId(targetCourseId.value, originAssignmentId)
-            .switchIfEmpty(assignmentRepository.findByIdAndCourseId(originAssignmentId, targetCourseId.value))
+        return assignmentCopyStore.findByCourseIdAndOriginAssignmentId(targetCourseId.value, originAssignmentId)
+            .switchIfEmpty(assignmentCopyStore.findByIdAndCourseId(originAssignmentId, targetCourseId.value))
             .flatMap<Assignment> { existing ->
                 Mono.error(
                     ResponseStatusException(
@@ -289,7 +289,7 @@ class AssignmentCopyService(
         sourceAssignmentId: String,
         targetCourseSlug: String,
     ): Mono<Void> {
-        return assignmentRepository.findByCourseIdAndCopyFingerprint(targetCourseId.value, copyFingerprint)
+        return assignmentCopyStore.findByCourseIdAndCopyFingerprint(targetCourseId.value, copyFingerprint)
             .flatMap<Assignment> { existing ->
                 Mono.error(
                     ResponseStatusException(
@@ -313,7 +313,7 @@ class AssignmentCopyService(
         weekNo: Int,
         orderInWeek: Int,
     ): Mono<Void> {
-        return assignmentRepository.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo, orderInWeek)
+        return assignmentCopyStore.findByCourseIdAndWeekNoAndOrderInWeek(courseId.value, weekNo, orderInWeek)
             .flatMap<Assignment> {
                 Mono.error(
                     ResponseStatusException(
