@@ -43,12 +43,12 @@ class CourseQueryService(
 
     fun getAdminCourses(): Flux<CourseResponse> =
         courseRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
-            .map(::toCourseResponse)
+            .map { course -> course.toResponse() }
 
     fun getCourse(courseSlug: String, userId: String): Mono<CourseResponse> {
         val slug = parseCourseSlug(courseSlug)
         val parsedUserId = parseUserId(userId)
-        return findAccessibleCourseBySlug(slug, parsedUserId).map(::toCourseResponse)
+        return findAccessibleCourseBySlug(slug, parsedUserId).map { course -> course.toResponse() }
     }
 
     fun getCourseOutline(courseSlug: String, userId: String): Mono<CourseOutlineResponse> {
@@ -66,7 +66,7 @@ class CourseQueryService(
 
     fun getCourses(userId: String): Flux<CourseResponse> {
         val parsedUserId = parseUserId(userId)
-        return loadEnrolledCourses(parsedUserId).map(::toCourseResponse)
+        return loadEnrolledCourses(parsedUserId).map { course -> course.toResponse() }
     }
 
     fun getEnrollments(courseSlug: String): Flux<CourseEnrollmentResponse> {
@@ -151,7 +151,7 @@ class CourseQueryService(
                         ensureEnrolled(parsedCourseId, parsedUserId).thenReturn(course)
                     }
             }
-            .map(::toCourseResponse)
+            .map { course -> course.toResponse() }
     }
 
     private fun loadEnrolledCourses(userId: UserId): Flux<Course> {
@@ -207,23 +207,6 @@ class CourseQueryService(
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, error.message ?: "잘못된 요청입니다.")
         }
     }
-
-    private fun toCourseResponse(course: Course): CourseResponse = CourseResponse(
-        id = requireNotNull(course.id),
-        slug = course.slug,
-        fieldTag = course.fieldTag,
-        startDate = course.startDate,
-        endDate = course.endDate,
-        metadata = com.example.aandi_post_web_server.course.api.dto.CourseMetadataResponse(
-            title = course.metadata.title,
-            description = course.metadata.description,
-            phase = course.metadata.phase,
-            attributes = course.metadata.attributes,
-        ),
-        status = course.status,
-        createdAt = course.createdAt,
-        updatedAt = course.updatedAt,
-    )
 
     private fun toWeekResponse(week: CourseWeek): CourseWeekResponse = CourseWeekResponse(
         id = requireNotNull(week.id),

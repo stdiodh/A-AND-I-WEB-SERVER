@@ -6,12 +6,12 @@ import com.example.aandi_post_web_server.assignment.api.dto.CreateAssignmentRequ
 import com.example.aandi_post_web_server.assignment.api.dto.UpdateAssignmentRequest
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentCommandService
 import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
-import com.example.aandi_post_web_server.course.api.dto.CourseMetadataResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseResponse
 import com.example.aandi_post_web_server.course.api.dto.CreateCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.UpdateCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.UpdateEnrollmentRequest
+import com.example.aandi_post_web_server.course.application.mapper.toResponse
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
 import com.example.aandi_post_web_server.course.domain.model.CourseStatus
@@ -71,7 +71,7 @@ class CourseCommandService(
                     status = request.status ?: course.status,
                     updatedAt = Instant.now(),
                 )
-                courseRepository.save(updated).map(::toCourseResponse)
+                courseRepository.save(updated).map { saved -> saved.toResponse() }
             }
     }
 
@@ -148,7 +148,7 @@ class CourseCommandService(
             .onErrorMap(DuplicateKeyException::class.java) { error ->
                 duplicateCourseSlugConflict(slug.value, error)
             }
-            .map(::toCourseResponse)
+            .map { saved -> saved.toResponse() }
     }
 
     private fun deleteCourseRelations(courseId: String): Mono<Void> =
@@ -178,20 +178,4 @@ class CourseCommandService(
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, error.message ?: "잘못된 요청입니다.")
         }
 
-    private fun toCourseResponse(course: Course): CourseResponse = CourseResponse(
-        id = requireNotNull(course.id),
-        slug = course.slug,
-        fieldTag = course.fieldTag,
-        startDate = course.startDate,
-        endDate = course.endDate,
-        metadata = CourseMetadataResponse(
-            title = course.metadata.title,
-            description = course.metadata.description,
-            phase = course.metadata.phase,
-            attributes = course.metadata.attributes,
-        ),
-        status = course.status,
-        createdAt = course.createdAt,
-        updatedAt = course.updatedAt,
-    )
 }
