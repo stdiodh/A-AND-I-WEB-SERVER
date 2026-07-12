@@ -1,9 +1,7 @@
 package com.example.aandi_post_web_server.assignment.domain.model
 
-import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import java.time.Instant
 
@@ -51,18 +49,5 @@ class AssignmentDraftCollectionsTest : StringSpec({
         entities.first().visibility shouldBe AssignmentTestCaseVisibility.PUBLIC
         entities.first().description shouldBe null
         entities.first().createdAt shouldBe now
-    }
-
-    "DeliveredAssignmentIds는 assignmentId를 중복 제거해 보관한다" {
-        val ids = DeliveredAssignmentIds.fromDeliveries(
-            listOf(
-                AssignmentDelivery(assignmentId = "a-1", userId = "u-1"),
-                AssignmentDelivery(assignmentId = "a-1", userId = "u-2"),
-                AssignmentDelivery(assignmentId = "a-2", userId = "u-3"),
-            )
-        )
-
-        ids.isEmpty() shouldBe false
-        ids.asCollection().toList().sorted() shouldContainExactly listOf("a-1", "a-2")
     }
 })

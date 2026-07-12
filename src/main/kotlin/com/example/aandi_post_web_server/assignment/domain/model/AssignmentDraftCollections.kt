@@ -2,7 +2,6 @@ package com.example.aandi_post_web_server.assignment.domain.model
 
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
-import com.example.aandi_post_web_server.assignment.entity.AssignmentDelivery
 import java.time.Instant
 
 data class AssignmentRequirementDraft(
@@ -69,18 +68,4 @@ class AssignmentTestCaseDrafts private constructor(
             )
         }
     }
-}
-
-class DeliveredAssignmentIds private constructor(
-    private val values: Set<String>,
-) {
-    companion object {
-        fun fromDeliveries(deliveries: List<AssignmentDelivery>): DeliveredAssignmentIds {
-            return DeliveredAssignmentIds(deliveries.map { it.assignmentId }.toSet())
-        }
-    }
-
-    fun isEmpty(): Boolean = values.isEmpty()
-
-    fun asCollection(): Collection<String> = values
 }
