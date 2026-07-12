@@ -2,7 +2,7 @@
 
 > 테스트 개수나 P95 숫자만 강조하지 않고, 어떤 데이터와 조건으로 무엇을 확인했는지 함께 기록합니다.
 
-> 이 문서의 188/277 테스트 수치는 과거 측정 기준입니다. 최신 품질 기준은 아래 `2026-07-11 현재 checkpoint`를 확인합니다.
+> 이 문서의 188/277 테스트 수치와 2026-07-11 checkpoint는 과거 측정 기준입니다. 최신 품질 기준은 아래 `2026-07-13 현재 checkpoint`를 확인합니다.
 
 [README로 돌아가기](../README.md)
 
@@ -75,7 +75,7 @@ JaCoCo HTML report는 `build/reports/jacoco/test/html/index.html`에서 확인�
 
 관련 블로그 정리: [테스트와 k6로 검증한 과제 목록 N+1 개선기](https://velog.io/@stdiodh/%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%99%80-k6%EB%A1%9C-%EA%B2%80%EC%A6%9D%ED%95%9C-%EA%B3%BC%EC%A0%9C-%EB%AA%A9%EB%A1%9D-N1-%EA%B0%9C%EC%84%A0%EA%B8%B0#%EC%A1%B0%ED%9A%8C-%ED%9A%9F%EC%88%98)
 
-### 2026-07-11 현재 checkpoint
+### 2026-07-11 checkpoint (historical)
 
 서비스 경계, MongoDB 인덱스 계약, 사용자 tombstone 이벤트 순서, 과제 조회 경계, child·삭제 write 순차화, CourseWeek 동시 생성 수렴과 Course 관계 삭제 순서 테스트를 추가한 뒤 같은 expanded scope와 gate로 다시 측정했습니다.
 
@@ -83,7 +83,17 @@ JaCoCo HTML report는 `build/reports/jacoco/test/html/index.html`에서 확인�
 | ---: | ---: | ---: | :--- |
 | 388 | 4,431 / 4,986 = **88.87%** | 1,141 / 1,790 = **63.74%** | Line 86%, Branch 62% |
 
-MongoDB 인덱스 migration JavaScript의 12개 단위 테스트는 `node --test`로 별도 실행하며 위 Gradle 테스트 수와 JaCoCo 분자·분모에는 포함하지 않습니다.
+MongoDB 인덱스 migration JavaScript의 12개 단위 테스트는 `node --test`로 별도 실행하며 이 문서의 Gradle 테스트 수와 JaCoCo 분자·분모에는 포함하지 않습니다.
+
+### 2026-07-13 현재 checkpoint
+
+Course·Assignment·User의 저장소 의존을 application port와 infrastructure adapter로 분리하고, 과제 response/result, activation web, Jackson 설정과 problem sync snapshot의 소유 경계를 정리한 뒤 다시 측정했습니다.
+
+| 테스트 수 | Line coverage | Branch coverage | CI gate |
+| ---: | ---: | ---: | :--- |
+| 456 | 4,555 / 4,951 = **92.00%** | 1,175 / 1,778 = **66.09%** | Line 86%, Branch 62% |
+
+2026-07-11 이후에는 port/adapter 분리와 응답 mapper 통합으로 JaCoCo 측정 source set의 대상 클래스 구성과 line·branch 분모가 바뀌었습니다. 따라서 두 checkpoint의 coverage 비율 차이를 테스트 보강만의 순수 개선률로 해석하지 않으며, absolute covered/total counter와 gate 통과 여부를 함께 기록합니다.
 
 숫자보다 다음 규칙을 우선적으로 테스트합니다.
 

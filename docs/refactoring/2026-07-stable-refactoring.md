@@ -9,7 +9,7 @@
 - 최초 작업 branch(기록): `develop/stable-refactoring`
 - 최초 병합 commit: `c2c542d`
 - PR #68 checkpoint: 306 tests, failures/errors/skipped 0, Line 85.67%, Branch 63.37%
-- 현재 checkpoint: 388 tests, failures/errors/skipped 0, Line 88.87%, Branch 63.74%
+- 현재 checkpoint: 456 tests, failures/errors/skipped 0, Line 4,555 / 4,951 = 92.00%, Branch 1,175 / 1,778 = 66.09%
 
 보존하는 핵심 계약:
 
@@ -42,6 +42,7 @@
 | 8A. 사용자 동기화 순서 | 완료 | hard delete를 동일 문서 tombstone으로 전환하고 stale profile 재삽입과 tombstone 조회 노출 차단 |
 | 8B. CourseWeek 동시 생성 수렴 | 완료 | unique 충돌 뒤 동일 주차를 재조회하고 assignment 저장 충돌만 슬롯 CONFLICT로 변환 |
 | 9. 문서·레거시 분류 | 완료 | 현재 문서와 과거 측정 근거를 분류하고 후속 코드·운영 정리는 별도 단계로 분리 |
+| 10. 계층 경계 정리 | 완료 | Course·Assignment·User 저장 경로를 application port/infrastructure adapter로 분리하고 response/result·activation·Jackson·problem sync 소유권과 구조 회귀 guard 정리 |
 
 이 문서의 최초 구현 범위는 PR #68에서 완료했습니다. 이후 데이터 운영 단계에서 애플리케이션 자동 생성을 사용하지 않는 Mongo index V001과 운영 절차를 추가했습니다. 7B transactional outbox, replica/backup 복원과 동시성 검증, 운영 Compose 단일화는 별도 운영 전제와 검증이 필요한 후속 작업입니다.
 
@@ -149,11 +150,22 @@
 - 실제 중복 방지는 운영 DB에 V001 `ux_course_week` unique index가 적용·검증된 경우에만 보장
 - 전체 387개 테스트, Line 88.87%, Branch 63.74%, JaCoCo gate와 bootJar 통과
 
+### 계층 경계 정리
+
+Course·Assignment·User application의 저장 경로를 기능별 port 뒤로 이동하고 Reactive MongoDB 구현은 infrastructure adapter가 담당하도록 정리했습니다. 과제 응답/result, activation web, Jackson 설정, problem sync snapshot과 관리자 제출 현황 서비스도 기능 소유 경계로 모았습니다.
+
+- query·command·copy·document cleanup·course·user sync 저장 계약을 최소 port로 분리
+- 분리한 저장소·problem sync·submission 하위 경계의 역참조를 막는 구조 회귀 테스트를 실제 패키지 기준으로 통합
+- 외부 JSON, 상태 의미, publisher 호출 순서와 MongoDB 문서 계약은 유지
+- 전체 456개 테스트, Line 92.00%, Branch 66.09%, JaCoCo gate와 bootJar 통과
+
 ## 다음 변경의 안전 기준
 
 ### 남은 기능 경계
 
 assignment application은 Course persistence 구현을 더 이상 직접 사용하지 않습니다. `CourseId`, `CourseSlug`, `WeekNo`, `AssignmentId` 같은 명시적 course domain 값 계약은 현재 허용합니다. 이 값 객체까지 이동하는 변경은 저장 데이터와 API 검증 규칙의 소유권을 먼저 정한 뒤 별도 단계에서 진행합니다.
+
+남은 assignment application의 API DTO 분리는 별도 command/result 모델과 v1/v2 controller mapping을 함께 바꿔야 하는 중위험 작업입니다. wire JSON·OpenAPI와 `testCases` 생략/빈 배열 계약을 먼저 고정한 뒤 별도 단계로 진행합니다.
 
 ### 이벤트 일관성
 
