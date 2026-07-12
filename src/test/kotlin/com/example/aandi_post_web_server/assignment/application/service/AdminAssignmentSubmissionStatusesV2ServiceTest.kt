@@ -2,10 +2,10 @@ package com.example.aandi_post_web_server.assignment.application.service
 
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionCourseQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionEnrollment
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionProjectionQueryPort
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionProjectionReference
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserReference
-import com.example.aandi_post_web_server.assignment.infrastructure.submission.repository.AssignmentSubmissionStatusProjectionRepository
-import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -19,15 +19,15 @@ import java.time.Instant
 
 class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
     val courseQueryPort = Mockito.mock(AdminAssignmentSubmissionCourseQueryPort::class.java)
-    val projectionRepository = Mockito.mock(AssignmentSubmissionStatusProjectionRepository::class.java)
+    val projectionQueryPort = Mockito.mock(AdminAssignmentSubmissionProjectionQueryPort::class.java)
     val userQueryPort = Mockito.mock(AdminAssignmentSubmissionUserQueryPort::class.java)
-    val service = AdminAssignmentSubmissionStatusesV2Service(courseQueryPort, projectionRepository, userQueryPort)
+    val service = AdminAssignmentSubmissionStatusesV2Service(courseQueryPort, projectionQueryPort, userQueryPort)
 
     val courseSlug = "back-basic"
     val assignmentId = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001"
 
     beforeTest {
-        Mockito.reset(courseQueryPort, projectionRepository, userQueryPort)
+        Mockito.reset(courseQueryPort, projectionQueryPort, userQueryPort)
     }
 
     "코스 수강생 전체 기준으로 제출/미제출 현황을 조합한다" {
@@ -40,20 +40,16 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
                     sampleEnrollment("user-2", "#BE302", "bob"),
                 )
             )
-        Mockito.`when`(projectionRepository.findAllByAssignmentId(assignmentId))
+        Mockito.`when`(projectionQueryPort.findAllByAssignmentId(assignmentId))
             .thenReturn(
                 Flux.just(
-                    AssignmentSubmissionStatusProjection(
-                        id = "projection-1",
-                        assignmentId = assignmentId,
+                    AdminAssignmentSubmissionProjectionReference(
                         publicCode = "#BE301",
                         submitted = true,
-                        firstCompletedAt = Instant.parse("2026-04-13T08:20:11Z"),
-                        lastCompletedAt = Instant.parse("2026-04-13T08:40:11Z"),
-                        latestScore = 90,
-                        latestPassedCases = 9,
-                        latestTotalCases = 10,
-                        lastEventTimestamp = Instant.parse("2026-04-13T08:40:11Z"),
+                        score = 90,
+                        passedCases = 9,
+                        totalCases = 10,
+                        completedAt = Instant.parse("2026-04-13T08:40:11Z"),
                     )
                 )
             )
@@ -91,7 +87,7 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
             .thenReturn(Mono.empty())
         Mockito.`when`(courseQueryPort.findEnrollments(courseSlug))
             .thenReturn(Flux.just(sampleEnrollment("user-1", "#BE301", "alice")))
-        Mockito.`when`(projectionRepository.findAllByAssignmentId(assignmentId))
+        Mockito.`when`(projectionQueryPort.findAllByAssignmentId(assignmentId))
             .thenReturn(Flux.empty())
         Mockito.`when`(userQueryPort.findAllByIds(listOf("user-1")))
             .thenReturn(Flux.empty())
@@ -119,7 +115,7 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
             .verify()
 
         Mockito.verify(courseQueryPort, Mockito.never()).findEnrollments(Mockito.anyString())
-        Mockito.verifyNoInteractions(projectionRepository, userQueryPort)
+        Mockito.verifyNoInteractions(projectionQueryPort, userQueryPort)
     }
 
     "assignment 가 다른 course 소속이면 404를 그대로 전달한다" {
@@ -134,7 +130,7 @@ class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
             .verify()
 
         Mockito.verify(courseQueryPort, Mockito.never()).findEnrollments(Mockito.anyString())
-        Mockito.verifyNoInteractions(projectionRepository, userQueryPort)
+        Mockito.verifyNoInteractions(projectionQueryPort, userQueryPort)
     }
 })
 

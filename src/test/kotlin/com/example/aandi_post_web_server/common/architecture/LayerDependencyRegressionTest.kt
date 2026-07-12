@@ -134,6 +134,20 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
+    fun `assignment application does not depend on submission infrastructure`() {
+        val assignmentApplication = "$basePackage.assignment.application"
+        val submissionInfrastructure = "$basePackage.assignment.infrastructure.submission."
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            if (!isSameOrChildPackage(packageName, assignmentApplication)) return@scanMainSourceImports null
+            if (!importName.startsWith(submissionInfrastructure)) return@scanMainSourceImports null
+
+            "$relativePath -> assignment application depends on submission infrastructure: $importName"
+        }
+
+        assertNoViolations("Assignment submission infrastructure boundary is broken", violations)
+    }
+
+    @Test
     fun `common runtime packages do not depend on feature packages`() {
         val featurePrefixes = listOf("assignment", "course", "report", "user")
             .map { "$basePackage.$it." }

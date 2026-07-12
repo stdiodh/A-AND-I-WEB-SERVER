@@ -4,17 +4,17 @@ import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSu
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionCourseQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionEnrollment
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionProjectionQueryPort
+import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionProjectionReference
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionUserReference
-import com.example.aandi_post_web_server.assignment.infrastructure.submission.repository.AssignmentSubmissionStatusProjectionRepository
-import com.example.aandi_post_web_server.assignment.submission.entity.AssignmentSubmissionStatusProjection
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
 @Service
 class AdminAssignmentSubmissionStatusesV2Service(
     private val courseQueryPort: AdminAssignmentSubmissionCourseQueryPort,
-    private val projectionRepository: AssignmentSubmissionStatusProjectionRepository,
+    private val projectionQueryPort: AdminAssignmentSubmissionProjectionQueryPort,
     private val userQueryPort: AdminAssignmentSubmissionUserQueryPort,
 ) {
 
@@ -30,7 +30,7 @@ class AdminAssignmentSubmissionStatusesV2Service(
                             val userIds = enrollments.map(AdminAssignmentSubmissionEnrollment::userId).distinct()
                             Mono.zip(
                                 Mono.just(enrollments),
-                                projectionRepository.findAllByAssignmentId(assignmentId).collectList(),
+                                projectionQueryPort.findAllByAssignmentId(assignmentId).collectList(),
                                 userQueryPort.findAllByIds(userIds)
                                     .collectMap(AdminAssignmentSubmissionUserReference::id),
                             )
@@ -39,7 +39,7 @@ class AdminAssignmentSubmissionStatusesV2Service(
             )
             .map { tuple ->
                 val enrollments = tuple.t1
-                val projectionsByPublicCode = tuple.t2.associateBy(AssignmentSubmissionStatusProjection::publicCode)
+                val projectionsByPublicCode = tuple.t2.associateBy(AdminAssignmentSubmissionProjectionReference::publicCode)
                 val reportUsersById = tuple.t3
                 val items = enrollments.map { enrollment ->
                     val projection = projectionsByPublicCode[enrollment.publicCode]
@@ -59,7 +59,7 @@ class AdminAssignmentSubmissionStatusesV2Service(
 
     private fun toItemResponse(
         enrollment: AdminAssignmentSubmissionEnrollment,
-        projection: AssignmentSubmissionStatusProjection?,
+        projection: AdminAssignmentSubmissionProjectionReference?,
         reportUser: AdminAssignmentSubmissionUserReference?,
     ): AdminAssignmentSubmissionStatusItemResponse =
         AdminAssignmentSubmissionStatusItemResponse(
@@ -68,9 +68,9 @@ class AdminAssignmentSubmissionStatusesV2Service(
             username = reportUser?.nickname?.takeIf { it.isNotBlank() } ?: enrollment.username,
             enrollmentStatus = enrollment.status,
             submitted = projection?.submitted == true,
-            score = projection?.latestScore,
-            passedCases = projection?.latestPassedCases,
-            totalCases = projection?.latestTotalCases,
-            completedAt = projection?.lastEventTimestamp,
+            score = projection?.score,
+            passedCases = projection?.passedCases,
+            totalCases = projection?.totalCases,
+            completedAt = projection?.completedAt,
         )
 }
