@@ -1,6 +1,7 @@
 package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryService
+import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentContentQueryStore
 import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentQueryStore
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
@@ -60,8 +61,10 @@ internal class CourseQueryServiceTestFixture(
     private val assignmentQueryService = AssignmentQueryService(
         assignmentCourseQueryPort = AssignmentCourseQueryAdapter(courseRepository, courseEnrollmentRepository),
         assignmentQueryStore = RepositoryAssignmentQueryStore(assignmentRepository),
-        assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentTestCaseRepository,
+        assignmentContentQueryStore = RepositoryAssignmentContentQueryStore(
+            assignmentRequirementRepository,
+            assignmentTestCaseRepository,
+        ),
         clock = clock,
     )
 

@@ -5,6 +5,7 @@ import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDiffi
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata
+import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentContentQueryStore
 import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentQueryStore
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
@@ -147,8 +148,10 @@ private class CourseReferenceFixture {
     val service = AssignmentQueryService(
         assignmentCourseQueryPort = assignmentCourseQueryPort,
         assignmentQueryStore = RepositoryAssignmentQueryStore(assignmentRepository),
-        assignmentRequirementRepository = assignmentRequirementRepository,
-        assignmentTestCaseRepository = assignmentTestCaseRepository,
+        assignmentContentQueryStore = RepositoryAssignmentContentQueryStore(
+            assignmentRequirementRepository,
+            assignmentTestCaseRepository,
+        ),
         clock = Clock.fixed(NOW, ZoneOffset.UTC),
     )
 

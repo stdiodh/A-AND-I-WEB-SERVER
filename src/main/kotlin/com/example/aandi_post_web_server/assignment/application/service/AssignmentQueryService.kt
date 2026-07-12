@@ -6,6 +6,7 @@ import com.example.aandi_post_web_server.assignment.api.dto.AssignmentSummaryRes
 import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.application.mapper.toDetailResponse
 import com.example.aandi_post_web_server.assignment.application.mapper.toResponse
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentContentQueryStore
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentQueryStore
@@ -15,8 +16,6 @@ import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestC
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.course.domain.model.AssignmentId
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
@@ -34,8 +33,7 @@ import java.time.Instant
 class AssignmentQueryService(
     private val assignmentCourseQueryPort: AssignmentCourseQueryPort,
     private val assignmentQueryStore: AssignmentQueryStore,
-    private val assignmentRequirementRepository: AssignmentRequirementRepository,
-    private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
+    private val assignmentContentQueryStore: AssignmentContentQueryStore,
     private val clock: Clock = Clock.systemUTC(),
     private val assignmentPublicationPolicy: AssignmentPublicationPolicy = AssignmentPublicationPolicy(clock),
 ) {
@@ -223,13 +221,13 @@ class AssignmentQueryService(
         assignmentId: AssignmentId,
         includeHidden: Boolean,
     ): Mono<AssignmentDetailResponse> =
-        assignmentRequirementRepository
-            .findAllByAssignmentIdOrderBySortOrder(assignmentId.value)
+        assignmentContentQueryStore
+            .findOrderedRequirementsByAssignmentId(assignmentId.value)
             .map { AssignmentRequirementResponse(it.sortOrder, it.requirementText) }
             .collectList()
             .zipWith(
-                assignmentTestCaseRepository
-                    .findAllByAssignmentIdOrderBySeq(assignmentId.value)
+                assignmentContentQueryStore
+                    .findOrderedTestCasesByAssignmentId(assignmentId.value)
                     .filter { includeHidden || it.visibility == AssignmentTestCaseVisibility.PUBLIC }
                     .map { AssignmentTestCaseResponse(it.seq, it.inputValues, it.outputText, it.visibility) }
                     .collectList()
@@ -254,16 +252,16 @@ class AssignmentQueryService(
         }
 
         val assignmentIds = assignments.map { assignment -> requireNotNull(assignment.id) }
-        val requirementsByAssignment = assignmentRequirementRepository
-            .findAllByAssignmentIdIn(assignmentIds)
+        val requirementsByAssignment = assignmentContentQueryStore
+            .findRequirementsByAssignmentIds(assignmentIds)
             .collectList()
             .map { requirements ->
                 requirements
                     .groupBy(AssignmentRequirement::assignmentId)
                     .mapValues { (_, items) -> items.sortedBy(AssignmentRequirement::sortOrder) }
             }
-        val testCasesByAssignment = assignmentTestCaseRepository
-            .findAllByAssignmentIdIn(assignmentIds)
+        val testCasesByAssignment = assignmentContentQueryStore
+            .findTestCasesByAssignmentIds(assignmentIds)
             .filter { testCase -> includeHidden || testCase.visibility == AssignmentTestCaseVisibility.PUBLIC }
             .collectList()
             .map { testCases ->
