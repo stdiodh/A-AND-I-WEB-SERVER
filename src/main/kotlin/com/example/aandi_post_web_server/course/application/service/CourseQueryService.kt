@@ -15,6 +15,7 @@ import com.example.aandi_post_web_server.course.api.dto.CourseOutlineHeaderRespo
 import com.example.aandi_post_web_server.course.api.dto.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseWeekResponse
+import com.example.aandi_post_web_server.course.application.mapper.toResponse
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseWeek
@@ -74,7 +75,7 @@ class CourseQueryService(
             .flatMapMany { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
                 courseEnrollmentRepository.findAllByCourseId(courseId.value)
-                    .map { enrollment -> toEnrollmentResponse(course.slug, enrollment) }
+                    .map { enrollment -> enrollment.toResponse(course.slug) }
             }
             .sort(compareByDescending<CourseEnrollmentResponse> { it.updatedAt })
     }
@@ -222,19 +223,6 @@ class CourseQueryService(
         status = course.status,
         createdAt = course.createdAt,
         updatedAt = course.updatedAt,
-    )
-
-    private fun toEnrollmentResponse(courseSlug: String, enrollment: CourseEnrollment): CourseEnrollmentResponse = CourseEnrollmentResponse(
-        courseId = enrollment.courseId,
-        courseSlug = courseSlug,
-        userId = enrollment.userId,
-        publicCode = enrollment.publicCode,
-        username = enrollment.username,
-        status = enrollment.status,
-        joinedAt = enrollment.joinedAt,
-        bannedAt = enrollment.bannedAt,
-        banReason = enrollment.banReason,
-        updatedAt = enrollment.updatedAt,
     )
 
     private fun toWeekResponse(week: CourseWeek): CourseWeekResponse = CourseWeekResponse(

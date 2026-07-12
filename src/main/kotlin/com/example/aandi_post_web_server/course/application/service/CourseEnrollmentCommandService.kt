@@ -4,6 +4,7 @@ import com.example.aandi_post_web_server.common.security.UserRole
 import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.api.dto.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.UpdateEnrollmentRequest
+import com.example.aandi_post_web_server.course.application.mapper.toResponse
 import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserQueryPort
 import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserReference
 import com.example.aandi_post_web_server.course.domain.model.CourseId
@@ -94,7 +95,7 @@ class CourseEnrollmentCommandService(
                         }
                         courseEnrollmentRepository.save(updated)
                     }
-                    .map { enrollment -> toEnrollmentResponse(course.slug, enrollment) }
+                    .map { enrollment -> enrollment.toResponse(course.slug) }
             }
     }
 
@@ -188,23 +189,10 @@ class CourseEnrollmentCommandService(
                         .onErrorMap(DuplicateKeyException::class.java) { error ->
                             duplicateEnrollmentConflict(courseId.value, reportUser.id, error)
                         }
-                        .map { enrollment -> toEnrollmentResponse(courseSlug, enrollment) }
+                        .map { enrollment -> enrollment.toResponse(courseSlug) }
                 }
             )
     }
-
-    private fun toEnrollmentResponse(courseSlug: String, enrollment: CourseEnrollment): CourseEnrollmentResponse = CourseEnrollmentResponse(
-        courseId = enrollment.courseId,
-        courseSlug = courseSlug,
-        userId = enrollment.userId,
-        publicCode = enrollment.publicCode,
-        username = enrollment.username,
-        status = enrollment.status,
-        joinedAt = enrollment.joinedAt,
-        bannedAt = enrollment.bannedAt,
-        banReason = enrollment.banReason,
-        updatedAt = enrollment.updatedAt,
-    )
 
     private fun parseCourseSlug(raw: String): CourseSlug =
         parseOrBadRequest { CourseSlug.from(raw) }
