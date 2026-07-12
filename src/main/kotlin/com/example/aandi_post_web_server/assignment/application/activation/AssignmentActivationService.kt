@@ -1,6 +1,5 @@
 package com.example.aandi_post_web_server.assignment.application.activation
 
-import com.example.aandi_post_web_server.assignment.api.v2.dto.AssignmentActivationResponse
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentActivationStore
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentActivation
 import org.slf4j.LoggerFactory
@@ -20,9 +19,9 @@ class AssignmentActivationService(
 
     fun isActive(): Mono<Boolean> = loadCurrent().map { it.active }
 
-    fun getActivation(): Mono<AssignmentActivationResponse> = loadCurrent().map(::toResponse)
+    fun getActivation(): Mono<AssignmentActivation> = loadCurrent()
 
-    fun setActivation(active: Boolean, updatedBy: String): Mono<AssignmentActivationResponse> {
+    fun setActivation(active: Boolean, updatedBy: String): Mono<AssignmentActivation> {
         val updated = AssignmentActivation(
             id = AssignmentActivation.GLOBAL_ID,
             active = active,
@@ -39,7 +38,6 @@ class AssignmentActivationService(
                     saved.updatedAt,
                 )
             }
-            .map(::toResponse)
     }
 
     private fun loadCurrent(): Mono<AssignmentActivation> {
@@ -51,13 +49,6 @@ class AssignmentActivationService(
             .defaultIfEmpty(AssignmentActivation.defaultActive())
             .doOnNext { value -> cache.set(CachedActivation(value, Instant.now())) }
     }
-
-    private fun toResponse(value: AssignmentActivation): AssignmentActivationResponse =
-        AssignmentActivationResponse(
-            active = value.active,
-            updatedAt = value.updatedAt,
-            updatedBy = value.updatedBy,
-        )
 
     private data class CachedActivation(val value: AssignmentActivation, val cachedAt: Instant) {
         fun isExpired(now: Instant = Instant.now()): Boolean =

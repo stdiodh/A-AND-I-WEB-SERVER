@@ -2,9 +2,9 @@
 
 package com.example.aandi_post_web_server.assignment.api.v2.controller
 
-import com.example.aandi_post_web_server.assignment.api.v2.dto.AssignmentActivationResponse
 import com.example.aandi_post_web_server.assignment.application.activation.AssignmentActivationService
 import com.example.aandi_post_web_server.assignment.application.activation.TestAssignmentActivationConfig
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentActivation
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.error.GlobalApiExceptionHandler
@@ -44,7 +44,8 @@ class AdminAssignmentActivationV2ControllerTest : StringSpec() {
 
     private val adminId = "1fd3abf7-5ea4-403f-bcf8-8b3f9d8df502"
     private val userId = "8ee88b63-526d-49dc-9e72-a96be0f81385"
-    private val sampleResponse = AssignmentActivationResponse(
+    private val sampleActivation = AssignmentActivation(
+        id = AssignmentActivation.GLOBAL_ID,
         active = false,
         updatedAt = Instant.parse("2026-06-12T01:00:00Z"),
         updatedBy = "1fd3abf7-5ea4-403f-bcf8-8b3f9d8df502",
@@ -68,7 +69,7 @@ class AdminAssignmentActivationV2ControllerTest : StringSpec() {
         }
 
         "ADMIN 권한 GET 은 현재 활성화 상태를 반환한다" {
-            Mockito.`when`(activationService.getActivation()).thenReturn(Mono.just(sampleResponse))
+            Mockito.`when`(activationService.getActivation()).thenReturn(Mono.just(sampleActivation))
 
             adminClient().get()
                 .uri("/v2/admin/assignments/activation")
@@ -77,12 +78,14 @@ class AdminAssignmentActivationV2ControllerTest : StringSpec() {
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(true)
                 .jsonPath("$.data.active").isEqualTo(false)
+                .jsonPath("$.data.updatedAt").isEqualTo("2026-06-12T01:00:00Z")
                 .jsonPath("$.data.updatedBy").isEqualTo("1fd3abf7-5ea4-403f-bcf8-8b3f9d8df502")
+                .jsonPath("$.data.id").doesNotExist()
         }
 
         "PUT 은 active 값으로 토글한다" {
             Mockito.`when`(activationService.setActivation(active = false, updatedBy = adminId))
-                .thenReturn(Mono.just(sampleResponse))
+                .thenReturn(Mono.just(sampleActivation))
 
             adminClient().put()
                 .uri("/v2/admin/assignments/activation")

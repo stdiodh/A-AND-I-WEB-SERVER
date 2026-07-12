@@ -73,6 +73,20 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
+    fun `assignment activation application does not depend on api`() {
+        val activationApplication = "$basePackage.assignment.application.activation"
+        val assignmentApi = "$basePackage.assignment.api."
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            if (!isSameOrChildPackage(packageName, activationApplication)) return@scanMainSourceImports null
+            if (!importName.startsWith(assignmentApi)) return@scanMainSourceImports null
+
+            "$relativePath -> assignment activation application depends on api: $importName"
+        }
+
+        assertNoViolations("Assignment activation boundary is broken", violations)
+    }
+
+    @Test
     fun `assignment application does not depend on course command facade`() {
         val assignmentApplication = "$basePackage.assignment.application"
         val courseCommandService = "$basePackage.course.application.service.CourseCommandService"

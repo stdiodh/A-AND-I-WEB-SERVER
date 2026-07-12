@@ -3,6 +3,7 @@ package com.example.aandi_post_web_server.assignment.api.v2.controller
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AssignmentActivationResponse
 import com.example.aandi_post_web_server.assignment.api.v2.dto.UpdateAssignmentActivationRequest
 import com.example.aandi_post_web_server.assignment.application.activation.AssignmentActivationService
+import com.example.aandi_post_web_server.assignment.domain.model.AssignmentActivation
 import com.example.aandi_post_web_server.common.api.envelope.V2ApiEnvelope
 import com.example.aandi_post_web_server.common.api.factory.V2ApiResponseFactory
 import com.example.aandi_post_web_server.common.openapi.V2AssignmentActivationEnvelopeDoc
@@ -47,7 +48,9 @@ class AdminAssignmentActivationV2Controller(
     )
     @GetMapping
     fun getActivation(): Mono<V2ApiEnvelope<AssignmentActivationResponse>> =
-        activationService.getActivation().map(V2ApiResponseFactory::success)
+        activationService.getActivation()
+            .map(::toResponse)
+            .map(V2ApiResponseFactory::success)
 
     @Operation(
         summary = "과제 활성화 상태 변경",
@@ -69,5 +72,14 @@ class AdminAssignmentActivationV2Controller(
         activationService.setActivation(
             active = request.active ?: error("active must not be null after validation"),
             updatedBy = authentication.name,
-        ).map(V2ApiResponseFactory::success)
+        )
+            .map(::toResponse)
+            .map(V2ApiResponseFactory::success)
+
+    private fun toResponse(value: AssignmentActivation): AssignmentActivationResponse =
+        AssignmentActivationResponse(
+            active = value.active,
+            updatedAt = value.updatedAt,
+            updatedBy = value.updatedBy,
+        )
 }
