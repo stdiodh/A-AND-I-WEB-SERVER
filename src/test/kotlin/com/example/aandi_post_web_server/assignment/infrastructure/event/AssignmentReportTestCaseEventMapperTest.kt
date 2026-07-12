@@ -1,10 +1,10 @@
 package com.example.aandi_post_web_server.assignment.infrastructure.event
 
-import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentReportEventPayload
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentReportEventType
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentMetadata
+import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentDifficulty
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
@@ -23,9 +23,9 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentTestCaseResponse(seq = 3, inputValues = listOf("9", "9"), outputText = "18", visibility = AssignmentTestCaseVisibility.EXCLUDED),
-                AssignmentTestCaseResponse(seq = 2, inputValues = listOf("3", "4"), outputText = "7", visibility = AssignmentTestCaseVisibility.HIDDEN),
-                AssignmentTestCaseResponse(seq = 1, inputValues = listOf("1", "2"), outputText = "3", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                testCase(seq = 3, inputValues = listOf("9", "9"), outputText = "18", visibility = AssignmentTestCaseVisibility.EXCLUDED),
+                testCase(seq = 2, inputValues = listOf("3", "4"), outputText = "7", visibility = AssignmentTestCaseVisibility.HIDDEN),
+                testCase(seq = 1, inputValues = listOf("1", "2"), outputText = "3", visibility = AssignmentTestCaseVisibility.PUBLIC),
             ),
         )
 
@@ -46,8 +46,8 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.PUBLISHED,
             ),
             testCases = listOf(
-                AssignmentTestCaseResponse(seq = 1, inputValues = listOf("A"), outputText = "B", visibility = AssignmentTestCaseVisibility.PUBLIC),
-                AssignmentTestCaseResponse(seq = 2, inputValues = listOf("C"), outputText = "D", visibility = AssignmentTestCaseVisibility.HIDDEN),
+                testCase(seq = 1, inputValues = listOf("A"), outputText = "B", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                testCase(seq = 2, inputValues = listOf("C"), outputText = "D", visibility = AssignmentTestCaseVisibility.HIDDEN),
             ),
         )
 
@@ -100,7 +100,7 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentTestCaseResponse(seq = 1, inputValues = emptyList(), outputText = "EMPTY", visibility = AssignmentTestCaseVisibility.PUBLIC),
+                testCase(seq = 1, inputValues = emptyList(), outputText = "EMPTY", visibility = AssignmentTestCaseVisibility.PUBLIC),
             ),
         )
 
@@ -114,7 +114,7 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.PUBLISHED,
             ),
             testCases = listOf(
-                AssignmentTestCaseResponse(
+                testCase(
                     seq = 1,
                     inputValues = listOf("hello world", "42  99"),
                     outputText = "ok",
@@ -133,7 +133,7 @@ class AssignmentReportTestCaseEventMapperTest : StringSpec({
                 status = AssignmentStatus.DRAFT,
             ),
             testCases = listOf(
-                AssignmentTestCaseResponse(seq = 1, inputValues = listOf("1 2"), outputText = "3", visibility = AssignmentTestCaseVisibility.EXCLUDED),
+                testCase(seq = 1, inputValues = listOf("1 2"), outputText = "3", visibility = AssignmentTestCaseVisibility.EXCLUDED),
             ),
         )
 
@@ -170,4 +170,17 @@ private fun assignment(
         timeLimitMinutes = 60,
     ),
     status = status,
+)
+
+private fun testCase(
+    seq: Int,
+    inputValues: List<String>,
+    outputText: String,
+    visibility: AssignmentTestCaseVisibility,
+): AssignmentTestCase = AssignmentTestCase(
+    assignmentId = "assignment-uuid",
+    seq = seq,
+    inputValues = inputValues,
+    outputText = outputText,
+    visibility = visibility,
 )

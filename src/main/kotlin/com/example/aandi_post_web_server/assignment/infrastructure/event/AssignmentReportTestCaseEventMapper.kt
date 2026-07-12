@@ -1,8 +1,8 @@
 package com.example.aandi_post_web_server.assignment.infrastructure.event
 
-import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
-import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
+import com.example.aandi_post_web_server.assignment.entity.Assignment
+import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import org.springframework.stereotype.Component
 
 @Component
@@ -10,7 +10,7 @@ class AssignmentReportTestCaseEventMapper {
 
     fun created(
         assignment: Assignment,
-        testCases: List<AssignmentTestCaseResponse>,
+        testCases: List<AssignmentTestCase>,
     ): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
             eventType = AssignmentReportTestCaseEventType.PROBLEM_CREATED,
@@ -23,7 +23,7 @@ class AssignmentReportTestCaseEventMapper {
 
     fun updated(
         assignment: Assignment,
-        testCases: List<AssignmentTestCaseResponse>,
+        testCases: List<AssignmentTestCase>,
     ): AssignmentReportTestCaseEvent =
         AssignmentReportTestCaseEvent(
             eventType = AssignmentReportTestCaseEventType.PROBLEM_UPDATED,
@@ -41,7 +41,7 @@ class AssignmentReportTestCaseEventMapper {
             testCases = emptyList(),
         )
 
-    private fun toTestCase(testCase: AssignmentTestCaseResponse): AssignmentReportTestCase =
+    private fun toTestCase(testCase: AssignmentTestCase): AssignmentReportTestCase =
         AssignmentReportTestCase(
             caseId = testCase.seq,
             input = testCase.inputValues,

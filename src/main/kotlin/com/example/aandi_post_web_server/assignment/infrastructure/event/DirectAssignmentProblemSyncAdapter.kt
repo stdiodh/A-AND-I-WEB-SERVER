@@ -1,8 +1,8 @@
 package com.example.aandi_post_web_server.assignment.infrastructure.event
 
-import com.example.aandi_post_web_server.assignment.api.dto.AssignmentTestCaseResponse
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentProblemSyncPort
 import com.example.aandi_post_web_server.assignment.entity.Assignment
+import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import org.slf4j.LoggerFactory
@@ -35,7 +35,7 @@ class DirectAssignmentProblemSyncAdapter(
 
     private fun loadSnapshot(
         assignmentId: String,
-    ): Mono<Pair<Assignment, List<AssignmentTestCaseResponse>>> =
+    ): Mono<Pair<Assignment, List<AssignmentTestCase>>> =
         assignmentRepository.findById(assignmentId)
             .switchIfEmpty(
                 Mono.error(
@@ -44,7 +44,6 @@ class DirectAssignmentProblemSyncAdapter(
             )
             .zipWith(
                 assignmentTestCaseRepository.findAllByAssignmentIdOrderBySeq(assignmentId)
-                    .map { AssignmentTestCaseResponse(it.seq, it.inputValues, it.outputText, it.visibility) }
                     .collectList()
             )
             .map { it.t1 to it.t2 }

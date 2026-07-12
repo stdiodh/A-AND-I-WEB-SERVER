@@ -59,6 +59,20 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
+    fun `assignment event infrastructure does not depend on api`() {
+        val assignmentEventInfrastructure = "$basePackage.assignment.infrastructure.event"
+        val assignmentApi = "$basePackage.assignment.api."
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            if (!isSameOrChildPackage(packageName, assignmentEventInfrastructure)) return@scanMainSourceImports null
+            if (!importName.startsWith(assignmentApi)) return@scanMainSourceImports null
+
+            "$relativePath -> assignment event infrastructure depends on api: $importName"
+        }
+
+        assertNoViolations("Assignment event boundary is broken", violations)
+    }
+
+    @Test
     fun `assignment application does not depend on course command facade`() {
         val assignmentApplication = "$basePackage.assignment.application"
         val courseCommandService = "$basePackage.course.application.service.CourseCommandService"
