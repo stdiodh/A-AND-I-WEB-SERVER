@@ -19,7 +19,14 @@ object V2ExceptionMapper {
         if (throwable is V2Exception) {
             return V2ErrorResult(
                 errorCode = throwable.errorCode,
-                message = throwable.message,
+                message = if (
+                    throwable.errorCode.httpStatus.is5xxServerError &&
+                    throwable.errorCode != V2ErrorCode.ASSIGNMENT_DEACTIVATED
+                ) {
+                    throwable.errorCode.messageTemplate
+                } else {
+                    throwable.message
+                },
             )
         }
 
@@ -59,7 +66,7 @@ object V2ExceptionMapper {
 
         return V2ErrorResult(
             errorCode = V2ErrorCode.INTERNAL_ERROR,
-            message = throwable.message ?: V2ErrorCode.INTERNAL_ERROR.messageTemplate,
+            message = V2ErrorCode.INTERNAL_ERROR.messageTemplate,
         )
     }
 
@@ -78,7 +85,7 @@ object V2ExceptionMapper {
         }
         return V2ErrorResult(
             errorCode = errorCode,
-            message = reason,
+            message = if (status.is5xxServerError) errorCode.messageTemplate else reason,
             status = status,
         )
     }

@@ -59,7 +59,7 @@ class ErrorResponseFactory {
             return fromJsonDecode(exchange, throwable)
         }
 
-        return internalError(exchange, throwable.message)
+        return internalError(exchange)
     }
 
     fun unauthorized(exchange: ServerWebExchange, detailMessage: String? = null): ApiErrorResult =
@@ -80,13 +80,12 @@ class ErrorResponseFactory {
             fallbackMessage = detailMessage,
         )
 
-    fun internalError(exchange: ServerWebExchange, detailMessage: String? = null): ApiErrorResult =
+    fun internalError(exchange: ServerWebExchange): ApiErrorResult =
         build(
             exchange = exchange,
             status = HttpStatus.INTERNAL_SERVER_ERROR,
             code = ErrorCode.INTERNAL_ERROR,
             message = ErrorCode.INTERNAL_ERROR.defaultMessage,
-            fallbackMessage = detailMessage,
         )
 
     fun assignmentDeactivated(exchange: ServerWebExchange, detailMessage: String? = null): ApiErrorResult =
@@ -154,7 +153,11 @@ class ErrorResponseFactory {
             422 -> ErrorCode.UNPROCESSABLE_ENTITY
             else -> ErrorCode.INTERNAL_ERROR
         }
-        val message = ex.reason?.takeIf { it.isNotBlank() } ?: code.defaultMessage
+        val message = if (status.is5xxServerError) {
+            code.defaultMessage
+        } else {
+            ex.reason?.takeIf { it.isNotBlank() } ?: code.defaultMessage
+        }
         return build(
             exchange = exchange,
             status = status,

@@ -39,6 +39,7 @@ class ErrorResponseFactoryTest : StringSpec({
             HttpStatus.NOT_FOUND to ErrorCode.NOT_FOUND,
             HttpStatus.CONFLICT to ErrorCode.CONFLICT,
             HttpStatus.UNPROCESSABLE_ENTITY to ErrorCode.UNPROCESSABLE_ENTITY,
+            HttpStatus.INTERNAL_SERVER_ERROR to ErrorCode.INTERNAL_ERROR,
             HttpStatus.SERVICE_UNAVAILABLE to ErrorCode.INTERNAL_ERROR,
         )
 
@@ -51,7 +52,11 @@ class ErrorResponseFactoryTest : StringSpec({
             result.status shouldBe status
             result.body.success shouldBe false
             result.body.error?.code shouldBe expectedCode.name
-            result.body.error?.message shouldBe "custom reason ${status.value()}"
+            result.body.error?.message shouldBe if (status.is5xxServerError) {
+                ErrorCode.INTERNAL_ERROR.defaultMessage
+            } else {
+                "custom reason ${status.value()}"
+            }
         }
     }
 
@@ -98,7 +103,7 @@ class ErrorResponseFactoryTest : StringSpec({
 
         result.status shouldBe HttpStatus.INTERNAL_SERVER_ERROR
         result.body.error?.code shouldBe ErrorCode.INTERNAL_ERROR.name
-        result.body.error?.message shouldBe "unexpected failure"
+        result.body.error?.message shouldBe ErrorCode.INTERNAL_ERROR.defaultMessage
         exchange.response.headers.getFirst(RequestIdSupport.HEADER_NAME) shouldBe
             RequestIdSupport.resolveRequestId(exchange)
     }
@@ -118,6 +123,17 @@ class ErrorResponseFactoryTest : StringSpec({
             result.body.success shouldBe false
             result.body.error?.code shouldBe expected.second.name
         }
+    }
+
+    "명시적인 과제 비활성 예외는 사용자 안내 문구를 유지한다" {
+        val result = factory.fromThrowable(
+            exchange("/v1/error/assignment-deactivated-message"),
+            AssignmentDeactivatedException("과제 제출 기간이 아닙니다."),
+        )
+
+        result.status shouldBe HttpStatus.SERVICE_UNAVAILABLE
+        result.body.error?.code shouldBe ErrorCode.ASSIGNMENT_DEACTIVATED.name
+        result.body.error?.message shouldBe "과제 제출 기간이 아닙니다."
     }
 
     "fromThrowable은 validation, input, response status, decoding 예외를 전용 mapper로 dispatch한다" {
@@ -161,7 +177,7 @@ class ErrorResponseFactoryTest : StringSpec({
 
     "public helper methods produce the documented common error envelopes" {
         val forbidden = factory.forbidden(exchange("/v1/error/forbidden"), "blocked")
-        val internal = factory.internalError(exchange("/v1/error/internal-helper"), " ")
+        val internal = factory.internalError(exchange("/v1/error/internal-helper"))
         val deactivated = factory.assignmentDeactivated(exchange("/v1/error/deactivated"), null)
 
         forbidden.status shouldBe HttpStatus.FORBIDDEN

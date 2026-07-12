@@ -10,6 +10,7 @@ import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.error.GlobalApiExceptionHandler
 import com.example.aandi_post_web_server.common.error.GlobalWebExceptionHandler
 import com.example.aandi_post_web_server.common.error.RequestIdWebFilter
+import com.example.aandi_post_web_server.common.error.v2.V2ErrorCode
 import com.example.aandi_post_web_server.common.security.SecurityConfig
 import com.example.aandi_post_web_server.course.api.v1.controller.CourseV1Controller
 import com.example.aandi_post_web_server.course.api.v1.controller.CourseQueryV1Controller
@@ -206,6 +207,7 @@ class V2StructuredLoggingWebFilterTest : StringSpec() {
                 .expectStatus().is5xxServerError
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.error.message").isEqualTo(V2ErrorCode.INTERNAL_ERROR.messageTemplate)
 
             listAppender.list shouldHaveSize 1
             val payload = parseLoggedJson()
@@ -215,6 +217,7 @@ class V2StructuredLoggingWebFilterTest : StringSpec() {
             payload["http"]["statusCode"].asInt() shouldBe 500
             payload["response"]["success"].asBoolean() shouldBe false
             payload["response"]["error"].isNull shouldBe false
+            payload["response"]["error"]["message"].asText() shouldBe V2ErrorCode.INTERNAL_ERROR.messageTemplate
         }
 
         "/api/v2 prefix 요청도 설정에 따라 구조화 로그 대상이다" {
