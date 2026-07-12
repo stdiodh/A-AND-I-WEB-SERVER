@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.assignment.application.service
+package com.example.aandi_post_web_server.assignment.application.submission.service
 
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionCourseQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionEnrollment
@@ -17,11 +17,11 @@ import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
 import java.time.Instant
 
-class AdminAssignmentSubmissionStatusesV2ServiceTest : StringSpec({
+class AdminAssignmentSubmissionStatusesServiceTest : StringSpec({
     val courseQueryPort = Mockito.mock(AdminAssignmentSubmissionCourseQueryPort::class.java)
     val projectionQueryPort = Mockito.mock(AdminAssignmentSubmissionProjectionQueryPort::class.java)
     val userQueryPort = Mockito.mock(AdminAssignmentSubmissionUserQueryPort::class.java)
-    val service = AdminAssignmentSubmissionStatusesV2Service(courseQueryPort, projectionQueryPort, userQueryPort)
+    val service = AdminAssignmentSubmissionStatusesService(courseQueryPort, projectionQueryPort, userQueryPort)
 
     val courseSlug = "back-basic"
     val assignmentId = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001"

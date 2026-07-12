@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.assignment.application.service
+package com.example.aandi_post_web_server.assignment.application.submission.service
 
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionCourseQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AdminAssignmentSubmissionEnrollment
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
 @Service
-class AdminAssignmentSubmissionStatusesV2Service(
+class AdminAssignmentSubmissionStatusesService(
     private val courseQueryPort: AdminAssignmentSubmissionCourseQueryPort,
     private val projectionQueryPort: AdminAssignmentSubmissionProjectionQueryPort,
     private val userQueryPort: AdminAssignmentSubmissionUserQueryPort,

@@ -2,9 +2,9 @@ package com.example.aandi_post_web_server.course.api.v2.controller
 
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusItemResponse
 import com.example.aandi_post_web_server.assignment.api.v2.dto.AdminAssignmentSubmissionStatusesResponse
-import com.example.aandi_post_web_server.assignment.application.service.AdminAssignmentSubmissionStatusesV2Service
 import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusItemResult
 import com.example.aandi_post_web_server.assignment.application.submission.model.AdminAssignmentSubmissionStatusesResult
+import com.example.aandi_post_web_server.assignment.application.submission.service.AdminAssignmentSubmissionStatusesService
 import com.example.aandi_post_web_server.common.openapi.V2AdminAssignmentSubmissionStatusesEnvelopeDoc
 import com.example.aandi_post_web_server.common.openapi.V2ErrorEnvelopeDoc
 import com.example.aandi_post_web_server.common.api.envelope.V2ApiEnvelope
@@ -31,7 +31,7 @@ import reactor.core.publisher.Mono
 @RestController
 @RequestMapping("/v2/admin/courses")
 class CourseAdminAssignmentSubmissionStatusesV2Controller(
-    private val adminAssignmentSubmissionStatusesV2Service: AdminAssignmentSubmissionStatusesV2Service,
+    private val adminAssignmentSubmissionStatusesService: AdminAssignmentSubmissionStatusesService,
 ) {
 
     @Operation(
@@ -60,7 +60,7 @@ class CourseAdminAssignmentSubmissionStatusesV2Controller(
         @Parameter(description = "과제 UUID", example = "7fbe8f62-9d89-4c74-b1e4-3ad3b9d7f001")
         @PathVariable assignmentId: String,
     ): Mono<V2ApiEnvelope<AdminAssignmentSubmissionStatusesResponse>> =
-        adminAssignmentSubmissionStatusesV2Service.getSubmissionStatuses(courseSlug, assignmentId)
+        adminAssignmentSubmissionStatusesService.getSubmissionStatuses(courseSlug, assignmentId)
             .map(::toResponse)
             .map(V2ApiResponseFactory::success)
 

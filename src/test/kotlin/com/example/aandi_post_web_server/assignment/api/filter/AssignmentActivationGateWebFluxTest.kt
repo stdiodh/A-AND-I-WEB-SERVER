@@ -3,7 +3,7 @@
 package com.example.aandi_post_web_server.assignment.api.filter
 
 import com.example.aandi_post_web_server.assignment.application.activation.AssignmentActivationService
-import com.example.aandi_post_web_server.assignment.application.service.AdminAssignmentSubmissionStatusesV2Service
+import com.example.aandi_post_web_server.assignment.application.submission.service.AdminAssignmentSubmissionStatusesService
 import com.example.aandi_post_web_server.common.config.WebConfig
 import com.example.aandi_post_web_server.common.error.ErrorResponseFactory
 import com.example.aandi_post_web_server.common.error.GlobalApiExceptionHandler
@@ -52,7 +52,7 @@ class AssignmentActivationGateWebFluxTest : StringSpec() {
     private lateinit var courseV1Service: CourseV1Service
 
     @MockBean
-    private lateinit var adminAssignmentSubmissionStatusesV2Service: AdminAssignmentSubmissionStatusesV2Service
+    private lateinit var adminAssignmentSubmissionStatusesService: AdminAssignmentSubmissionStatusesService
 
     @MockBean
     private lateinit var activationService: AssignmentActivationService
@@ -62,7 +62,7 @@ class AssignmentActivationGateWebFluxTest : StringSpec() {
 
     init {
         beforeTest {
-            Mockito.reset(activationService, courseV1Service, adminAssignmentSubmissionStatusesV2Service)
+            Mockito.reset(activationService, courseV1Service, adminAssignmentSubmissionStatusesService)
         }
 
         "비활성 상태에서 USER 호출은 503 ASSIGNMENT_DEACTIVATED" {
