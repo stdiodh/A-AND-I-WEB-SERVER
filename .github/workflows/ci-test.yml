@@ -164,13 +164,18 @@ jobs:
             performance/k6/tools/generate_test_jwt.py \
             performance/aggregate/summarize_runs.py \
             performance/aggregate/test_summarize_runs.py \
-            scripts/resume/generate_resume_metrics.py
+            scripts/resume/generate_resume_metrics.py \
+            scripts/resume/test_generate_resume_metrics.py
           python3 -m unittest discover \
             -s performance/compare \
             -p 'test_*.py' \
             -v
           python3 -m unittest discover \
             -s performance/aggregate \
+            -p 'test_*.py' \
+            -v
+          python3 -m unittest discover \
+            -s scripts/resume \
             -p 'test_*.py' \
             -v
           python3 scripts/resume/generate_resume_metrics.py --validate-only

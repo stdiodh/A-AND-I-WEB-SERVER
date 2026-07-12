@@ -2,6 +2,9 @@
 
 이력서에 사용할 수 있는 수치와 근거 artifact를 한 문서로 모읍니다.
 
+> 이 파일은 수동으로 정리한 curated 근거 문서입니다.
+> 생성기 기본 결과는 `build/reports/resume-metrics/`에 저장되며 이 파일을 덮어쓰지 않습니다.
+
 ## Sources
 
 - Web CI/CD: `docs/metrics/web-cicd-remeasure.json`

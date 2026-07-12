@@ -25,6 +25,10 @@ FORBIDDEN_CLAIM_PATTERNS = [
 ]
 DEFAULT_SCHEMA = "scripts/resume/resume_metrics_schema.json"
 DEFAULT_EXAMPLE = "docs/metrics/resume-metrics.example.json"
+COMMITTED_SNAPSHOT = "docs/metrics/resume-metrics.json"
+CURATED_MARKDOWN = "docs/resume-metrics.md"
+DEFAULT_OUT_JSON = "build/reports/resume-metrics/resume-metrics.json"
+DEFAULT_OUT_MD = "build/reports/resume-metrics/resume-metrics.md"
 DISCLAIMER = "이 수치는 운영 환경 최대 처리량이 아니라 로컬/고정 부하 회귀 검증 기준입니다."
 
 
@@ -54,10 +58,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--junit-glob", default="build/test-results/test/TEST-*.xml")
     parser.add_argument("--jacoco-xml", default="build/reports/jacoco/test/jacocoTestReport.xml")
     parser.add_argument("--assignment-scale-report", default="docs/performance/results/2026-06-29-assignment-scale.json")
-    parser.add_argument("--k6-aggregate", default="performance/results/assignment-read-after.aggregate.json")
     parser.add_argument("--ci-summary", default="docs/metrics/ci-summary.json")
-    parser.add_argument("--out-json", default="docs/metrics/resume-metrics.json")
-    parser.add_argument("--out-md", default="docs/resume-metrics.md")
+    parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
+    parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     parser.add_argument("--schema", default=DEFAULT_SCHEMA)
     parser.add_argument("--example-json", default=DEFAULT_EXAMPLE)
     parser.add_argument("--validate-only", action="store_true")
@@ -336,122 +339,6 @@ def read_assignment_scale_report(path: Path) -> dict[str, Any]:
     return metric
 
 
-def read_k6_aggregate(path: Path) -> dict[str, Any]:
-    metric = base_metric("k6", str(path))
-    values = {
-        "businessP50Ms": None,
-        "businessP90Ms": None,
-        "businessP95Ms": None,
-        "businessP99Ms": None,
-        "assignmentListP50Ms": None,
-        "assignmentListP90Ms": None,
-        "assignmentListP95Ms": None,
-        "assignmentListP99Ms": None,
-        "assignmentDetailP50Ms": None,
-        "assignmentDetailP90Ms": None,
-        "assignmentDetailP95Ms": None,
-        "assignmentDetailP99Ms": None,
-        "httpFailureRate": None,
-        "checkSuccessRate": None,
-        "throughputRps": None,
-        "iterations": None,
-        "iterationsRate": None,
-        "droppedIterations": None,
-        "sampleRuns": None,
-        "context": {},
-    }
-    if not path.exists():
-        metric.update(
-            confidence=NEEDS_MEASUREMENT,
-            reason="k6 aggregate JSON artifact is missing.",
-            values=values,
-            valueConfidences=fill_confidences(values, NEEDS_MEASUREMENT),
-        )
-        return metric
-
-    try:
-        payload = load_json(path)
-    except ValueError as exc:
-        metric.update(confidence=NEEDS_REVIEW, reason=str(exc), values=values, valueConfidences=fill_confidences(values, NEEDS_REVIEW))
-        return metric
-
-    summary = payload.get("summary", {})
-    values.update(
-        {
-            "businessP50Ms": stat(summary, "business_p50_ms"),
-            "businessP90Ms": stat(summary, "business_p90_ms"),
-            "businessP95Ms": stat(summary, "business_p95_ms"),
-            "businessP99Ms": stat(summary, "business_p99_ms"),
-            "assignmentListP50Ms": stat(summary, "assignment_list_p50_ms"),
-            "assignmentListP90Ms": stat(summary, "assignment_list_p90_ms"),
-            "assignmentListP95Ms": stat(summary, "assignment_list_p95_ms"),
-            "assignmentListP99Ms": stat(summary, "assignment_list_p99_ms"),
-            "assignmentDetailP50Ms": stat(summary, "assignment_detail_p50_ms"),
-            "assignmentDetailP90Ms": stat(summary, "assignment_detail_p90_ms"),
-            "assignmentDetailP95Ms": stat(summary, "assignment_detail_p95_ms"),
-            "assignmentDetailP99Ms": stat(summary, "assignment_detail_p99_ms"),
-            "httpFailureRate": stat(summary, "http_failure_rate"),
-            "checkSuccessRate": stat(summary, "check_success_rate"),
-            "throughputRps": stat(summary, "business_success_throughput"),
-            "iterations": stat(summary, "iterations"),
-            "iterationsRate": stat(summary, "iterations_rate"),
-            "droppedIterations": stat(summary, "dropped_iterations"),
-            "sampleRuns": len(payload.get("runs", [])) if isinstance(payload.get("runs"), list) else None,
-            "context": payload.get("context", {}),
-        }
-    )
-
-    missing_required = [
-        key
-        for key in (
-            "businessP50Ms",
-            "businessP90Ms",
-            "businessP95Ms",
-            "businessP99Ms",
-            "assignmentListP50Ms",
-            "assignmentListP90Ms",
-            "assignmentListP95Ms",
-            "assignmentListP99Ms",
-            "assignmentDetailP50Ms",
-            "assignmentDetailP90Ms",
-            "assignmentDetailP95Ms",
-            "assignmentDetailP99Ms",
-            "httpFailureRate",
-            "checkSuccessRate",
-            "throughputRps",
-            "iterations",
-            "iterationsRate",
-            "droppedIterations",
-            "sampleRuns",
-        )
-        if values.get(key) is None
-    ]
-    unsafe_context_reasons = k6_context_reasons(values.get("context", {}))
-    if payload.get("accepted") is not True:
-        confidence = NOT_RECOMMENDED
-        reason = "k6 aggregate is not accepted."
-    elif values["sampleRuns"] is not None and values["sampleRuns"] < 3:
-        confidence = NOT_RECOMMENDED
-        reason = "k6 aggregate has fewer than 3 runs."
-    elif unsafe_context_reasons:
-        confidence = NOT_RECOMMENDED
-        reason = "k6 aggregate context is not local-safe: " + ", ".join(unsafe_context_reasons)
-    elif missing_required:
-        confidence = NEEDS_REVIEW
-        reason = "k6 aggregate is missing metrics: " + ", ".join(missing_required)
-    else:
-        confidence = CONFIRMED
-        reason = "Read from accepted k6 aggregate JSON."
-
-    if confidence == NOT_RECOMMENDED:
-        value_confidences = fill_confidences(values, NOT_RECOMMENDED)
-    else:
-        value_confidences = confidence_by_presence(values, CONFIRMED, NEEDS_MEASUREMENT)
-
-    metric.update(confidence=confidence, reason=reason, values=values, valueConfidences=value_confidences)
-    return metric
-
-
 def read_ci_summary(path: Path) -> dict[str, Any]:
     metric = base_metric("ci", str(path))
     values = {
@@ -701,16 +588,32 @@ def validate_existing_outputs(args: argparse.Namespace) -> None:
     if not schema_path.exists():
         raise SystemExit(f"Schema file is missing: {schema_path}")
     load_json(schema_path)
-    candidates = [Path(args.example_json), Path(args.out_json)]
+    candidates = list(
+        dict.fromkeys(
+            [
+                Path(args.example_json),
+                Path(COMMITTED_SNAPSHOT),
+                Path(args.out_json),
+            ]
+        )
+    )
+    payloads: dict[Path, dict[str, Any]] = {}
     found = False
     for path in candidates:
         if path.exists():
-            validate_payload(load_json(path))
+            payload = load_json(path)
+            validate_payload(payload)
+            payloads[path] = payload
             found = True
     if not found:
         raise SystemExit("No resume metrics JSON file found to validate.")
-    if Path(args.out_md).exists():
-        validate_generated_text(Path(args.out_md).read_text(encoding="utf-8"), load_json(Path(args.out_json)) if Path(args.out_json).exists() else None)
+
+    committed_payload = payloads.get(Path(COMMITTED_SNAPSHOT))
+    markdown_candidates = list(dict.fromkeys([Path(CURATED_MARKDOWN), Path(args.out_md)]))
+    for path in markdown_candidates:
+        if path.exists():
+            payload = payloads.get(Path(args.out_json)) if path == Path(args.out_md) else committed_payload
+            validate_generated_text(path.read_text(encoding="utf-8"), payload or committed_payload)
 
 
 def validate_payload(payload: dict[str, Any]) -> None:
