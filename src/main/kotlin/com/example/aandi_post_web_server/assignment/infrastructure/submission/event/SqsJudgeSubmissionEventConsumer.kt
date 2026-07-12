@@ -32,7 +32,7 @@ class SqsJudgeSubmissionEventConsumer(
     private var pollingSubscription: Disposable? = null
 
     override fun start() {
-        if (!properties.enabled || !running.compareAndSet(false, true)) {
+        if (!properties.enabled) {
             return
         }
 
@@ -41,6 +41,10 @@ class SqsJudgeSubmissionEventConsumer(
         }
         require(properties.region.isNotBlank()) {
             "AWS_REGION must not be blank when REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED=true"
+        }
+
+        if (!running.compareAndSet(false, true)) {
+            return
         }
 
         pollingSubscription = Mono.defer { pollBatch().then() }

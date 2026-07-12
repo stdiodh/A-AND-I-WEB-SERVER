@@ -6,6 +6,7 @@ import com.example.aandi_post_web_server.user.infrastructure.config.UserSyncEven
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.mockito.ArgumentCaptor
@@ -22,6 +23,65 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageResponse
 import java.util.concurrent.CompletableFuture
 
 class SqsUserEventConsumerTest : StringSpec({
+    "활성화된 consumer 의 queue URL 이 비어 있으면 실행 상태를 남기지 않는다" {
+        val fixture = UserEventConsumerFixture(
+            properties = UserSyncEventProperties(
+                enabled = true,
+                queueUrl = "",
+            ),
+        )
+
+        val exception = shouldThrow<IllegalArgumentException> {
+            fixture.consumer.start()
+        }
+
+        exception.message shouldBe "app.events.user-sync.queue-url must not be blank when enabled=true"
+        fixture.consumer.isRunning shouldBe false
+        Mockito.verifyNoInteractions(fixture.sqsAsyncClient)
+    }
+
+    "실행 중인 consumer 를 다시 시작해도 polling 을 중복 구독하지 않는다" {
+        val fixture = UserEventConsumerFixture()
+        val pendingReceive = CompletableFuture<ReceiveMessageResponse>()
+        Mockito.`when`(
+            fixture.sqsAsyncClient.receiveMessage(ArgumentMatchers.any(ReceiveMessageRequest::class.java))
+        ).thenReturn(pendingReceive)
+
+        fixture.consumer.start()
+        try {
+            fixture.consumer.start()
+
+            fixture.consumer.isRunning shouldBe true
+            Mockito.verify(fixture.sqsAsyncClient, Mockito.times(1))
+                .receiveMessage(ArgumentMatchers.any(ReceiveMessageRequest::class.java))
+        } finally {
+            fixture.consumer.stop()
+        }
+    }
+
+    "consumer 중지 시 진행 중인 polling 을 취소한 뒤 callback 을 호출한다" {
+        val fixture = UserEventConsumerFixture()
+        val pendingReceive = CompletableFuture<ReceiveMessageResponse>()
+        var callbackCount = 0
+        var runningAtCallback: Boolean? = null
+        Mockito.`when`(
+            fixture.sqsAsyncClient.receiveMessage(ArgumentMatchers.any(ReceiveMessageRequest::class.java))
+        ).thenReturn(pendingReceive)
+
+        fixture.consumer.start()
+        fixture.consumer.stop(
+            Runnable {
+                callbackCount += 1
+                runningAtCallback = fixture.consumer.isRunning
+            }
+        )
+
+        pendingReceive.isCancelled shouldBe true
+        fixture.consumer.isRunning shouldBe false
+        callbackCount shouldBe 1
+        runningAtCallback shouldBe false
+    }
+
     "메시지 처리 성공 시 deleteMessage 를 호출한다" {
         val fixture = UserEventConsumerFixture()
         val message = userProfileUpdatedMessage()
@@ -146,14 +206,16 @@ class SqsUserEventConsumerTest : StringSpec({
     }
 })
 
-private class UserEventConsumerFixture {
+private class UserEventConsumerFixture(
+    properties: UserSyncEventProperties = UserSyncEventProperties(
+        enabled = true,
+        queueUrl = "https://sqs.ap-northeast-2.amazonaws.com/362622729632/report-user-events-queue",
+    ),
+) {
     val sqsAsyncClient: SqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
     val reportUserSyncService: ReportUserSyncService = Mockito.mock(ReportUserSyncService::class.java)
     val consumer = SqsUserEventConsumer(
-        properties = UserSyncEventProperties(
-            enabled = true,
-            queueUrl = "https://sqs.ap-northeast-2.amazonaws.com/362622729632/report-user-events-queue",
-        ),
+        properties = properties,
         sqsAsyncClient = sqsAsyncClient,
         authUserEventParser = AuthUserEventParser(
             jacksonObjectMapper().registerModule(JavaTimeModule()),

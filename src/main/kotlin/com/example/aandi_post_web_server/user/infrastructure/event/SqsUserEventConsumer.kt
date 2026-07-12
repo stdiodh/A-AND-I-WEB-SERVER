@@ -29,12 +29,16 @@ class SqsUserEventConsumer(
     private var pollingSubscription: Disposable? = null
 
     override fun start() {
-        if (!properties.enabled || !running.compareAndSet(false, true)) {
+        if (!properties.enabled) {
             return
         }
 
         require(properties.queueUrl.isNotBlank()) {
             "app.events.user-sync.queue-url must not be blank when enabled=true"
+        }
+
+        if (!running.compareAndSet(false, true)) {
+            return
         }
 
         pollingSubscription = Flux.defer { pollBatch() }

@@ -6,6 +6,7 @@ import com.example.aandi_post_web_server.assignment.application.submission.servi
 import com.example.aandi_post_web_server.assignment.application.submission.service.AssignmentSubmissionStatusProjectionStore
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.ints.shouldBeExactly
@@ -26,6 +27,75 @@ import java.util.concurrent.CompletableFuture
 
 class SqsJudgeSubmissionEventConsumerTest : StringSpec({
     val queueUrl = JUDGE_QUEUE_URL
+
+    "활성화된 consumer 의 queue URL 이 비어 있으면 실행 상태를 남기지 않는다" {
+        val sqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
+        val consumer = judgeSubmissionEventConsumer(
+            sqsAsyncClient = sqsAsyncClient,
+            store = InMemoryAssignmentSubmissionStatusProjectionStore(),
+            properties = JudgeSubmissionEventProperties(
+                enabled = true,
+                queueUrl = "",
+                region = "ap-northeast-2",
+            ),
+        )
+
+        shouldThrow<IllegalArgumentException> {
+            consumer.start()
+        }
+
+        consumer.isRunning shouldBe false
+        Mockito.verifyNoInteractions(sqsAsyncClient)
+    }
+
+    "활성화된 consumer 의 region 이 비어 있으면 실행 상태를 남기지 않는다" {
+        val sqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
+        val consumer = judgeSubmissionEventConsumer(
+            sqsAsyncClient = sqsAsyncClient,
+            store = InMemoryAssignmentSubmissionStatusProjectionStore(),
+            properties = JudgeSubmissionEventProperties(
+                enabled = true,
+                queueUrl = queueUrl,
+                region = "",
+            ),
+        )
+
+        shouldThrow<IllegalArgumentException> {
+            consumer.start()
+        }
+
+        consumer.isRunning shouldBe false
+        Mockito.verifyNoInteractions(sqsAsyncClient)
+    }
+
+    "중복 시작을 막고 중지 시 진행 중인 polling 을 취소한 뒤 callback 을 호출한다" {
+        val sqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
+        val consumer = judgeSubmissionEventConsumer(
+            sqsAsyncClient,
+            InMemoryAssignmentSubmissionStatusProjectionStore(),
+        )
+        val pendingReceive = CompletableFuture<ReceiveMessageResponse>()
+        var callbackCount = 0
+        var runningAtCallback: Boolean? = null
+        Mockito.`when`(sqsAsyncClient.receiveMessage(ArgumentMatchers.any(ReceiveMessageRequest::class.java)))
+            .thenReturn(pendingReceive)
+
+        consumer.start()
+        consumer.start()
+        consumer.stop(
+            Runnable {
+                callbackCount += 1
+                runningAtCallback = consumer.isRunning
+            }
+        )
+
+        Mockito.verify(sqsAsyncClient, Mockito.times(1))
+            .receiveMessage(ArgumentMatchers.any(ReceiveMessageRequest::class.java))
+        pendingReceive.isCancelled shouldBe true
+        consumer.isRunning shouldBe false
+        callbackCount shouldBe 1
+        runningAtCallback shouldBe false
+    }
 
     "메시지 처리 성공 시 projection 저장 후 deleteMessage 를 호출한다" {
         val sqsAsyncClient = Mockito.mock(SqsAsyncClient::class.java)
@@ -352,13 +422,14 @@ private const val JUDGE_QUEUE_URL = "https://example.com/queues/judge-submission
 private fun judgeSubmissionEventConsumer(
     sqsAsyncClient: SqsAsyncClient,
     store: AssignmentSubmissionStatusProjectionStore,
+    properties: JudgeSubmissionEventProperties = JudgeSubmissionEventProperties(
+        enabled = true,
+        queueUrl = JUDGE_QUEUE_URL,
+        region = "ap-northeast-2",
+    ),
 ): SqsJudgeSubmissionEventConsumer =
     SqsJudgeSubmissionEventConsumer(
-        properties = JudgeSubmissionEventProperties(
-            enabled = true,
-            queueUrl = JUDGE_QUEUE_URL,
-            region = "ap-northeast-2",
-        ),
+        properties = properties,
         sqsAsyncClient = sqsAsyncClient,
         judgeCompletedEventParser = JudgeCompletedEventParser(
             jacksonObjectMapper().registerModule(JavaTimeModule()),
