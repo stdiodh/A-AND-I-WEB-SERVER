@@ -53,7 +53,6 @@
 ```text
 com.example.aandi_post_web_server
 ├─ common
-│  ├─ annotation
 │  ├─ api
 │  │  ├─ envelope
 │  │  ├─ factory
@@ -76,18 +75,22 @@ com.example.aandi_post_web_server
 │  │     └─ dto
 │  ├─ application
 │  │  ├─ activation
+│  │  ├─ mapper
 │  │  ├─ port
 │  │  ├─ service
 │  │  └─ submission
+│  │     ├─ model
 │  │     └─ service
 │  ├─ domain
 │  │  └─ model
 │  ├─ entity
 │  ├─ infrastructure
+│  │  ├─ adapter
 │  │  ├─ event
 │  │  ├─ jackson
 │  │  ├─ repository
 │  │  └─ submission
+│  │     ├─ adapter
 │  │     ├─ event
 │  │     └─ repository
 │  └─ submission
@@ -101,6 +104,8 @@ com.example.aandi_post_web_server
 │  │  └─ v2
 │  │     └─ controller
 │  ├─ application
+│  │  ├─ mapper
+│  │  ├─ port
 │  │  └─ service
 │  ├─ domain
 │  │  └─ model
@@ -111,9 +116,11 @@ com.example.aandi_post_web_server
 │
 └─ user
    ├─ application
+   │  ├─ model
    │  └─ service
    ├─ entity
    └─ infrastructure
+      ├─ adapter
       ├─ config
       ├─ event
       └─ repository
