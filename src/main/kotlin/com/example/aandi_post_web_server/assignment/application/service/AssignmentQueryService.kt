@@ -8,13 +8,13 @@ import com.example.aandi_post_web_server.assignment.application.mapper.toDetailR
 import com.example.aandi_post_web_server.assignment.application.mapper.toResponse
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseQueryPort
 import com.example.aandi_post_web_server.assignment.application.port.AssignmentCourseReference
+import com.example.aandi_post_web_server.assignment.application.port.AssignmentQueryStore
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentPublicationPolicy
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentTestCaseVisibility
 import com.example.aandi_post_web_server.assignment.entity.Assignment
 import com.example.aandi_post_web_server.assignment.entity.AssignmentRequirement
 import com.example.aandi_post_web_server.assignment.entity.AssignmentTestCase
-import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
 import com.example.aandi_post_web_server.course.domain.model.AssignmentId
@@ -33,7 +33,7 @@ import java.time.Instant
 @Service
 class AssignmentQueryService(
     private val assignmentCourseQueryPort: AssignmentCourseQueryPort,
-    private val assignmentRepository: AssignmentRepository,
+    private val assignmentQueryStore: AssignmentQueryStore,
     private val assignmentRequirementRepository: AssignmentRequirementRepository,
     private val assignmentTestCaseRepository: AssignmentTestCaseRepository,
     private val clock: Clock = Clock.systemUTC(),
@@ -41,7 +41,7 @@ class AssignmentQueryService(
 ) {
 
     fun getVisibleOutlineAssignments(courseId: CourseId): Flux<AssignmentOutlineReference> =
-        assignmentRepository.findAllByCourseId(courseId.value)
+        assignmentQueryStore.findAllByCourseId(courseId.value)
             .filter(::isVisibleToUser)
             .sort(compareBy<Assignment> { it.weekNo }.thenBy { it.orderInWeek })
             .map { assignment ->
@@ -57,7 +57,7 @@ class AssignmentQueryService(
             }
 
     fun getVisibleAssignmentCourseId(assignmentId: AssignmentId): Mono<String> =
-        assignmentRepository.findById(assignmentId.value)
+        assignmentQueryStore.findById(assignmentId.value)
             .switchIfEmpty(assignmentNotFound(assignmentId))
             .flatMap { assignment -> ensureVisibleToUser(assignment, assignmentId) }
             .map(Assignment::courseId)
@@ -127,7 +127,7 @@ class AssignmentQueryService(
         return findAccessibleCourseBySlug(slug, parsedUserId)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
+                assignmentQueryStore.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
                     .switchIfEmpty(assignmentNotFound(parsedAssignmentId))
                     .flatMap { assignment -> ensureVisibleToUser(assignment, parsedAssignmentId) }
                     .flatMap { assignment ->
@@ -151,7 +151,7 @@ class AssignmentQueryService(
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                assignmentRepository.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
+                assignmentQueryStore.findByIdAndCourseId(parsedAssignmentId.value, courseId.value)
                     .switchIfEmpty(assignmentNotFound(parsedAssignmentId))
                     .flatMap { assignment ->
                         loadAssignmentDetail(
@@ -169,9 +169,9 @@ class AssignmentQueryService(
         weekNo: WeekNo?,
     ): Flux<Assignment> =
         if (weekNo == null) {
-            assignmentRepository.findAllByCourseId(courseId.value)
+            assignmentQueryStore.findAllByCourseId(courseId.value)
         } else {
-            assignmentRepository.findAllByCourseIdAndWeekNo(courseId.value, weekNo.value)
+            assignmentQueryStore.findAllByCourseIdAndWeekNo(courseId.value, weekNo.value)
         }
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<AssignmentCourseReference> =

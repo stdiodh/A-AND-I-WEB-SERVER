@@ -1,6 +1,7 @@
 package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryService
+import com.example.aandi_post_web_server.assignment.infrastructure.adapter.RepositoryAssignmentQueryStore
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentRequirementRepository
 import com.example.aandi_post_web_server.assignment.infrastructure.repository.AssignmentTestCaseRepository
@@ -58,7 +59,7 @@ internal class CourseQueryServiceTestFixture(
     private val assignmentTestCaseRepository: AssignmentTestCaseRepository = Mockito.mock(AssignmentTestCaseRepository::class.java)
     private val assignmentQueryService = AssignmentQueryService(
         assignmentCourseQueryPort = AssignmentCourseQueryAdapter(courseRepository, courseEnrollmentRepository),
-        assignmentRepository = assignmentRepository,
+        assignmentQueryStore = RepositoryAssignmentQueryStore(assignmentRepository),
         assignmentRequirementRepository = assignmentRequirementRepository,
         assignmentTestCaseRepository = assignmentTestCaseRepository,
         clock = clock,
