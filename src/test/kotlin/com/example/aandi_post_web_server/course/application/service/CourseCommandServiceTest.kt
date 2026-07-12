@@ -14,6 +14,7 @@ import com.example.aandi_post_web_server.course.domain.model.CoursePhase
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
+import com.example.aandi_post_web_server.course.infrastructure.adapter.RepositoryCourseWeekStore
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
@@ -336,7 +337,7 @@ private class CourseCommandFixture {
     val service = CourseCommandService(
         courseRepository = courseRepository,
         courseEnrollmentRepository = courseEnrollmentRepository,
-        courseWeekRepository = courseWeekRepository,
+        courseWeekStore = RepositoryCourseWeekStore(courseWeekRepository),
         courseEnrollmentCommandService = courseEnrollmentCommandService,
         assignmentCommandService = assignmentCommandService,
     )

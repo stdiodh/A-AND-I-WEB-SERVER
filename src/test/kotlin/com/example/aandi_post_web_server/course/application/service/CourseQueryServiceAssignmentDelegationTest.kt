@@ -2,6 +2,7 @@ package com.example.aandi_post_web_server.course.application.service
 
 import com.example.aandi_post_web_server.assignment.application.service.AssignmentQueryService
 import com.example.aandi_post_web_server.assignment.domain.model.AssignmentStatus
+import com.example.aandi_post_web_server.course.infrastructure.adapter.RepositoryCourseWeekStore
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
@@ -20,7 +21,7 @@ class CourseQueryServiceAssignmentDelegationTest : StringSpec({
         val service = CourseQueryService(
             courseRepository = courseRepository,
             courseEnrollmentRepository = courseEnrollmentRepository,
-            courseWeekRepository = courseWeekRepository,
+            courseWeekStore = RepositoryCourseWeekStore(courseWeekRepository),
             assignmentQueryService = assignmentQueryService,
         )
 

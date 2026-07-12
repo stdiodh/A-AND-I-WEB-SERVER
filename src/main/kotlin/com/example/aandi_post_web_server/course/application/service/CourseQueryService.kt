@@ -16,13 +16,13 @@ import com.example.aandi_post_web_server.course.api.dto.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseWeekResponse
 import com.example.aandi_post_web_server.course.application.mapper.toResponse
+import com.example.aandi_post_web_server.course.application.port.CourseWeekStore
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseWeek
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
-import com.example.aandi_post_web_server.course.infrastructure.repository.CourseWeekRepository
 import org.springframework.http.HttpStatus
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -36,7 +36,7 @@ import java.time.Instant
 class CourseQueryService(
     private val courseRepository: CourseRepository,
     private val courseEnrollmentRepository: CourseEnrollmentRepository,
-    private val courseWeekRepository: CourseWeekRepository,
+    private val courseWeekStore: CourseWeekStore,
     private val assignmentQueryService: AssignmentQueryService,
     private val clock: Clock = Clock.systemUTC(),
 ) {
@@ -86,7 +86,7 @@ class CourseQueryService(
         return findAccessibleCourseBySlug(slug, parsedUserId)
             .flatMapMany { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                courseWeekRepository.findAllByCourseId(courseId.value)
+                courseWeekStore.findAllByCourseId(courseId.value)
             }
             .sort(compareBy<CourseWeek> { it.weekNo })
             .map(::toWeekResponse)
