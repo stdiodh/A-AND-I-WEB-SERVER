@@ -10,6 +10,7 @@ import com.example.aandi_post_web_server.course.entity.CourseMetadata
 import com.example.aandi_post_web_server.course.domain.model.CoursePhase
 import com.example.aandi_post_web_server.course.domain.model.CourseTrack
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
+import com.example.aandi_post_web_server.course.infrastructure.adapter.RepositoryCourseEnrollmentStore
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import io.kotest.core.spec.style.StringSpec
@@ -371,7 +372,7 @@ private class CourseEnrollmentCommandFixture {
     val userQueryPort: CourseEnrollmentUserQueryPort = Mockito.mock(CourseEnrollmentUserQueryPort::class.java)
     val service = CourseEnrollmentCommandService(
         courseRepository = courseRepository,
-        courseEnrollmentRepository = courseEnrollmentRepository,
+        courseEnrollmentStore = RepositoryCourseEnrollmentStore(courseEnrollmentRepository),
         userQueryPort = userQueryPort,
     )
 }

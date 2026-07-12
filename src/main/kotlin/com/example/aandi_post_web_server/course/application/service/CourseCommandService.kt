@@ -12,13 +12,13 @@ import com.example.aandi_post_web_server.course.api.dto.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.UpdateCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.UpdateEnrollmentRequest
 import com.example.aandi_post_web_server.course.application.mapper.toResponse
+import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentStore
 import com.example.aandi_post_web_server.course.application.port.CourseWeekStore
 import com.example.aandi_post_web_server.course.domain.model.CourseId
 import com.example.aandi_post_web_server.course.domain.model.CourseSlug
 import com.example.aandi_post_web_server.course.domain.model.CourseStatus
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseMetadata
-import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
@@ -31,7 +31,7 @@ import java.time.Instant
 @Service
 class CourseCommandService(
     private val courseRepository: CourseRepository,
-    private val courseEnrollmentRepository: CourseEnrollmentRepository,
+    private val courseEnrollmentStore: CourseEnrollmentStore,
     private val courseWeekStore: CourseWeekStore,
     private val courseEnrollmentCommandService: CourseEnrollmentCommandService,
     private val assignmentCommandService: AssignmentCommandService,
@@ -154,7 +154,7 @@ class CourseCommandService(
     private fun deleteCourseRelations(courseId: String): Mono<Void> =
         Flux.concatDelayError(
             courseWeekStore.deleteAllByCourseId(courseId).then(),
-            courseEnrollmentRepository.deleteAllByCourseId(courseId).then(),
+            courseEnrollmentStore.deleteAllByCourseId(courseId).then(),
         ).then()
 
     private fun findCourseBySlug(slug: CourseSlug): Mono<Course> =

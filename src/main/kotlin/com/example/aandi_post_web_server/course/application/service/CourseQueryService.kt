@@ -16,12 +16,12 @@ import com.example.aandi_post_web_server.course.api.dto.CourseOutlineResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseResponse
 import com.example.aandi_post_web_server.course.api.dto.CourseWeekResponse
 import com.example.aandi_post_web_server.course.application.mapper.toResponse
+import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentStore
 import com.example.aandi_post_web_server.course.application.port.CourseWeekStore
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
 import com.example.aandi_post_web_server.course.entity.CourseWeek
 import com.example.aandi_post_web_server.course.domain.model.EnrollmentStatus
-import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import org.springframework.http.HttpStatus
 import org.springframework.data.domain.Sort
@@ -35,7 +35,7 @@ import java.time.Instant
 @Service
 class CourseQueryService(
     private val courseRepository: CourseRepository,
-    private val courseEnrollmentRepository: CourseEnrollmentRepository,
+    private val courseEnrollmentStore: CourseEnrollmentStore,
     private val courseWeekStore: CourseWeekStore,
     private val assignmentQueryService: AssignmentQueryService,
     private val clock: Clock = Clock.systemUTC(),
@@ -74,7 +74,7 @@ class CourseQueryService(
         return findCourseBySlug(slug)
             .flatMapMany { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                courseEnrollmentRepository.findAllByCourseId(courseId.value)
+                courseEnrollmentStore.findAllByCourseId(courseId.value)
                     .map { enrollment -> enrollment.toResponse(course.slug) }
             }
             .sort(compareByDescending<CourseEnrollmentResponse> { it.updatedAt })
@@ -155,7 +155,7 @@ class CourseQueryService(
     }
 
     private fun loadEnrolledCourses(userId: UserId): Flux<Course> {
-        return courseEnrollmentRepository.findAllByUserIdAndStatus(userId.value, EnrollmentStatus.ENABLED)
+        return courseEnrollmentStore.findAllEnabledByUserId(userId.value)
             .map { it.courseId }
             .distinct()
             .collectList()
@@ -181,7 +181,7 @@ class CourseQueryService(
     }
 
     private fun ensureEnrolled(courseId: CourseId, userId: UserId): Mono<CourseEnrollment> {
-        return courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, userId.value)
+        return courseEnrollmentStore.findByCourseIdAndUserId(courseId.value, userId.value)
             .filter { enrollment -> enrollment.status == EnrollmentStatus.ENABLED }
             .switchIfEmpty(
                 Mono.error(

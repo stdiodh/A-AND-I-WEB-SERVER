@@ -5,6 +5,7 @@ import com.example.aandi_post_web_server.course.api.dto.CourseEnrollmentResponse
 import com.example.aandi_post_web_server.course.api.dto.EnrollCourseRequest
 import com.example.aandi_post_web_server.course.api.dto.UpdateEnrollmentRequest
 import com.example.aandi_post_web_server.course.application.mapper.toResponse
+import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentStore
 import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserQueryPort
 import com.example.aandi_post_web_server.course.application.port.CourseEnrollmentUserReference
 import com.example.aandi_post_web_server.course.domain.model.CourseId
@@ -15,7 +16,6 @@ import com.example.aandi_post_web_server.course.domain.model.PublicCode
 import com.example.aandi_post_web_server.course.domain.model.UserId
 import com.example.aandi_post_web_server.course.entity.Course
 import com.example.aandi_post_web_server.course.entity.CourseEnrollment
-import com.example.aandi_post_web_server.course.infrastructure.repository.CourseEnrollmentRepository
 import com.example.aandi_post_web_server.course.infrastructure.repository.CourseRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
@@ -27,7 +27,7 @@ import java.time.Instant
 @Service
 class CourseEnrollmentCommandService(
     private val courseRepository: CourseRepository,
-    private val courseEnrollmentRepository: CourseEnrollmentRepository,
+    private val courseEnrollmentStore: CourseEnrollmentStore,
     private val userQueryPort: CourseEnrollmentUserQueryPort,
 ) {
     fun enrollMember(courseSlug: String, request: EnrollCourseRequest): Mono<CourseEnrollmentResponse> {
@@ -62,7 +62,7 @@ class CourseEnrollmentCommandService(
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, parsedUserId.value)
+                courseEnrollmentStore.findByCourseIdAndUserId(courseId.value, parsedUserId.value)
                     .switchIfEmpty(
                         Mono.error(
                             ResponseStatusException(
@@ -93,7 +93,7 @@ class CourseEnrollmentCommandService(
                                 )
                             }
                         }
-                        courseEnrollmentRepository.save(updated)
+                        courseEnrollmentStore.save(updated)
                     }
                     .map { enrollment -> enrollment.toResponse(course.slug) }
             }
@@ -105,7 +105,7 @@ class CourseEnrollmentCommandService(
         return findCourseBySlug(slug)
             .flatMap { course ->
                 val courseId = parseCourseId(requireNotNull(course.id))
-                courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, parsedUserId.value)
+                courseEnrollmentStore.findByCourseIdAndUserId(courseId.value, parsedUserId.value)
                     .switchIfEmpty(
                         Mono.error(
                             ResponseStatusException(
@@ -114,7 +114,7 @@ class CourseEnrollmentCommandService(
                             )
                         )
                     )
-                    .flatMap { enrollment -> courseEnrollmentRepository.delete(enrollment) }
+                    .flatMap { enrollment -> courseEnrollmentStore.delete(enrollment) }
             }
             .then()
     }
@@ -160,7 +160,7 @@ class CourseEnrollmentCommandService(
         courseSlug: String,
         reportUser: CourseEnrollmentUserReference,
     ): Mono<CourseEnrollmentResponse> {
-        return courseEnrollmentRepository.findByCourseIdAndUserId(courseId.value, reportUser.id)
+        return courseEnrollmentStore.findByCourseIdAndUserId(courseId.value, reportUser.id)
             .flatMap<CourseEnrollmentResponse> { existing ->
                 val conflict = if (existing.status == EnrollmentStatus.BANNED) {
                     ResponseStatusException(
@@ -175,7 +175,7 @@ class CourseEnrollmentCommandService(
             .switchIfEmpty(
                 Mono.defer {
                     val now = Instant.now()
-                    courseEnrollmentRepository.save(
+                    courseEnrollmentStore.save(
                         CourseEnrollment(
                             courseId = courseId.value,
                             userId = reportUser.id,
