@@ -1,5 +1,6 @@
 package com.example.aandi_post_web_server.user.infrastructure.event
 
+import com.example.aandi_post_web_server.user.application.model.AuthUserEvent
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Component

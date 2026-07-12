@@ -1,4 +1,4 @@
-package com.example.aandi_post_web_server.user.infrastructure.event
+package com.example.aandi_post_web_server.user.application.model
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties

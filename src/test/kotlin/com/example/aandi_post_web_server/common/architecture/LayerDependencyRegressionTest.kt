@@ -148,6 +148,21 @@ class LayerDependencyRegressionTest {
     }
 
     @Test
+    fun `user application does not depend on event infrastructure`() {
+        val userApplication = "$basePackage.user.application"
+        val userInfrastructure = "$basePackage.user.infrastructure."
+        val violations = scanMainSourceImports { packageName, importName, relativePath ->
+            if (!isSameOrChildPackage(packageName, userApplication)) return@scanMainSourceImports null
+            if (!importName.startsWith(userInfrastructure)) return@scanMainSourceImports null
+            if (!importName.contains(".event.")) return@scanMainSourceImports null
+
+            "$relativePath -> user application depends on event infrastructure: $importName"
+        }
+
+        assertNoViolations("User event infrastructure boundary is broken", violations)
+    }
+
+    @Test
     fun `common runtime packages do not depend on feature packages`() {
         val featurePrefixes = listOf("assignment", "course", "report", "user")
             .map { "$basePackage.$it." }

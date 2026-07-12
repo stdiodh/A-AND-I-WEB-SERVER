@@ -1,8 +1,8 @@
 package com.example.aandi_post_web_server.user.application.service
 
+import com.example.aandi_post_web_server.user.application.model.AuthUserEvent
+import com.example.aandi_post_web_server.user.application.model.AuthUserEventType
 import com.example.aandi_post_web_server.user.entity.ReportUser
-import com.example.aandi_post_web_server.user.infrastructure.event.AuthUserEvent
-import com.example.aandi_post_web_server.user.infrastructure.event.AuthUserEventType
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate

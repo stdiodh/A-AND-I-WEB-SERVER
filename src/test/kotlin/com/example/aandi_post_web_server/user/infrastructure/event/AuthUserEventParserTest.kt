@@ -1,5 +1,6 @@
 package com.example.aandi_post_web_server.user.infrastructure.event
 
+import com.example.aandi_post_web_server.user.application.model.AuthUserEventType
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.kotest.core.spec.style.StringSpec

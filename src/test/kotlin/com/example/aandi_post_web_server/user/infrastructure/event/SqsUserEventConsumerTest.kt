@@ -1,5 +1,7 @@
 package com.example.aandi_post_web_server.user.infrastructure.event
 
+import com.example.aandi_post_web_server.user.application.model.AuthUserEvent
+import com.example.aandi_post_web_server.user.application.model.AuthUserEventType
 import com.example.aandi_post_web_server.user.application.service.ReportUserSyncOutcome
 import com.example.aandi_post_web_server.user.application.service.ReportUserSyncService
 import com.example.aandi_post_web_server.user.infrastructure.config.UserSyncEventProperties
