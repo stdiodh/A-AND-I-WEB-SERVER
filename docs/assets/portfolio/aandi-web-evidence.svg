@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">A&amp;I Web Server 검증 지표</title>
+  <desc id="desc">서로 다른 측정 범위에서 확인한 과제 목록 child repository call 60회에서 2회, 목록 API P95 9.297밀리초에서 7.565밀리초, 동일 범위 CI 중앙값 140초에서 109초와 2026년 7월 13일 현재 품질 체크포인트 456개 테스트, Line 92.00퍼센트, Branch 66.09퍼센트를 보여 준다.</desc>
+
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="#F8FAFC"/>
+  <line x1="80" y1="44" x2="1520" y2="44" stroke="#2563EB" stroke-width="4"/>
+
+  <text x="80" y="104" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="2" fill="#2563EB">A&amp;I WEB SERVER · VERIFIED EVIDENCE</text>
+  <text x="80" y="160" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="44" font-weight="750" letter-spacing="-1.4" fill="#0F172A">개선 결과와 현재 품질 기준을 분리해 기록했습니다</text>
+  <text x="80" y="200" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="19" fill="#475569">각 행은 독립된 측정 조건의 결과이며, 서로 더하거나 하나의 전후 변화로 해석하지 않습니다.</text>
+
+  <line x1="98" y1="252" x2="98" y2="668" stroke="#CBD5E1" stroke-width="3"/>
+
+  <circle cx="98" cy="298" r="9" fill="#2563EB"/>
+  <text x="132" y="278" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="14" font-weight="800" letter-spacing="1.2" fill="#475569">QUERY STRUCTURE</text>
+  <text x="132" y="326" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="48" font-weight="750" fill="#0F172A">60</text>
+  <line x1="246" y1="309" x2="358" y2="309" stroke="#2563EB" stroke-width="4" marker-end="url(#arrow-blue)"/>
+  <text x="392" y="326" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="48" font-weight="750" fill="#10B981">2</text>
+  <text x="522" y="304" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="21" font-weight="650" fill="#0F172A">child repository calls</text>
+  <text x="522" y="336" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="16" fill="#475569">과제 30개 · service-level interaction · 단건 2N 조회를 batch 2회로 변경</text>
+  <line x1="132" y1="372" x2="1520" y2="372" stroke="#E2E8F0" stroke-width="2"/>
+
+  <circle cx="98" cy="426" r="9" fill="#2563EB"/>
+  <text x="132" y="406" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="14" font-weight="800" letter-spacing="1.2" fill="#475569">LIST API LATENCY</text>
+  <text x="132" y="454" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="45" font-weight="750" fill="#0F172A">P95 9.297 ms</text>
+  <line x1="486" y1="438" x2="598" y2="438" stroke="#2563EB" stroke-width="4" marker-end="url(#arrow-blue)"/>
+  <text x="632" y="454" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="45" font-weight="750" fill="#10B981">7.565 ms</text>
+  <text x="1040" y="432" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="21" font-weight="650" fill="#0F172A">18.63% lower</text>
+  <text x="1040" y="462" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="16" fill="#475569">30 assignments · list-only · 100 RPS · 2분 × 3회 · local fixed-load</text>
+  <line x1="132" y1="500" x2="1520" y2="500" stroke="#E2E8F0" stroke-width="2"/>
+
+  <circle cx="98" cy="554" r="9" fill="#2563EB"/>
+  <text x="132" y="534" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="14" font-weight="800" letter-spacing="1.2" fill="#475569">CI · SAME SCOPE</text>
+  <text x="132" y="582" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="48" font-weight="750" fill="#0F172A">140 s</text>
+  <line x1="322" y1="566" x2="434" y2="566" stroke="#2563EB" stroke-width="4" marker-end="url(#arrow-blue)"/>
+  <text x="468" y="582" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="48" font-weight="750" fill="#10B981">109 s</text>
+  <text x="744" y="560" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="21" font-weight="650" fill="#0F172A">22.143% shorter</text>
+  <text x="744" y="590" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="16" fill="#475569">동일 검증 범위 · 성공 5회씩의 critical-path 중앙값</text>
+
+  <rect x="80" y="676" width="1440" height="142" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+  <rect x="80" y="676" width="10" height="142" rx="5" fill="#10B981"/>
+  <text x="122" y="716" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="14" font-weight="800" letter-spacing="1.2" fill="#475569">CURRENT QUALITY CHECKPOINT · 2026-07-13</text>
+  <text x="122" y="775" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="35" font-weight="750" fill="#0F172A">456 tests</text>
+  <text x="430" y="775" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="35" font-weight="750" fill="#0F172A">Line 92.00%</text>
+  <text x="794" y="775" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="35" font-weight="750" fill="#0F172A">Branch 66.09%</text>
+  <text x="1200" y="751" font-family="Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif" font-size="15" font-weight="700" fill="#475569">CI GATES</text>
+  <text x="1200" y="780" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="22" font-weight="750" fill="#10B981">Line 86% · Branch 62%</text>
+
+  <text x="80" y="862" font-family="'JetBrains Mono', 'SFMono-Regular', Consolas, monospace" font-size="13" fill="#64748B">sources · docs/MEASUREMENT.md · docs/performance/results/2026-07-09-assignment-list-before-after.md · docs/metrics/web-cicd-remeasure.json</text>
+</svg>

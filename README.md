@@ -104,6 +104,10 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 
 ## 성능과 테스트
 
+![A&I Web Server 검증 지표](./docs/assets/portfolio/aandi-web-evidence.svg)
+
+위 지표는 각각 별도의 측정 범위에서 확인한 결과입니다. Query, latency, CI, coverage 수치를 하나의 연속된 전후 개선이나 누적 효과로 해석하지 않습니다.
+
 ### 자동화 테스트
 
 | 구분 | 테스트 | Line coverage | Branch coverage | CI 기준 | 직전 기준 대비 |
@@ -112,12 +116,11 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 | 1차 리팩터링 | 277 | 85.04% | 62.59% | Line 83%, Branch 61% | +89 tests, Line +6.97%p, Branch +7.88%p |
 | 2차 리팩터링 | 338 | 88.22% | 63.42% | Line 86%, Branch 62% | +61 tests, 측정 scope 확장 |
 | 3차 리팩터링 | 388 | 88.87% | 63.74% | Line 86%, Branch 62% | +50 tests, Line +0.65%p, Branch +0.32%p |
+| 현재 체크포인트 | 456 | 92.00% | 66.09% | Line 86%, Branch 62% | +68 tests, 측정 source set 변경 |
 
-초기 대비 테스트는 **188 → 388개(+200개, +106.4%)**, CI Line gate는 **70% → 86%(+16%p)**로 강화했습니다. 전체 coverage 수치는 Line **+10.80%p**, Branch **+9.03%p** 높아졌지만, 2차에서 측정 범위를 확장했으므로 동일 scope의 직접 개선치는 2차 → 3차의 Line **+0.65%p**, Branch **+0.32%p**를 기준으로 봅니다.
+현재 체크포인트는 **456 tests, Line 92.00%, Branch 66.09%**이며 CI gate는 **Line 86%, Branch 62%**입니다. 2026-07-11 이후 port/adapter 분리와 mapper 통합으로 측정 source set의 클래스 구성과 분모가 바뀌었으므로, 388개 체크포인트와 현재 coverage 비율의 차이를 테스트 보강만의 직접 개선률로 해석하지 않습니다.
 
-![JaCoCo coverage gate summary](./docs/assets/images/jacoco-report-before-after.png)
-
-이미지는 2026-06-23 gate 보강 시점의 기록입니다. 과거 checkpoint와 scope 변경 이력은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 보존합니다. 현재 제외 대상은 Spring Boot 진입점과 OpenAPI schema-only 문서 모델뿐이며, 코루틴·controller·service·DTO·validator는 모두 측정합니다.
+2026-06-23의 JaCoCo 이미지와 과거 checkpoint·scope 변경 이력은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 보존합니다. 현재 제외 대상은 Spring Boot 진입점과 OpenAPI schema-only 문서 모델뿐이며, 코루틴·controller·service·DTO·validator는 모두 측정합니다.
 
 ### CI/CD 실행 시간
 
@@ -142,8 +145,6 @@ MongoDB collection은 과제 원본 데이터와 제출 현황 projection의 목
 | Dropped iterations | 0 | 0 |
 | Private testcase 노출 | 0건 | 0건 |
 
-![k6 읽기 API 부하 테스트](./docs/assets/performance/web-k6-read-capacity.svg)
-
 100 RPS, 2분, 3회 반복 조건에서 확인했습니다. 고정 부하 테스트 결과이므로 최대 처리량으로 해석하지 않습니다.
 
 상세 측정 조건과 per-run 결과는 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 정리했습니다.
@@ -154,7 +155,7 @@ Resume 문장과 근거 상태는 [Resume Metrics](./docs/resume-metrics.md)에 
 
 | 지표 | 측정 조건 | 근거 |
 | :--- | :--- | :--- |
-| 자동화 테스트 388개, Line 88.87%, Branch 63.74% | 2026-07-11 KST, Course 관계 삭제 순차화 포함 | `docs/MEASUREMENT.md`, `build/reports/jacoco/test/jacocoTestReport.xml`, `build.gradle.kts` |
+| 자동화 테스트 456개, Line 92.00%, Branch 66.09% | 2026-07-13 KST, 현재 source set과 Line 86%·Branch 62% gate 기준 | `docs/MEASUREMENT.md`, `docs/refactoring/2026-07-stable-refactoring.md`, `build.gradle.kts` |
 | Child repository calls 60 → 2 | 30 assignments, service-level repository interaction 기준 | `performance/results/assignment-read-query-evidence.json`, `AssignmentQueryServiceUserTest` |
 | HTTP 실패율 0.00%, Check 성공률 100.00%, Dropped iterations 0 | local fixed-load, 100 RPS, 2분 × 3회, 목록 60%·상세 40% | `performance/results/assignment-read-before.aggregate.json`, `performance/results/assignment-read-after.aggregate.json` |
 | Assignment list P95 9.297 ms → 7.565 ms | local fixed-load, 30 assignments, 목록 100%, 100 RPS, 2분 × 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.md` |

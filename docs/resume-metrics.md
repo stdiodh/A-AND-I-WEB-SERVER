@@ -10,6 +10,7 @@
 - Web CI/CD: `docs/metrics/web-cicd-remeasure.json`
 - Assignment scale: `docs/performance/results/2026-06-29-assignment-scale.json`
 - Assignment list before/after: `docs/performance/results/2026-07-09-assignment-list-before-after.json`
+- Quality checkpoint: `docs/MEASUREMENT.md`
 - Resume metrics generator snapshot: `docs/metrics/resume-metrics.json` (`generatedAt=2026-06-28T16:51:17Z`)
 
 `docs/metrics/resume-metrics.json`은 2026-06-28 기준 generator snapshot입니다. 2026-07-09 list-only before/after latency 근거는 이 Markdown 문서와 `docs/performance/results/2026-07-09-assignment-list-before-after.json`을 기준으로 봅니다.
@@ -48,7 +49,7 @@ Do not use:
 Approved sentence candidates:
 
 - 로컬 고정 부하 회귀 기준에서 1000개 과제 fixture P95 125.51 ms, P99 133.48 ms / 300개 과제 fixture P95 129.03 ms, P99 136.78 ms, HTTP failure 0.00%, dropped iterations 0을 관리
-- JUnit 277개 테스트와 JaCoCo line 85.04%, branch 62.59%를 로컬 리포트에서 자동 집계
+- 2026-07-13 체크포인트에서 자동화 테스트 456개와 JaCoCo Line 92.00%, Branch 66.09%, CI gate Line 86%·Branch 62%를 검증
 
 Do not use:
 
