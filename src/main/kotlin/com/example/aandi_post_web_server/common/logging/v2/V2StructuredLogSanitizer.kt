@@ -131,42 +131,18 @@ class V2StructuredLogSanitizer(
 
     private fun String.isPartialMaskField(): Boolean {
         val normalized = normalizedFieldName()
-        return normalized == "email" ||
-            normalized == "phone" ||
-            normalized == "loginid" ||
-            normalized == "username" ||
-            normalized.endsWith("email") ||
-            normalized.endsWith("phone") ||
-            normalized.endsWith("loginid") ||
-            normalized.endsWith("username")
+        return PARTIAL_MASK_FIELD_NAME_SUFFIXES.any { normalized.endsWith(it) }
     }
 
     private fun String?.isHiddenField(): Boolean {
         val normalized = this?.normalizedFieldName() ?: return false
-        return normalized == "privatetestcases" ||
-            normalized == "hiddentestcases" ||
-            normalized == "hiddencase" ||
-            normalized.contains("privatetestcase") ||
-            normalized.contains("hiddentestcase") ||
-            normalized.contains("hiddencase")
+        return HIDDEN_FIELD_NAME_FRAGMENTS.any { normalized.contains(it) }
     }
 
     private fun String.isSensitivePayloadField(): Boolean {
         val normalized = normalizedFieldName()
-        return normalized == "expectedoutput" ||
-            normalized.endsWith("expectedoutput") ||
-            normalized == "input" ||
-            normalized.endsWith("input") ||
-            normalized == "output" ||
-            normalized.endsWith("output") ||
-            normalized == "code" ||
-            normalized.endsWith("code") ||
-            normalized == "sourcecode" ||
-            normalized == "submittedcode" ||
-            normalized == "submittedsource" ||
-            normalized == "usercode" ||
-            normalized == "useranswercode" ||
-            normalized == "codecontent"
+        return normalized in SENSITIVE_PAYLOAD_FIELD_NAMES ||
+            SENSITIVE_PAYLOAD_FIELD_NAME_SUFFIXES.any { normalized.endsWith(it) }
     }
 
     private fun String.isHiddenPayloadChild(): Boolean {
@@ -200,5 +176,9 @@ class V2StructuredLogSanitizer(
         val SECRET_FIELD_NAMES = setOf("authenticate", "salt", "authorizations")
         val SECRET_FIELD_NAME_FRAGMENTS = listOf("password", "credential")
         val SECRET_FIELD_NAME_SUFFIXES = listOf("token", "authorization", "secret", "privatekey", "session", "cookie")
+        val PARTIAL_MASK_FIELD_NAME_SUFFIXES = listOf("email", "phone", "loginid", "username")
+        val HIDDEN_FIELD_NAME_FRAGMENTS = listOf("privatetestcase", "hiddentestcase", "hiddencase")
+        val SENSITIVE_PAYLOAD_FIELD_NAMES = setOf("submittedsource", "codecontent")
+        val SENSITIVE_PAYLOAD_FIELD_NAME_SUFFIXES = listOf("input", "output", "code")
     }
 }
