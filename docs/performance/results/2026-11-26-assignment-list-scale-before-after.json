@@ -964,6 +964,624 @@
     "MongoDB는 지시된 `docker compose up -d mongodb` 대신 `docker run mongo:7.0.16`(포트 27018)로 띄웠습니다. 저장소 compose 파일의 이미지 태그가 `mongo:7`(로컬 캐시 7.0.37)이라 7.0.16을 맞추기 위해서이고, 기존 27017 컨테이너(aandi-report-mongodb-local)를 멈추는 것이 허용되지 않아 다른 포트를 사용했습니다. 서버와 fixture/k6 모두 같은 27018 URI를 사용했습니다.",
     "k6 러너는 A-AND-I-WEB-SERVER main `d4cd644`의 스크립트를 사용했습니다. 7월 측정의 러너 커밋 `6682802`와 비교해 performance/ 아래 차이는 results/README.md와 .gitkeep뿐입니다.",
     "before 300·1000 조건은 저장소 집계 스크립트가 dropped 때문에 aggregate JSON을 만들지 않아(accepted=false), 3회 중앙값·범위는 각 run의 summary JSON(`2026-11-26-raw/`)에서 같은 지표(assignment_list_duration med/p(90)/p(95)/p(99))로 직접 계산했습니다. aggregate가 있는 조건은 두 계산 결과가 일치함을 확인했습니다.",
-    "서버는 `./gradlew bootRun`(Spring Boot 기본 -XX:TieredStopAtLevel=1)으로 실행했습니다. 측정 중에는 다른 무거운 작업을 돌리지 않았습니다."
-  ]
+    "서버는 `./gradlew bootRun`(Spring Boot 기본 -XX:TieredStopAtLevel=1)으로 실행했습니다. 측정 중에는 다른 무거운 작업을 돌리지 않았습니다.",
+    "저부하 동일 부하 측정은 2026-11-26 13:01–13:29 UTC에 했습니다(예비 실행 포함). 시작 전 Gradle·테스트 작업이 모두 끝난 것을 확인했고(`logs/k6-sustain-precheck-system-state.txt`), 측정 중에는 다른 빌드를 돌리지 않았습니다. k6 러너는 같은 커밋 `d4cd644`의 별도 worktree에서 실행했습니다.",
+    "과제 300개·15 RPS의 before는 run 간 편차가 큽니다(P95 55.550~138.750 ms, P99 70.442~203.494 ms). after는 P95 45.988~49.614 ms로 좁습니다. 개선율은 3회 중앙값끼리 계산했고, before 최솟값(55.550 ms)과 after 최댓값(49.614 ms)을 비교해도 after가 낮습니다.",
+    "과제 1,000개·5 RPS도 before P95 최솟값(183.669 ms)이 after P95 최댓값(128.522 ms)보다 높아 3회 범위가 겹치지 않습니다."
+  ],
+  "sameLoad": {
+    "precheck": [
+      {
+        "file": "2026-11-26-raw/same-load/precheck/precheck-sustain-1000-5rps/assignment-read-2026-11-26T13-03-05-501Z-d4cd644.summary.json",
+        "executedAt": "2026-11-26T13:03:05.501Z",
+        "actualDuration": "30.18s",
+        "targetRps": "5",
+        "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+        "gitCommitSha": "d4cd644",
+        "gitDirty": "false",
+        "thresholdFailed": false,
+        "listP50": 148.308,
+        "listP90": 164.076,
+        "listP95": 168.083,
+        "listP99": 190.32299999999998,
+        "listMax": 220.468,
+        "httpFailureRate": 0,
+        "checkSuccessRate": 1,
+        "checkFails": 0,
+        "droppedIterations": 0,
+        "httpReqs": 151,
+        "httpRps": 5.00340082147889,
+        "listSuccessThroughput": 5.00340082147889,
+        "iterations": 151,
+        "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+      },
+      {
+        "file": "2026-11-26-raw/same-load/precheck/precheck-sustain-300-15rps/assignment-read-2026-11-26T13-02-25-521Z-d4cd644.summary.json",
+        "executedAt": "2026-11-26T13:02:25.521Z",
+        "actualDuration": "30.00s",
+        "targetRps": "15",
+        "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+        "gitCommitSha": "d4cd644",
+        "gitDirty": "false",
+        "thresholdFailed": false,
+        "listP50": 50.236000000000004,
+        "listP90": 56.2441,
+        "listP95": 58.94114999999999,
+        "listP99": 72.87111999999998,
+        "listMax": 87.618,
+        "httpFailureRate": 0,
+        "checkSuccessRate": 1,
+        "checkFails": 0,
+        "droppedIterations": 0,
+        "httpReqs": 450,
+        "httpRps": 14.999211541446638,
+        "listSuccessThroughput": 14.999211541446638,
+        "iterations": 450,
+        "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+      }
+    ],
+    "scenarios": {
+      "300@15rps": {
+        "before": {
+          "serverCommit": "9b678b6",
+          "status": "valid",
+          "invalidReasons": [],
+          "runCount": 3,
+          "targetRps": "15",
+          "fixtureFingerprints": [
+            "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee"
+          ],
+          "listP50Ms": {
+            "median": 52.435,
+            "min": 47.444,
+            "max": 65.891
+          },
+          "listP90Ms": {
+            "median": 70.082,
+            "min": 52.339,
+            "max": 110.741
+          },
+          "listP95Ms": {
+            "median": 79.049,
+            "min": 55.55,
+            "max": 138.75
+          },
+          "listP99Ms": {
+            "median": 124.406,
+            "min": 70.442,
+            "max": 203.494
+          },
+          "httpFailureRate": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "checkSuccessRate": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "droppedIterations": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "httpRps": {
+            "median": 15.00074720545908,
+            "min": 15.00058578078732,
+            "max": 15.001496276392897
+          },
+          "listSuccessThroughputRps": {
+            "median": 15.00074720545908,
+            "min": 15.00058578078732,
+            "max": 15.001496276392897
+          },
+          "officialAggregate": {
+            "accepted": true,
+            "reasons": [],
+            "file": "2026-11-26-raw/same-load/before/assignment-list-only-300-15rps/assignment-list-only-300-15rps.aggregate.stdout.json"
+          },
+          "runs": [
+            {
+              "file": "2026-11-26-raw/same-load/before/assignment-list-only-300-15rps/assignment-read-2026-11-26T13-05-18-263Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:05:18.263Z",
+              "actualDuration": "120.05s",
+              "targetRps": "15",
+              "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 47.444,
+              "listP90": 52.339,
+              "listP95": 55.55,
+              "listP99": 70.442,
+              "listMax": 83.812,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 1801,
+              "httpRps": 15.001496276392897,
+              "listSuccessThroughput": 15.001496276392897,
+              "iterations": 1801,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            },
+            {
+              "file": "2026-11-26-raw/same-load/before/assignment-list-only-300-15rps/assignment-read-2026-11-26T13-07-25-145Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:07:25.145Z",
+              "actualDuration": "120.06s",
+              "targetRps": "15",
+              "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 52.435,
+              "listP90": 70.082,
+              "listP95": 79.049,
+              "listP99": 124.406,
+              "listMax": 210.857,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 1801,
+              "httpRps": 15.00074720545908,
+              "listSuccessThroughput": 15.00074720545908,
+              "iterations": 1801,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            },
+            {
+              "file": "2026-11-26-raw/same-load/before/assignment-list-only-300-15rps/assignment-read-2026-11-26T13-09-31-776Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:09:31.776Z",
+              "actualDuration": "120.06s",
+              "targetRps": "15",
+              "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 65.891,
+              "listP90": 110.741,
+              "listP95": 138.75,
+              "listP99": 203.494,
+              "listMax": 296.247,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 1801,
+              "httpRps": 15.00058578078732,
+              "listSuccessThroughput": 15.00058578078732,
+              "iterations": 1801,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            }
+          ]
+        },
+        "after": {
+          "serverCommit": "642cfd3",
+          "status": "valid",
+          "invalidReasons": [],
+          "runCount": 3,
+          "targetRps": "15",
+          "fixtureFingerprints": [
+            "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee"
+          ],
+          "listP50Ms": {
+            "median": 42.141999999999996,
+            "min": 40.63,
+            "max": 43.9895
+          },
+          "listP90Ms": {
+            "median": 46.4124,
+            "min": 44.86,
+            "max": 47.9498
+          },
+          "listP95Ms": {
+            "median": 47.7598,
+            "min": 45.988,
+            "max": 49.61365
+          },
+          "listP99Ms": {
+            "median": 50.87402,
+            "min": 47.983,
+            "max": 51.63328
+          },
+          "httpFailureRate": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "checkSuccessRate": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "droppedIterations": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "httpRps": {
+            "median": 14.999875376035417,
+            "min": 14.999737754584924,
+            "max": 15.002579594016035
+          },
+          "listSuccessThroughputRps": {
+            "median": 14.999875376035417,
+            "min": 14.999737754584924,
+            "max": 15.002579594016035
+          },
+          "officialAggregate": {
+            "accepted": true,
+            "reasons": [],
+            "file": "2026-11-26-raw/same-load/after/assignment-list-only-300-15rps/assignment-list-only-300-15rps.aggregate.stdout.json"
+          },
+          "runs": [
+            {
+              "file": "2026-11-26-raw/same-load/after/assignment-list-only-300-15rps/assignment-read-2026-11-26T13-18-30-736Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:18:30.736Z",
+              "actualDuration": "120.00s",
+              "targetRps": "15",
+              "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 43.9895,
+              "listP90": 47.9498,
+              "listP95": 49.61365,
+              "listP99": 51.63328,
+              "listMax": 89.624,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 1800,
+              "httpRps": 14.999737754584924,
+              "listSuccessThroughput": 14.999737754584924,
+              "iterations": 1800,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            },
+            {
+              "file": "2026-11-26-raw/same-load/after/assignment-list-only-300-15rps/assignment-read-2026-11-26T13-20-37-291Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:20:37.291Z",
+              "actualDuration": "120.00s",
+              "targetRps": "15",
+              "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 42.141999999999996,
+              "listP90": 46.4124,
+              "listP95": 47.7598,
+              "listP99": 50.87402,
+              "listMax": 111.035,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 1800,
+              "httpRps": 14.999875376035417,
+              "listSuccessThroughput": 14.999875376035417,
+              "iterations": 1800,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            },
+            {
+              "file": "2026-11-26-raw/same-load/after/assignment-list-only-300-15rps/assignment-read-2026-11-26T13-22-43-791Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:22:43.791Z",
+              "actualDuration": "120.05s",
+              "targetRps": "15",
+              "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 40.63,
+              "listP90": 44.86,
+              "listP95": 45.988,
+              "listP99": 47.983,
+              "listMax": 82.134,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 1801,
+              "httpRps": 15.002579594016035,
+              "listSuccessThroughput": 15.002579594016035,
+              "iterations": 1801,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            }
+          ]
+        },
+        "comparison": {
+          "sameFixtureFingerprint": true,
+          "sameTargetRps": true,
+          "bothValid": true,
+          "listP50LowerPercent": 19.630018117669508,
+          "listP90LowerPercent": 33.77415028109928,
+          "listP95LowerPercent": 39.58203139824666,
+          "listP99LowerPercent": 59.106457887883224,
+          "note": "valid comparison"
+        }
+      },
+      "1000@5rps": {
+        "before": {
+          "serverCommit": "9b678b6",
+          "status": "valid",
+          "invalidReasons": [],
+          "runCount": 3,
+          "targetRps": "5",
+          "fixtureFingerprints": [
+            "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a"
+          ],
+          "listP50Ms": {
+            "median": 150.841,
+            "min": 148.6265,
+            "max": 157.955
+          },
+          "listP90Ms": {
+            "median": 175.205,
+            "min": 164.5628,
+            "max": 191.593
+          },
+          "listP95Ms": {
+            "median": 187.474,
+            "min": 183.66905,
+            "max": 201.654
+          },
+          "listP99Ms": {
+            "median": 203.26199999999997,
+            "min": 202.972,
+            "max": 232.919
+          },
+          "httpFailureRate": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "checkSuccessRate": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "droppedIterations": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "httpRps": {
+            "median": 5.000535373458578,
+            "min": 4.999925876098887,
+            "max": 5.002154755149019
+          },
+          "listSuccessThroughputRps": {
+            "median": 5.000535373458578,
+            "min": 4.999925876098887,
+            "max": 5.002154755149019
+          },
+          "officialAggregate": {
+            "accepted": true,
+            "reasons": [],
+            "file": "2026-11-26-raw/same-load/before/assignment-list-only-1000-5rps/assignment-list-only-1000-5rps.aggregate.stdout.json"
+          },
+          "runs": [
+            {
+              "file": "2026-11-26-raw/same-load/before/assignment-list-only-1000-5rps/assignment-read-2026-11-26T13-11-44-116Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:11:44.116Z",
+              "actualDuration": "120.19s",
+              "targetRps": "5",
+              "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 157.955,
+              "listP90": 191.593,
+              "listP95": 201.654,
+              "listP99": 232.919,
+              "listMax": 283.382,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 601,
+              "httpRps": 5.000535373458578,
+              "listSuccessThroughput": 5.000535373458578,
+              "iterations": 601,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            },
+            {
+              "file": "2026-11-26-raw/same-load/before/assignment-list-only-1000-5rps/assignment-read-2026-11-26T13-13-51-749Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:13:51.749Z",
+              "actualDuration": "120.15s",
+              "targetRps": "5",
+              "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 150.841,
+              "listP90": 175.205,
+              "listP95": 187.474,
+              "listP99": 202.972,
+              "listMax": 281.25,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 601,
+              "httpRps": 5.002154755149019,
+              "listSuccessThroughput": 5.002154755149019,
+              "iterations": 601,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            },
+            {
+              "file": "2026-11-26-raw/same-load/before/assignment-list-only-1000-5rps/assignment-read-2026-11-26T13-15-59-426Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:15:59.426Z",
+              "actualDuration": "120.00s",
+              "targetRps": "5",
+              "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 148.6265,
+              "listP90": 164.5628,
+              "listP95": 183.66905,
+              "listP99": 203.26199999999997,
+              "listMax": 318.177,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 600,
+              "httpRps": 4.999925876098887,
+              "listSuccessThroughput": 4.999925876098887,
+              "iterations": 600,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            }
+          ]
+        },
+        "after": {
+          "serverCommit": "642cfd3",
+          "status": "valid",
+          "invalidReasons": [],
+          "runCount": 3,
+          "targetRps": "5",
+          "fixtureFingerprints": [
+            "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a"
+          ],
+          "listP50Ms": {
+            "median": 121.154,
+            "min": 121.128,
+            "max": 121.562
+          },
+          "listP90Ms": {
+            "median": 127.133,
+            "min": 126.6686,
+            "max": 127.144
+          },
+          "listP95Ms": {
+            "median": 128.437,
+            "min": 127.7517,
+            "max": 128.522
+          },
+          "listP99Ms": {
+            "median": 131.667,
+            "min": 131.03436000000002,
+            "max": 132.072
+          },
+          "httpFailureRate": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "checkSuccessRate": {
+            "median": 1,
+            "min": 1,
+            "max": 1
+          },
+          "droppedIterations": {
+            "median": 0,
+            "min": 0,
+            "max": 0
+          },
+          "httpRps": {
+            "median": 4.999957625359125,
+            "min": 4.924608302924013,
+            "max": 5.00268222011945
+          },
+          "listSuccessThroughputRps": {
+            "median": 4.999957625359125,
+            "min": 4.924608302924013,
+            "max": 5.00268222011945
+          },
+          "officialAggregate": {
+            "accepted": true,
+            "reasons": [],
+            "file": "2026-11-26-raw/same-load/after/assignment-list-only-1000-5rps/assignment-list-only-1000-5rps.aggregate.stdout.json"
+          },
+          "runs": [
+            {
+              "file": "2026-11-26-raw/same-load/after/assignment-list-only-1000-5rps/assignment-read-2026-11-26T13-24-54-639Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:24:54.639Z",
+              "actualDuration": "120.00s",
+              "targetRps": "5",
+              "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 121.562,
+              "listP90": 126.6686,
+              "listP95": 127.7517,
+              "listP99": 131.03436000000002,
+              "listMax": 132.666,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 600,
+              "httpRps": 4.999957625359125,
+              "listSuccessThroughput": 4.999957625359125,
+              "iterations": 600,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            },
+            {
+              "file": "2026-11-26-raw/same-load/after/assignment-list-only-1000-5rps/assignment-read-2026-11-26T13-27-03-519Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:27:03.519Z",
+              "actualDuration": "122.04s",
+              "targetRps": "5",
+              "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 121.128,
+              "listP90": 127.144,
+              "listP95": 128.522,
+              "listP99": 132.072,
+              "listMax": 149.125,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 601,
+              "httpRps": 4.924608302924013,
+              "listSuccessThroughput": 4.924608302924013,
+              "iterations": 601,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            },
+            {
+              "file": "2026-11-26-raw/same-load/after/assignment-list-only-1000-5rps/assignment-read-2026-11-26T13-29-10-747Z-d4cd644.summary.json",
+              "executedAt": "2026-11-26T13:29:10.747Z",
+              "actualDuration": "120.14s",
+              "targetRps": "5",
+              "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+              "gitCommitSha": "d4cd644",
+              "gitDirty": "false",
+              "thresholdFailed": false,
+              "listP50": 121.154,
+              "listP90": 127.133,
+              "listP95": 128.437,
+              "listP99": 131.667,
+              "listMax": 158.255,
+              "httpFailureRate": 0,
+              "checkSuccessRate": 1,
+              "checkFails": 0,
+              "droppedIterations": 0,
+              "httpReqs": 601,
+              "httpRps": 5.00268222011945,
+              "listSuccessThroughput": 5.00268222011945,
+              "iterations": 601,
+              "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)"
+            }
+          ]
+        },
+        "comparison": {
+          "sameFixtureFingerprint": true,
+          "sameTargetRps": true,
+          "bothValid": true,
+          "listP50LowerPercent": 19.680988590635177,
+          "listP90LowerPercent": 27.43757312862077,
+          "listP95LowerPercent": 31.49076671965178,
+          "listP99LowerPercent": 35.223012663458974,
+          "note": "valid comparison"
+        }
+      }
+    },
+    "rpsRule": "before server 30s precheck at 15 RPS (300) and 5 RPS (1000): dropped 0, failures 0, checks 100% → used for both before and after"
+  }
 }

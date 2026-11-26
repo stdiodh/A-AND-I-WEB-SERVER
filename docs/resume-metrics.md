@@ -68,11 +68,16 @@ Do not use:
 | HTTP failure / checks / dropped | 0.00% / 100.00% / 0 | 0.00% / 100.00% / 0 | same local fixed-load run | `docs/performance/results/2026-07-09-assignment-list-before-after.json` |
 | Assignment list 성공 처리량 (2026-11-26) | 30.818 req/s (무효: dropped 2143) | 49.994 req/s (dropped 0, HTTP failure 0) | 300 assignments, list-only, 50 RPS, 2분 x 3회 중앙값 | `docs/performance/results/2026-11-26-assignment-list-scale-before-after.json` |
 | Assignment list 성공 처리량 (2026-11-26) | 8.609 req/s (무효: dropped 4833) | 49.940 req/s (dropped 0, HTTP failure 0) | 1,000 assignments, list-only, 50 RPS, 2분 x 3회 중앙값 | `docs/performance/results/2026-11-26-assignment-list-scale-before-after.json` |
+| Assignment list P95 (2026-11-26 동일 부하) | 79.049 ms | 47.760 ms | 300 assignments, list-only, 15 RPS, 2분 x 3회 중앙값, before/after 모두 유효 | `docs/performance/results/2026-11-26-assignment-list-scale-before-after.json` |
+| Assignment list P95 (2026-11-26 동일 부하) | 187.474 ms | 128.437 ms | 1,000 assignments, list-only, 5 RPS, 2분 x 3회 중앙값, before/after 모두 유효 | `docs/performance/results/2026-11-26-assignment-list-scale-before-after.json` |
+| Assignment list P99 (2026-11-26 동일 부하) | 203.262 ms | 131.667 ms | 1,000 assignments, list-only, 5 RPS, 2분 x 3회 중앙값, before/after 모두 유효 | `docs/performance/results/2026-11-26-assignment-list-scale-before-after.json` |
 
-2026-11-26 재측정에서 30개 과제 조건의 P95는 10.160 ms → 10.373 ms, P99는 13.088 ms → 12.380 ms였습니다. 300개·1,000개 조건의 before는 목표 부하를 유지하지 못해(dropped > 0) 지연 시간 비교는 근거로 쓰지 않습니다.
+2026-11-26 재측정에서 30개 과제 조건의 P95는 10.160 ms → 10.373 ms, P99는 13.088 ms → 12.380 ms였습니다. 300개·1,000개 조건의 50 RPS 측정은 before가 목표 부하를 유지하지 못해(dropped > 0) 지연 시간 비교 근거로 쓰지 않고, 응답시간은 before도 유지하는 동일 부하(300개 15 RPS, 1,000개 5 RPS) 측정값만 씁니다.
 
 Approved sentence candidates:
 
+- 과제 1,000개·5 RPS 동일 부하에서 과제 목록 API P95를 187.474 ms에서 128.437 ms로 31.49% 줄이고 HTTP 실패 0건을 확인
+- 과제 300개·15 RPS 동일 부하에서 과제 목록 API P95를 79.049 ms에서 47.760 ms로 39.58% 줄이고 HTTP 실패 0건을 확인
 - 과제 1,000개·50 RPS 조건에서 과제 목록 처리량을 8.609 req/s에서 49.940 req/s로 높이고 HTTP 실패 0건을 확인
 - 과제 목록 조회의 반복 child repository 조회를 batch 조회로 변경하고, 30개 과제 기준 service-level child repository call을 60회에서 2회로 감소
 
