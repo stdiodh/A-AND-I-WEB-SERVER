@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 | :-- | :-- |
 | 담당 | 리팩터링과 테스트 보강, 과제 목록 batch 조회 전환, CI/CD 실행 시간 단축 |
-| 결과 | 테스트 188 → 456개, 과제 30개 기준 child repository 호출 60 → 2회, 동일 범위 CI 중앙값 140.0초 → 109.0초 |
+| 결과 | 테스트·커버리지 보강, 과제 목록 child repository 호출 감소, 동일 범위 CI 중앙값 단축 (자세한 수치는 [성능과 테스트](#성능과-테스트)의 표) |
 
 <img width="1672" height="941" alt="d40e8dcc-c8aa-483e-a645-e545b9cb06fc" src="https://github.com/user-attachments/assets/215e689a-3b3f-4bc2-885a-dc5af4c9a07f" />
 
@@ -110,9 +110,9 @@ sequenceDiagram
 | 1차 리팩터링 |     277 |        85.04% |          62.59% | Line 83%, Branch 61%     |
 | 2차 리팩터링 |     338 |        88.22% |          63.42% | Line 86%, Branch 62%     |
 | 3차 리팩터링 |     388 |        88.87% |          63.74% | Line 86%, Branch 62%     |
-| 현재      | **456** |    **92.00%** |      **66.09%** | **Line 86%, Branch 62%** |
+| 현재      | **602** |    **97.13%** |      **82.17%** | **Line 86%, Branch 62%** |
 
-상세 내용은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 있습니다.
+현재 값은 2026-11-26 `clean test jacocoTestReport` 기준이며, 상세 내용은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 있습니다.
 
 ### CI/CD 실행 시간
 
