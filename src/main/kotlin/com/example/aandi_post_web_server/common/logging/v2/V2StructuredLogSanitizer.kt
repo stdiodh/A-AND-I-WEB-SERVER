@@ -124,29 +124,9 @@ class V2StructuredLogSanitizer(
 
     private fun String.isSecretField(): Boolean {
         val normalized = normalizedFieldName()
-        return normalized == "password" ||
-            normalized.contains("password") ||
-            normalized == "accesstoken" ||
-            normalized == "refreshtoken" ||
-            normalized == "token" ||
-            normalized.endsWith("token") ||
-            normalized == "authenticate" ||
-            normalized == "salt" ||
-            normalized == "authorization" ||
-            normalized == "authorizations" ||
-            normalized.endsWith("authorization") ||
-            normalized == "secret" ||
-            normalized.endsWith("secret") ||
-            normalized == "credential" ||
-            normalized == "credentials" ||
-            normalized.contains("credential") ||
-            normalized == "privatekey" ||
-            normalized.endsWith("privatekey") ||
-            normalized == "clientsecret" ||
-            normalized == "session" ||
-            normalized.endsWith("session") ||
-            normalized == "cookie" ||
-            normalized.endsWith("cookie")
+        return normalized in SECRET_FIELD_NAMES ||
+            SECRET_FIELD_NAME_FRAGMENTS.any { normalized.contains(it) } ||
+            SECRET_FIELD_NAME_SUFFIXES.any { normalized.endsWith(it) }
     }
 
     private fun String.isPartialMaskField(): Boolean {
@@ -214,4 +194,11 @@ class V2StructuredLogSanitizer(
 
     private fun String.normalizedFieldName(): String =
         lowercase().filter { it.isLetterOrDigit() }
+
+    private companion object {
+        // 아래 이름은 모두 normalizedFieldName() 결과(소문자, 영숫자만)와 비교한다.
+        val SECRET_FIELD_NAMES = setOf("authenticate", "salt", "authorizations")
+        val SECRET_FIELD_NAME_FRAGMENTS = listOf("password", "credential")
+        val SECRET_FIELD_NAME_SUFFIXES = listOf("token", "authorization", "secret", "privatekey", "session", "cookie")
+    }
 }
