@@ -34,8 +34,8 @@ class V2StructuredLogSanitizer(
             return null
         }
 
-        if (fieldName.isNullableSecretField()) {
-            return maskedSecret(fieldName!!)
+        if (fieldName != null && fieldName.isSecretField()) {
+            return maskedSecret(fieldName)
         }
         if (fieldName.isHiddenField()) {
             return "****"
@@ -160,9 +160,6 @@ class V2StructuredLogSanitizer(
             normalized.endsWith("loginid") ||
             normalized.endsWith("username")
     }
-
-    private fun String?.isNullableSecretField(): Boolean =
-        this?.isSecretField() ?: false
 
     private fun String?.isHiddenField(): Boolean {
         val normalized = this?.normalizedFieldName() ?: return false
