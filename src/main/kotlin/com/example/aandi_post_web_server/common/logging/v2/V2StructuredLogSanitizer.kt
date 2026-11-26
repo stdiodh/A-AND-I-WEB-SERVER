@@ -156,17 +156,20 @@ class V2StructuredLogSanitizer(
     }
 
     private fun JsonNode.hasHiddenVisibility(): Boolean {
-        val visibility = path("visibility").takeIf { !it.isMissingNode && !it.isNull }?.asText()
-            ?: path("caseVisibility").takeIf { !it.isMissingNode && !it.isNull }?.asText()
+        val visibility = presentChild("visibility")?.asText()
+            ?: presentChild("caseVisibility")?.asText()
         val normalizedVisibility = visibility?.lowercase().orEmpty()
         if (normalizedVisibility.contains("private") || normalizedVisibility.contains("hidden")) {
             return true
         }
 
-        return path("isPrivate").takeIf { !it.isMissingNode && !it.isNull }?.asBoolean(false) == true ||
-            path("private").takeIf { !it.isMissingNode && !it.isNull }?.asBoolean(false) == true ||
-            path("hidden").takeIf { !it.isMissingNode && !it.isNull }?.asBoolean(false) == true
+        return presentChild("isPrivate")?.asBoolean(false) == true ||
+            presentChild("private")?.asBoolean(false) == true ||
+            presentChild("hidden")?.asBoolean(false) == true
     }
+
+    private fun JsonNode.presentChild(name: String): JsonNode? =
+        path(name).takeIf { !it.isMissingNode && !it.isNull }
 
     private fun String.normalizedFieldName(): String =
         lowercase().filter { it.isLetterOrDigit() }
