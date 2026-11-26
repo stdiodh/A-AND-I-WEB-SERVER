@@ -63,17 +63,23 @@ Do not use:
 
 | Metric | Before | After | Condition | Source |
 | :--- | ---: | ---: | :--- | :--- |
-| Assignment list P95 | 9.297 ms | 7.565 ms | 30 assignments, list-only, 100 RPS, 2분 x 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.json` |
-| Assignment list P99 | 11.512 ms | 9.546 ms | 30 assignments, list-only, 100 RPS, 2분 x 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.json` |
+| Assignment list P95 (2026-11-26 재측정에서 재현되지 않음) | 9.297 ms | 7.565 ms | 30 assignments, list-only, 100 RPS, 2분 x 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.json` |
+| Assignment list P99 (2026-11-26 재측정에서 재현되지 않음) | 11.512 ms | 9.546 ms | 30 assignments, list-only, 100 RPS, 2분 x 3회 | `docs/performance/results/2026-07-09-assignment-list-before-after.json` |
 | HTTP failure / checks / dropped | 0.00% / 100.00% / 0 | 0.00% / 100.00% / 0 | same local fixed-load run | `docs/performance/results/2026-07-09-assignment-list-before-after.json` |
+| Assignment list 성공 처리량 (2026-11-26) | 30.818 req/s (무효: dropped 2143) | 49.994 req/s (dropped 0, HTTP failure 0) | 300 assignments, list-only, 50 RPS, 2분 x 3회 중앙값 | `docs/performance/results/2026-11-26-assignment-list-scale-before-after.json` |
+| Assignment list 성공 처리량 (2026-11-26) | 8.609 req/s (무효: dropped 4833) | 49.940 req/s (dropped 0, HTTP failure 0) | 1,000 assignments, list-only, 50 RPS, 2분 x 3회 중앙값 | `docs/performance/results/2026-11-26-assignment-list-scale-before-after.json` |
+
+2026-11-26 재측정에서 30개 과제 조건의 P95는 10.160 ms → 10.373 ms, P99는 13.088 ms → 12.380 ms였습니다. 300개·1,000개 조건의 before는 목표 부하를 유지하지 못해(dropped > 0) 지연 시간 비교는 근거로 쓰지 않습니다.
 
 Approved sentence candidates:
 
-- 30개 과제 list-only local fixed-load 조건에서 과제 목록 API P95를 9.297 ms에서 7.565 ms로 측정하고, HTTP failure 0.00%, checks 100.00%, dropped iterations 0을 확인
+- 과제 1,000개·50 RPS 조건에서 과제 목록 처리량을 8.609 req/s에서 49.940 req/s로 높이고 HTTP 실패 0건을 확인
 - 과제 목록 조회의 반복 child repository 조회를 batch 조회로 변경하고, 30개 과제 기준 service-level child repository call을 60회에서 2회로 감소
 
 Do not use:
 
+- 30개 과제 list-only local fixed-load 조건에서 과제 목록 API P95를 9.297 ms에서 7.565 ms로 측정하고, HTTP failure 0.00%, checks 100.00%, dropped iterations 0을 확인 (2026-11-26 같은 조건 재측정에서 재현되지 않음)
+- 300개·1,000개 과제 조건의 before/after 지연 시간 감소율(99%대). before가 목표 부하를 유지하지 못한 포화 상태 값입니다.
 - 이 결과를 운영 최대 처리량, production latency, MongoDB command count 감소로 표현하지 않습니다.
 - k6 report의 `gitCommitSha=6682802`는 runner repo 기준이므로 서버 commit `9b678b6 -> 642cfd3`와 분리해서 설명합니다.
 

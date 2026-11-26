@@ -1,0 +1,10 @@
+{
+  "accepted": false,
+  "reasons": [
+    "run 1 has failed checks",
+    "run 1 has dropped iterations",
+    "run 1 private testcase guard is not 100%",
+    "run 2 has dropped iterations",
+    "run 3 has dropped iterations"
+  ]
+}

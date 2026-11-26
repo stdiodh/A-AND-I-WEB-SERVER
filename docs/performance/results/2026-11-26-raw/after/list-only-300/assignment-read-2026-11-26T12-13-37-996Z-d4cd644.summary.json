@@ -1,0 +1,442 @@
+{
+  "context": {
+    "executedAt": "2026-11-26T12:13:37.996Z",
+    "timezone": "unknown",
+    "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)",
+    "gitCommitSha": "d4cd644",
+    "gitDirty": "false",
+    "scenario": "assignment-read",
+    "runLabel": "assignment-list-only-300-run-3",
+    "executed": true,
+    "skipped": false,
+    "skipReason": "",
+    "businessRequestCount": 6000,
+    "thresholdFailed": false,
+    "executor": "constant-arrival-rate",
+    "vus": "50 req/s",
+    "loadModel": "arrival-rate",
+    "targetRps": "50",
+    "preAllocatedVus": "30",
+    "maxVus": "200",
+    "duration": "2m",
+    "requestSleepSeconds": "0",
+    "assignmentListRatio": "100",
+    "assignmentDetailRatio": "0",
+    "baseUrlHost": "localhost",
+    "targetEnvironment": "local",
+    "dockerNetworkMode": "local-binary",
+    "jvmOptions": "unknown",
+    "cpu": "Apple M5 Pro",
+    "memory": "48.00 GiB",
+    "mongodbMode": "local-docker-compose",
+    "fixtureFingerprint": "7ec90312e9aa43aa2aa28760809a2c9cdfb558ec70a4f892413f6b390c6972ee",
+    "fixtureCounts": {
+      "courses": "1",
+      "assignments": "300",
+      "enrollments": "100",
+      "submissionStatuses": "60"
+    },
+    "tokenSupplied": {
+      "user": true,
+      "admin": true
+    },
+    "tokenRoleExpected": "USER",
+    "warmupCompleted": "true",
+    "actualDuration": "120.01s"
+  },
+  "k6": {
+    "options": {
+      "summaryTrendStats": [
+        "med",
+        "p(90)",
+        "p(95)",
+        "p(99)",
+        "max"
+      ],
+      "summaryTimeUnit": "",
+      "noColor": false
+    },
+    "state": {
+      "testRunDurationMs": 120013.668,
+      "isStdOutTTY": false,
+      "isStdErrTTY": false
+    },
+    "metrics": {
+      "data_received": {
+        "type": "counter",
+        "contains": "data",
+        "values": {
+          "rate": 13044658.671710625,
+          "count": 1565537335
+        }
+      },
+      "vus": {
+        "type": "gauge",
+        "contains": "default",
+        "values": {
+          "max": 2,
+          "value": 1,
+          "min": 1
+        }
+      },
+      "data_sent": {
+        "values": {
+          "count": 5862000,
+          "rate": 48844.43661866913
+        },
+        "type": "counter",
+        "contains": "data"
+      },
+      "http_req_blocked": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "p(95)": 0.003,
+          "p(99)": 0.008,
+          "max": 0.425,
+          "med": 0.002,
+          "p(90)": 0.003
+        }
+      },
+      "private_testcase_guard_rate": {
+        "type": "rate",
+        "contains": "default",
+        "values": {
+          "rate": 1,
+          "passes": 6000,
+          "fails": 0
+        }
+      },
+      "http_reqs": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "count": 6000,
+          "rate": 49.994305648586625
+        }
+      },
+      "http_req_duration{expected_response:true}": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "p(95)": 42.7863,
+          "p(99)": 46.94713,
+          "max": 55.029,
+          "med": 34.385000000000005,
+          "p(90)": 40.344300000000004
+        }
+      },
+      "http_req_connecting": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 0,
+          "p(90)": 0,
+          "p(95)": 0,
+          "p(99)": 0,
+          "max": 0.36
+        }
+      },
+      "vus_max": {
+        "type": "gauge",
+        "contains": "default",
+        "values": {
+          "value": 30,
+          "min": 30,
+          "max": 30
+        }
+      },
+      "http_req_sending": {
+        "contains": "time",
+        "values": {
+          "p(99)": 0.034,
+          "max": 0.25,
+          "med": 0.011,
+          "p(90)": 0.015,
+          "p(95)": 0.018
+        },
+        "type": "trend"
+      },
+      "iterations": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "count": 6000,
+          "rate": 49.994305648586625
+        }
+      },
+      "http_req_waiting": {
+        "contains": "time",
+        "values": {
+          "med": 34.2995,
+          "p(90)": 40.264100000000006,
+          "p(95)": 42.68484999999999,
+          "p(99)": 46.82638,
+          "max": 54.912
+        },
+        "type": "trend"
+      },
+      "api_request_duration_ms": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 34.385000000000005,
+          "p(90)": 40.344300000000004,
+          "p(95)": 42.7863,
+          "p(99)": 46.94713,
+          "max": 55.029
+        }
+      },
+      "assignment_list_success_count": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "count": 6000,
+          "rate": 49.994305648586625
+        }
+      },
+      "http_req_receiving": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 0.071,
+          "p(90)": 0.102,
+          "p(95)": 0.114,
+          "p(99)": 0.16900999999999997,
+          "max": 1.381
+        }
+      },
+      "api_response_count": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "count": 6000,
+          "rate": 49.994305648586625
+        }
+      },
+      "envelope_validation_rate": {
+        "values": {
+          "rate": 1,
+          "passes": 6000,
+          "fails": 0
+        },
+        "type": "rate",
+        "contains": "default"
+      },
+      "iteration_duration": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "p(90)": 42.869417,
+          "p(95)": 45.354583,
+          "p(99)": 49.43325,
+          "max": 57.457875,
+          "med": 36.661792
+        }
+      },
+      "assignment_list_duration": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 34.385000000000005,
+          "p(90)": 40.344300000000004,
+          "p(95)": 42.7863,
+          "p(99)": 46.94713,
+          "max": 55.029
+        }
+      },
+      "http_req_duration": {
+        "type": "trend",
+        "contains": "time",
+        "values": {
+          "med": 34.385000000000005,
+          "p(90)": 40.344300000000004,
+          "p(95)": 42.7863,
+          "p(99)": 46.94713,
+          "max": 55.029
+        }
+      },
+      "assignment_list_success_rate": {
+        "type": "rate",
+        "contains": "default",
+        "values": {
+          "rate": 1,
+          "passes": 6000,
+          "fails": 0
+        }
+      },
+      "http_req_tls_handshaking": {
+        "values": {
+          "p(95)": 0,
+          "p(99)": 0,
+          "max": 0,
+          "med": 0,
+          "p(90)": 0
+        },
+        "type": "trend",
+        "contains": "time"
+      },
+      "checks": {
+        "contains": "default",
+        "values": {
+          "rate": 1,
+          "passes": 84000,
+          "fails": 0
+        },
+        "thresholds": {
+          "rate>0.99": {
+            "ok": true
+          }
+        },
+        "type": "rate"
+      },
+      "api_success_rate": {
+        "type": "rate",
+        "contains": "default",
+        "values": {
+          "rate": 1,
+          "passes": 6000,
+          "fails": 0
+        }
+      },
+      "business_success_count": {
+        "type": "counter",
+        "contains": "default",
+        "values": {
+          "count": 6000,
+          "rate": 49.994305648586625
+        }
+      },
+      "http_req_failed": {
+        "values": {
+          "fails": 6000,
+          "rate": 0,
+          "passes": 0
+        },
+        "thresholds": {
+          "rate<0.01": {
+            "ok": true
+          }
+        },
+        "type": "rate",
+        "contains": "default"
+      }
+    },
+    "setup_data": {
+      "assignmentId": "10000000-0000-4000-8000-000000000001",
+      "courseSlug": "perf-k6",
+      "weights": {
+        "detail": 0,
+        "list": 100,
+        "listCutoff": 1
+      },
+      "accessToken": "[REDACTED]"
+    },
+    "root_group": {
+      "name": "",
+      "path": "",
+      "id": "d41d8cd98f00b204e9800998ecf8427e",
+      "groups": [],
+      "checks": [
+        {
+          "name": "assignment list: http status is 200",
+          "path": "::assignment list: http status is 200",
+          "id": "fa3685192335664fa1faf2fe553d69e9",
+          "passes": 6000,
+          "fails": 0
+        },
+        {
+          "name": "assignment list: content-type is json",
+          "path": "::assignment list: content-type is json",
+          "id": "397fa46d4cff76c6bb0307671a9a790a",
+          "passes": 6000,
+          "fails": 0
+        },
+        {
+          "name": "assignment list: json parsing succeeds",
+          "path": "::assignment list: json parsing succeeds",
+          "id": "6b6d1047d3386b7294cfe1a7086ec329",
+          "passes": 6000,
+          "fails": 0
+        },
+        {
+          "id": "eb1b2a7847aaf9b78a9f4e9734e153d8",
+          "passes": 6000,
+          "fails": 0,
+          "name": "assignment list: envelope success is true",
+          "path": "::assignment list: envelope success is true"
+        },
+        {
+          "name": "assignment list: envelope error is null",
+          "path": "::assignment list: envelope error is null",
+          "id": "c6937945ff8f16794869fe7238b95fc4",
+          "passes": 6000,
+          "fails": 0
+        },
+        {
+          "name": "assignment list: envelope timestamp exists",
+          "path": "::assignment list: envelope timestamp exists",
+          "id": "30b9ef537dc0ff2087492b64f22e93b7",
+          "passes": 6000,
+          "fails": 0
+        },
+        {
+          "name": "assignment list: envelope data exists",
+          "path": "::assignment list: envelope data exists",
+          "id": "9f641c084c7c1a8d90731b99f8bed210",
+          "passes": 6000,
+          "fails": 0
+        },
+        {
+          "name": "assignment list: data is array",
+          "path": "::assignment list: data is array",
+          "id": "ac2d6bdcc5e88908800433acd68df9b2",
+          "passes": 6000,
+          "fails": 0
+        },
+        {
+          "passes": 6000,
+          "fails": 0,
+          "name": "assignment list: data is non-empty",
+          "path": "::assignment list: data is non-empty",
+          "id": "dbbcb731fd54ff90f6280a11c3e47b1f"
+        },
+        {
+          "name": "assignment list: each assignmentId exists",
+          "path": "::assignment list: each assignmentId exists",
+          "id": "ea3d32dd583129dab28a437708d7b5ef",
+          "passes": 6000,
+          "fails": 0
+        },
+        {
+          "passes": 6000,
+          "fails": 0,
+          "name": "assignment list: each status is PUBLISHED",
+          "path": "::assignment list: each status is PUBLISHED",
+          "id": "47f0f2b2324459bf1055c0a1b85de167"
+        },
+        {
+          "name": "assignment list: expected assignmentId exists in list",
+          "path": "::assignment list: expected assignmentId exists in list",
+          "id": "a577c37ba3c07f4e75c1e8c9f5e9482a",
+          "passes": 6000,
+          "fails": 0
+        },
+        {
+          "path": "::assignment list: metadata.testCases are PUBLIC when present",
+          "id": "59c0a842bffa5c89a451a23f13df20b9",
+          "passes": 6000,
+          "fails": 0,
+          "name": "assignment list: metadata.testCases are PUBLIC when present"
+        },
+        {
+          "name": "assignment list: private testcase marker is absent",
+          "path": "::assignment list: private testcase marker is absent",
+          "id": "fe5ba1b28d99c92a86d58adc83c97549",
+          "passes": 6000,
+          "fails": 0
+        }
+      ]
+    }
+  }
+}

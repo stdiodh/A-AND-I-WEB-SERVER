@@ -150,7 +150,9 @@ CI는 GitHub Actions 성공 실행 기준입니다.
 
 100 RPS, 2분, 3회 반복 기준입니다.
 
-Assignment list P95는 **9.297 ms → 7.565 ms**로 확인했습니다.
+2026-11-26에 같은 조건(과제 30개, 100 RPS)으로 다시 측정했을 때 P95 개선은 재현되지 않았습니다(10.160 ms → 10.373 ms).
+과제 300개·1,000개에 50 RPS를 걸면 개선 전 서버는 처리량이 30.818 req/s, 8.609 req/s에 그쳤고, 개선 후 서버는 3회 모두 50 RPS를 유지하며 HTTP 실패 0건, P95 42.334 ms, 237.767 ms를 기록했습니다.
+재측정 조건과 원본 결과는 [과제 목록 재측정 결과](./docs/performance/results/2026-11-26-assignment-list-scale-before-after.md)에 정리했습니다.
 
 상세 결과는 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 정리했습니다.
 
