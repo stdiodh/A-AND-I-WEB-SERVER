@@ -22,7 +22,7 @@
 
 | 문서 | 상태 |
 | :--- | :--- |
-| [과제 목록 지연시간 측정 계획](./ASSIGNMENT_LIST_LATENCY_PLAN.md) | 30개 fixture 측정 완료, 300/1000개 확장은 선택 작업 |
+| [과제 목록 지연시간 측정 계획](./ASSIGNMENT_LIST_LATENCY_PLAN.md) | 30·300·1,000개 측정 완료 (2026-11-26) |
 | [과제 이벤트 일관성 ADR](./adr/0001-assignment-event-consistency.md) | Proposed, 구현 전 MongoDB transaction 조건 확인 필요 |
 
 ## 과거 측정 근거
