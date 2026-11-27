@@ -98,7 +98,7 @@ sequenceDiagram
 
 ## 성능과 테스트
 
-<img width="1672" height="941" alt="e7a5f139-6c75-4139-8f54-d09bbb454424" src="https://github.com/user-attachments/assets/03ad568e-56a1-42d7-b36b-80eb5a20fef2" />
+<img width="1672" height="941" alt="과제 목록 조회 횟수, 목록 API P95, CI 시간의 개선 전후와 2026-11-26 테스트·커버리지 기준" src="./docs/assets/images/quality-summary.png" />
 
 각 지표는 서로 다른 측정 조건의 결과이며 누적 효과로 해석하지 않습니다.
 
