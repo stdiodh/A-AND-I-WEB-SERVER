@@ -2,10 +2,10 @@
 
 > 코스·과제 원본을 관리하고, 문제 동기화와 채점 결과 projection을 처리하는 교육 운영 백엔드입니다.
 
-코스·수강·과제·요구사항·테스트케이스를 관리하고, 수강생과 운영자에게 필요한 API를 제공합니다.
-
-기능 활성화 시 과제 변경 내용을 Online Judge용 problem snapshot으로 발행하고, 
-채점 완료 이벤트를 관리자 조회용 submission projection으로 저장합니다.
+| 항목 | 내용 |
+| :-- | :-- |
+| 담당 | 리팩터링과 테스트 보강, 과제 목록 batch 조회 전환, CI/CD 실행 시간 단축 |
+| 결과 | 테스트·커버리지 보강, 과제 목록 child repository 호출 감소, 동일 범위 CI 중앙값 단축 (자세한 수치는 [성능과 테스트](#성능과-테스트)의 표) |
 
 <img width="1672" height="941" alt="d40e8dcc-c8aa-483e-a645-e545b9cb06fc" src="https://github.com/user-attachments/assets/215e689a-3b3f-4bc2-885a-dc5af4c9a07f" />
 
@@ -43,9 +43,7 @@ sequenceDiagram
     Judge-->>Judge: 외부 계약에 따라 반영
 ```
 
-`APP_EVENTS_REPORT_TEST_CASE_ENABLED=false`가 기본값입니다.
-
-활성화하면 command 경로가 SNS publish 완료를 기다리며, SNS 실패는 API 실패로 전달됩니다. SNS 이후 SQS 전달과 Online Judge 반영은 외부 구성에 따라 동작합니다.
+`APP_EVENTS_REPORT_TEST_CASE_ENABLED=false`가 기본값입니다. 활성화하면 command 경로가 SNS publish 완료를 기다리고, SNS 실패를 API 실패로 반환합니다. SQS 전달과 Online Judge 반영은 외부 구성에 따릅니다.
 
 ## 수강생 조회와 채점 결과 반영
 
@@ -75,17 +73,13 @@ sequenceDiagram
     API-->>Admin: 수강생별 제출 현황
 ```
 
-공개 전 과제는 수강생에게 노출하지 않고, 공개된 과제에서도 `PUBLIC` 테스트케이스만 반환합니다.
-
-관리자 제출 현황은 Online Judge를 직접 조회하지 않고 MongoDB projection을 사용합니다.
-
-`REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED=false`가 기본값이며, 활성화 시 `JUDGE_COMPLETED` 파싱 → projection 저장 → SQS 메시지 삭제까지 처리합니다.
+- 수강생에게는 공개된 과제와 `PUBLIC` 테스트케이스만 반환합니다.
+- 관리자 제출 현황은 Online Judge를 직접 조회하지 않고 MongoDB projection을 사용합니다.
+- `REPORT_JUDGE_SUBMISSION_EVENTS_ENABLED=false`가 기본값이며, 활성화 시 `JUDGE_COMPLETED` 파싱 → projection 저장 → SQS 메시지 삭제까지 처리합니다.
 
 ## 데이터 구조
 
 <img width="1672" height="941" alt="c14aa111-877a-4836-8d47-2f36c0e7b9a5" src="https://github.com/user-attachments/assets/d0719ecb-032b-4957-a1b5-b0e4fbe4c74a" />
-
-MongoDB는 과제 원본과 제출 상태 projection을 분리해 관리합니다.
 
 | 데이터                                 | 역할              |
 | :---------------------------------- | :-------------- |
@@ -97,11 +91,8 @@ MongoDB는 과제 원본과 제출 상태 projection을 분리해 관리합니�
 
 ## 화면으로 확인하기
 
-운영자의 과제 생성·수정·공개 흐름입니다.
-
-[과제 운영 데모 영상 보기](./docs/assets/videos/assignment-operation.mov)
-
-수강생의 문제 조회와 채점 흐름입니다.
+- 운영자 과제 생성·수정·공개: [과제 운영 데모 영상 보기](./docs/assets/videos/assignment-operation.mov)
+- 수강생 문제 조회와 채점:
 
 ![Problem Judge Demo](./docs/assets/gifs/problem-judge.gif)
 
@@ -119,9 +110,9 @@ MongoDB는 과제 원본과 제출 상태 projection을 분리해 관리합니�
 | 1차 리팩터링 |     277 |        85.04% |          62.59% | Line 83%, Branch 61%     |
 | 2차 리팩터링 |     338 |        88.22% |          63.42% | Line 86%, Branch 62%     |
 | 3차 리팩터링 |     388 |        88.87% |          63.74% | Line 86%, Branch 62%     |
-| 현재      | **456** |    **92.00%** |      **66.09%** | **Line 86%, Branch 62%** |
+| 현재      | **602** |    **97.13%** |      **82.17%** | **Line 86%, Branch 62%** |
 
-상세 내용은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에서 확인할 수 있습니다.
+현재 값은 2026-11-26 `clean test jacocoTestReport` 기준이며, 상세 내용은 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 있습니다.
 
 ### CI/CD 실행 시간
 
@@ -131,9 +122,7 @@ MongoDB는 과제 원본과 제출 상태 projection을 분리해 관리합니�
 | 문서-only CI | 124.0초 |    28.0초 | 77.4% |
 | CD dry-run | 211.0초 |    82.0초 | 61.1% |
 
-CI는 GitHub Actions 성공 실행 기준입니다.
-
-상세 조건은 [CI/CD 최적화 측정](./docs/cicd-optimization.md)에 정리했습니다.
+GitHub Actions 성공 실행 기준이며, 상세 조건은 [CI/CD 최적화 측정](./docs/cicd-optimization.md)에 있습니다.
 
 ### 읽기 API 부하 테스트
 
@@ -150,12 +139,17 @@ CI는 GitHub Actions 성공 실행 기준입니다.
 
 100 RPS, 2분, 3회 반복 기준입니다.
 
-2026-11-26에 같은 조건(과제 30개, 100 RPS)으로 다시 측정했을 때 P95 개선은 재현되지 않았습니다(10.160 ms → 10.373 ms).
-과제 300개·1,000개에 50 RPS를 걸면 개선 전 서버는 처리량이 30.818 req/s, 8.609 req/s에 그쳤고, 개선 후 서버는 3회 모두 50 RPS를 유지하며 HTTP 실패 0건, P95 42.334 ms, 237.767 ms를 기록했습니다.
-개선 전 서버도 버티는 같은 부하로 다시 비교하면, 과제 300개·15 RPS에서 P95가 79.049 ms → 47.760 ms(39.58% 감소), 과제 1,000개·5 RPS에서 187.474 ms → 128.437 ms(31.49% 감소)였고 두 조건 모두 실패 0건이었습니다.
-재측정 조건과 원본 결과는 [과제 목록 재측정 결과](./docs/performance/results/2026-11-26-assignment-list-scale-before-after.md)에 정리했습니다.
+2026-11-26 재측정 결과입니다.
 
-상세 결과는 [테스트와 성능 측정](./docs/MEASUREMENT.md)에 정리했습니다.
+| 조건 | 개선 전 | 개선 후 |
+| :-- | --: | --: |
+| 과제 30개 · 100 RPS, P95 | 10.160 ms | 10.373 ms (개선 재현 안 됨) |
+| 과제 300개 · 50 RPS | 처리량 30.818 req/s | 50 RPS 유지, P95 42.334 ms |
+| 과제 1,000개 · 50 RPS | 처리량 8.609 req/s | 50 RPS 유지, P95 237.767 ms |
+| 과제 300개 · 15 RPS, P95 | 79.049 ms | 47.760 ms (39.58% 감소) |
+| 과제 1,000개 · 5 RPS, P95 | 187.474 ms | 128.437 ms (31.49% 감소) |
+
+개선 후 서버는 50 RPS 조건 3회 모두 HTTP 실패 0건이었고, 15·5 RPS 비교는 두 조건 모두 실패 0건이었습니다. 측정 조건과 원본 결과는 [과제 목록 재측정 결과](./docs/performance/results/2026-11-26-assignment-list-scale-before-after.md)에 있습니다.
 
 ## 실행
 
