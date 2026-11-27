@@ -34,7 +34,7 @@ class V2HeaderValidationFilter(
         val timestamp = requiredHeader(headers.getFirst(V2HeaderNames.TIMESTAMP), V2HeaderNames.TIMESTAMP)
         val salt = optionalHeader(headers.getFirst(V2HeaderNames.SALT))
 
-        if (!tokenHeader.startsWith("Bearer ") || tokenHeader.removePrefix("Bearer ").isBlank()) {
+        if (!isBearerFormat(tokenHeader)) {
             return Mono.error(
                 V2ValidationException(
                     errorCode = V2ErrorCode.HEADER_INVALID,
@@ -84,6 +84,9 @@ class V2HeaderValidationFilter(
     private fun optionalHeader(rawValue: String?): String? =
         rawValue?.trim()?.takeIf { it.isNotBlank() }
 
+    private fun isBearerFormat(tokenHeader: String): Boolean =
+        tokenHeader.startsWith(BEARER_PREFIX) && tokenHeader.removePrefix(BEARER_PREFIX).isNotBlank()
+
     private fun isValidTimestamp(value: String): Boolean =
         parseTimestamp(value) != null
 
@@ -102,4 +105,8 @@ class V2HeaderValidationFilter(
         MessageDigest.getInstance("MD5")
             .digest(input.toByteArray())
             .joinToString("") { "%02x".format(it) }
+
+    private companion object {
+        const val BEARER_PREFIX = "Bearer "
+    }
 }

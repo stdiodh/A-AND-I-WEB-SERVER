@@ -263,13 +263,19 @@ class V2StructuredLogFormatter(
     private fun buildTags(route: String, isFailure: Boolean): List<String> {
         val segments = route.split('/')
             .filter { it.isNotBlank() }
-            .filterNot { it == "v2" || it.startsWith("{") && it.endsWith("}") }
+            .filterNot { isVersionSegment(it) || isPathVariableSegment(it) }
             .map { it.lowercase() }
             .take(4)
             .toMutableList()
         segments += if (isFailure) "fail" else "success"
         return segments.distinct()
     }
+
+    private fun isVersionSegment(segment: String): Boolean =
+        segment == "v2"
+
+    private fun isPathVariableSegment(segment: String): Boolean =
+        segment.startsWith("{") && segment.endsWith("}")
 
     private fun formatTimestamp(instant: Instant): String =
         instant.atZone(seoulZone).format(timestampFormatter)

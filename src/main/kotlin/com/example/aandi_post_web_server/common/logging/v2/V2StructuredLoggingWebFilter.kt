@@ -127,8 +127,10 @@ class V2StructuredLoggingWebFilter(
 
     private fun resolveStatusCode(exchange: ServerWebExchange, failure: Throwable?): Int {
         val responseStatus = exchange.response.statusCode?.value()
+        val hasErrorStatus = responseStatus != null && responseStatus >= 400
+        val failedWithoutErrorStatus = failure != null && !hasErrorStatus
         return when {
-            failure != null && (responseStatus == null || responseStatus < 400) -> 500
+            failedWithoutErrorStatus -> 500
             responseStatus != null -> responseStatus
             else -> 200
         }

@@ -154,6 +154,28 @@ class V2HeaderValidationFilterTest : StringSpec({
         chain.calls shouldBe 0
     }
 
+    "bearer prefix must be exact and followed by a token" {
+        listOf("Bearer", "   Bearer   ", "bearer access-token", "Bearer\taccess-token", "BearerAccess").forEach { token ->
+            val chain = HeaderValidationRecordingWebFilterChain()
+            val exchange = headerExchange(
+                path = "/v2/courses",
+                authorization = token,
+                deviceOS = "IOS",
+                timestamp = "1770000000000",
+            )
+
+            StepVerifier.create(V2HeaderValidationFilter("secret").filter(exchange, chain))
+                .expectErrorSatisfies { error ->
+                    val exception = error as V2ValidationException
+                    exception.errorCode shouldBe V2ErrorCode.HEADER_INVALID
+                    exception.message shouldBe "Authenticate 헤더는 'Bearer {accessToken}' 형식이어야 합니다."
+                }
+                .verify()
+
+            chain.calls shouldBe 0
+        }
+    }
+
     "invalid timestamp fails before reaching the chain" {
         val chain = HeaderValidationRecordingWebFilterChain()
         val exchange = headerExchange(
