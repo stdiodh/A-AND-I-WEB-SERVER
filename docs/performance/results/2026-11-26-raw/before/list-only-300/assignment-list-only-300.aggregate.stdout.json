@@ -1,0 +1,8 @@
+{
+  "accepted": false,
+  "reasons": [
+    "run 1 has dropped iterations",
+    "run 2 has dropped iterations",
+    "run 3 has dropped iterations"
+  ]
+}

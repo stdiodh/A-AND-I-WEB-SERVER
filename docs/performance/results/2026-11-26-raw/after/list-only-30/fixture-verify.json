@@ -1,0 +1,16 @@
+{
+  "status": "verified",
+  "database": "aandi_performance",
+  "courseSlug": "perf-k6",
+  "assignmentId": "10000000-0000-4000-8000-000000000001",
+  "userId": "00000000-0000-4000-8000-000000000001",
+  "adminUserId": "00000000-0000-4000-8000-999999999999",
+  "fixtureFingerprint": "005fc5cdb43a402413b263ae38b5565a73634b25bc7532cef346320ad295cf1a",
+  "counts": {
+    "courses": 1,
+    "weeks": 3,
+    "assignments": 30,
+    "enrollments": 100,
+    "submissionStatuses": 60
+  }
+}

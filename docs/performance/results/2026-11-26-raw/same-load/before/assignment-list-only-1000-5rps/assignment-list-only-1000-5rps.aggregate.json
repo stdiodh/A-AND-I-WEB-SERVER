@@ -1,0 +1,176 @@
+{
+  "accepted": true,
+  "context": {
+    "scenario": "assignment-read",
+    "baseUrlHost": "localhost",
+    "targetEnvironment": "local",
+    "gitCommitSha": "d4cd644",
+    "gitDirty": "false",
+    "k6Version": "k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)",
+    "fixtureFingerprint": "606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a",
+    "fixtureCounts": {
+      "courses": "1",
+      "assignments": "1000",
+      "enrollments": "100",
+      "submissionStatuses": "60"
+    },
+    "executor": "constant-arrival-rate",
+    "vus": "5 req/s",
+    "loadModel": "arrival-rate",
+    "targetRps": "5",
+    "preAllocatedVus": "30",
+    "maxVus": "200",
+    "duration": "2m",
+    "requestSleepSeconds": "0",
+    "assignmentListRatio": "100",
+    "assignmentDetailRatio": "0",
+    "dockerNetworkMode": "local-binary",
+    "jvmOptions": "unknown",
+    "mongodbMode": "local-docker-compose",
+    "cpu": "Apple M5 Pro",
+    "memory": "48.00 GiB",
+    "warmupCompleted": "true"
+  },
+  "runs": [
+    {
+      "file": "assignment-read-2026-11-26T13-11-44-116Z-d4cd644.summary.json",
+      "assignment_list_p50_ms": 157.955,
+      "assignment_list_p90_ms": 191.593,
+      "assignment_list_p95_ms": 201.654,
+      "assignment_list_p99_ms": 232.919,
+      "assignment_list_success_throughput": 5.000535373458578,
+      "business_p50_ms": 157.955,
+      "business_p90_ms": 191.593,
+      "business_p95_ms": 201.654,
+      "business_p99_ms": 232.919,
+      "http_rps": 5.000535373458578,
+      "business_success_throughput": 5.000535373458578,
+      "iterations": 601.0,
+      "iterations_rate": 5.000535373458578,
+      "http_failure_rate": 0.0,
+      "check_success_rate": 1.0,
+      "dropped_iterations": 0.0
+    },
+    {
+      "file": "assignment-read-2026-11-26T13-13-51-749Z-d4cd644.summary.json",
+      "assignment_list_p50_ms": 150.841,
+      "assignment_list_p90_ms": 175.205,
+      "assignment_list_p95_ms": 187.474,
+      "assignment_list_p99_ms": 202.972,
+      "assignment_list_success_throughput": 5.002154755149019,
+      "business_p50_ms": 150.841,
+      "business_p90_ms": 175.205,
+      "business_p95_ms": 187.474,
+      "business_p99_ms": 202.972,
+      "http_rps": 5.002154755149019,
+      "business_success_throughput": 5.002154755149019,
+      "iterations": 601.0,
+      "iterations_rate": 5.002154755149019,
+      "http_failure_rate": 0.0,
+      "check_success_rate": 1.0,
+      "dropped_iterations": 0.0
+    },
+    {
+      "file": "assignment-read-2026-11-26T13-15-59-426Z-d4cd644.summary.json",
+      "assignment_list_p50_ms": 148.6265,
+      "assignment_list_p90_ms": 164.5628,
+      "assignment_list_p95_ms": 183.66905,
+      "assignment_list_p99_ms": 203.26199999999997,
+      "assignment_list_success_throughput": 4.999925876098887,
+      "business_p50_ms": 148.6265,
+      "business_p90_ms": 164.5628,
+      "business_p95_ms": 183.66905,
+      "business_p99_ms": 203.26199999999997,
+      "http_rps": 4.999925876098887,
+      "business_success_throughput": 4.999925876098887,
+      "iterations": 600.0,
+      "iterations_rate": 4.999925876098887,
+      "http_failure_rate": 0.0,
+      "check_success_rate": 1.0,
+      "dropped_iterations": 0.0
+    }
+  ],
+  "summary": {
+    "assignment_list_p50_ms": {
+      "median": 150.841,
+      "min": 148.6265,
+      "max": 157.955
+    },
+    "assignment_list_p90_ms": {
+      "median": 175.205,
+      "min": 164.5628,
+      "max": 191.593
+    },
+    "assignment_list_p95_ms": {
+      "median": 187.474,
+      "min": 183.66905,
+      "max": 201.654
+    },
+    "assignment_list_p99_ms": {
+      "median": 203.26199999999997,
+      "min": 202.972,
+      "max": 232.919
+    },
+    "assignment_list_success_throughput": {
+      "median": 5.000535373458578,
+      "min": 4.999925876098887,
+      "max": 5.002154755149019
+    },
+    "business_p50_ms": {
+      "median": 150.841,
+      "min": 148.6265,
+      "max": 157.955
+    },
+    "business_p90_ms": {
+      "median": 175.205,
+      "min": 164.5628,
+      "max": 191.593
+    },
+    "business_p95_ms": {
+      "median": 187.474,
+      "min": 183.66905,
+      "max": 201.654
+    },
+    "business_p99_ms": {
+      "median": 203.26199999999997,
+      "min": 202.972,
+      "max": 232.919
+    },
+    "http_rps": {
+      "median": 5.000535373458578,
+      "min": 4.999925876098887,
+      "max": 5.002154755149019
+    },
+    "business_success_throughput": {
+      "median": 5.000535373458578,
+      "min": 4.999925876098887,
+      "max": 5.002154755149019
+    },
+    "iterations": {
+      "median": 601.0,
+      "min": 600.0,
+      "max": 601.0
+    },
+    "iterations_rate": {
+      "median": 5.000535373458578,
+      "min": 4.999925876098887,
+      "max": 5.002154755149019
+    },
+    "http_failure_rate": {
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "check_success_rate": {
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "dropped_iterations": {
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    }
+  },
+  "markdown": "# k6 Aggregate - assignment-read\n\n## Context\n\n- Scenario: assignment-read\n- Git Commit SHA: d4cd644\n- k6 Version: k6 v0.52.0 (commit/20f8febb5b, go1.22.4, darwin/arm64)\n- BASE_URL Host: localhost\n- Target Environment: local\n- Fixture Fingerprint: 606ea27d61f599fb07d394be94ba7fcc513cca0937b07db8f4be76a8cb52714a\n- Fixture Counts: {\"assignments\": \"1000\", \"courses\": \"1\", \"enrollments\": \"100\", \"submissionStatuses\": \"60\"}\n- Load Model: arrival-rate\n- Target RPS: 5\n- Duration: 2m\n- Pre Allocated VUs: 30\n- Max VUs: 200\n- JVM Options: unknown\n- MongoDB Mode: local-docker-compose\n- CPU: Apple M5 Pro\n- Memory: 48.00 GiB\n\n## Metrics\n\n| Metric | Median | Min | Max |\n| :--- | ---: | ---: | ---: |\n| assignment_list_p50_ms | 150.841 | 148.6265 | 157.955 |\n| assignment_list_p90_ms | 175.205 | 164.5628 | 191.593 |\n| assignment_list_p95_ms | 187.474 | 183.669 | 201.654 |\n| assignment_list_p99_ms | 203.262 | 202.972 | 232.919 |\n| assignment_list_success_throughput | 5.0005 | 4.9999 | 5.0022 |\n| business_p50_ms | 150.841 | 148.6265 | 157.955 |\n| business_p90_ms | 175.205 | 164.5628 | 191.593 |\n| business_p95_ms | 187.474 | 183.669 | 201.654 |\n| business_p99_ms | 203.262 | 202.972 | 232.919 |\n| http_rps | 5.0005 | 4.9999 | 5.0022 |\n| business_success_throughput | 5.0005 | 4.9999 | 5.0022 |\n| iterations | 601 | 600 | 601 |\n| iterations_rate | 5.0005 | 4.9999 | 5.0022 |\n| http_failure_rate | 0 | 0 | 0 |\n| check_success_rate | 1 | 1 | 1 |\n| dropped_iterations | 0 | 0 | 0 |\n\n## Runs\n\n| File | Business P95 | Business P99 | HTTP failed | Checks | Iterations | Dropped iterations |\n| :--- | ---: | ---: | ---: | ---: | ---: | ---: |\n| assignment-read-2026-11-26T13-11-44-116Z-d4cd644.summary.json | 201.654 | 232.919 | 0 | 1 | 601 | 0 |\n| assignment-read-2026-11-26T13-13-51-749Z-d4cd644.summary.json | 187.474 | 202.972 | 0 | 1 | 601 | 0 |\n| assignment-read-2026-11-26T13-15-59-426Z-d4cd644.summary.json | 183.669 | 203.262 | 0 | 1 | 600 | 0 |"
+}
