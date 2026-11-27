@@ -29,7 +29,7 @@
 
 다음 문서는 완료된 시점의 증거이며 현재 배포 절차나 최신 테스트 수치의 기준이 아닙니다.
 
-- `cicd-optimization.md`, `cicd-measurement-audit.md`: CI/CD 일회성 재측정 결과
+- `cicd-optimization.md`: CI/CD 일회성 재측정 결과
 - `resume-metrics.md`, `metrics/`: 이력서 수치와 생성 snapshot
 - `docs/performance/results/` 및 `performance/results/`: 고정된 성능 실행 결과와 원시 산출물
 - `.github/workflows/measure-web-cicd.yml`, `.github/workflows/cd-dry-run.yml`: 운영 배포가 아닌 측정 workflow
