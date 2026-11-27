@@ -4,11 +4,9 @@
 
 [README로 돌아가기](../README.md)
 
-## Status
+## 진행 상태
 
-30개 assignment list-only before/after 측정은 `docs/performance/results/2026-07-09-assignment-list-before-after.md`에 기록했습니다.
-
-남은 작업은 같은 절차를 300/1000개 fixture before/after로 확장하거나, 최대 처리량이 필요할 때 별도 capacity scenario를 정의하는 것입니다.
+과제 30개 측정은 [2026-07-09 결과](./performance/results/2026-07-09-assignment-list-before-after.md), 과제 30·300·1,000개 재측정은 [2026-11-26 결과](./performance/results/2026-11-26-assignment-list-scale-before-after.md)에 기록했습니다. 남은 작업은 최대 처리량이 필요할 때 별도 용량 시나리오를 정의하는 것입니다.
 
 ## Target API
 

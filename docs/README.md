@@ -22,14 +22,14 @@
 
 | 문서 | 상태 |
 | :--- | :--- |
-| [과제 목록 지연시간 측정 계획](./ASSIGNMENT_LIST_LATENCY_PLAN.md) | 30개 fixture 측정 완료, 300/1000개 확장은 선택 작업 |
+| [과제 목록 지연시간 측정 계획](./ASSIGNMENT_LIST_LATENCY_PLAN.md) | 30·300·1,000개 측정 완료 (2026-11-26) |
 | [과제 이벤트 일관성 ADR](./adr/0001-assignment-event-consistency.md) | Proposed, 구현 전 MongoDB transaction 조건 확인 필요 |
 
 ## 과거 측정 근거
 
 다음 문서는 완료된 시점의 증거이며 현재 배포 절차나 최신 테스트 수치의 기준이 아닙니다.
 
-- `cicd-optimization.md`, `cicd-measurement-audit.md`: CI/CD 일회성 재측정 결과
+- `cicd-optimization.md`: CI/CD 일회성 재측정 결과
 - `resume-metrics.md`, `metrics/`: 이력서 수치와 생성 snapshot
 - `docs/performance/results/` 및 `performance/results/`: 고정된 성능 실행 결과와 원시 산출물
 - `.github/workflows/measure-web-cicd.yml`, `.github/workflows/cd-dry-run.yml`: 운영 배포가 아닌 측정 workflow

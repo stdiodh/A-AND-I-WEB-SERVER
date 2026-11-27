@@ -1,15 +1,21 @@
-# 2026-07 안정적 리팩터링 완료 기록
+# 2026-07 안정적 리팩터링 기록
 
-## 목표와 원칙
+외부 API와 이벤트 발행 순서를 그대로 두고, 전역 상태·중복 정책·서비스 경계·배포 위험을 작은 단계로 나눠 줄였습니다. 각 단계는 테스트를 통과한 뒤 다음 단계로 넘어갔습니다. 첫 범위는 [PR #68](https://github.com/Team-AnI/A-AND-I-WEB-SERVER/pull/68)로 `main`에 병합했고, 이후 단계는 아래 표에 이어서 적었습니다.
 
-외부 API와 애플리케이션의 publisher 호출 순서를 유지하면서 전역 상태, 중복 정책, 서비스 경계, 배포 위험을 작은 단계로 줄입니다. 각 단계는 독립적인 테스트 checkpoint를 통과한 뒤 다음 단계로 넘어갑니다.
+## 이전과 현재
 
-- 상태: 누적 완료 기록 — 최초 범위는 [PR #68](https://github.com/Team-AnI/A-AND-I-WEB-SERVER/pull/68)로 `main` 병합, 이후 완료 단계는 아래 표에 누적
-- 최초 기준 commit: `14a283a`
-- 최초 작업 branch(기록): `develop/stable-refactoring`
-- 최초 병합 commit: `c2c542d`
-- PR #68 checkpoint: 306 tests, failures/errors/skipped 0, Line 85.67%, Branch 63.37%
-- 현재 checkpoint: 456 tests, failures/errors/skipped 0, Line 4,555 / 4,951 = 92.00%, Branch 1,175 / 1,778 = 66.09%
+| 항목 | 이전 (시작 기준) | 현재 (10단계 완료) |
+| --- | --- | --- |
+| 테스트 | 277 | 456 |
+| Line coverage | 85.04% | 92.00% (4,555 / 4,951) |
+| Branch coverage | 62.59% | 66.09% (1,175 / 1,778) |
+| PATCH 요청의 필드 생략 판정 | 전역 `IdentityHashMap` 추적 | DTO 안의 presence 값 |
+| 공개 상태 계산 | 여러 곳에 중복 | 한 곳으로 통합, 요청마다 기준 시각 고정 |
+| 과제 명령·조회 | Course 서비스에 섞임 | `AssignmentCommandService`, `AssignmentQueryService`로 분리 |
+| 저장소 의존 | application이 Mongo 저장소를 직접 사용 | application port와 infrastructure adapter로 분리 |
+| 배포 이미지 | 배포 때 다시 빌드 | 테스트를 통과한 JAR 하나로 이미지 생성, 직전 이미지로 rollback |
+
+중간에 측정 범위(JaCoCo 제외 규칙)가 넓어져, coverage 차이를 테스트 보강만의 효과로 보지 않습니다. 단계별 수치는 [테스트와 성능 측정](../MEASUREMENT.md)에 있습니다.
 
 보존하는 핵심 계약:
 
